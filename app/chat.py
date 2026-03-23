@@ -1,0 +1,662 @@
+import json
+import logging
+import re
+import anthropic
+from app.config import (
+    CLAUDE_MODEL, QUERY_EXPANSION_MODEL, ENABLE_QUERY_EXPANSION,
+    MAX_TOOL_ROUNDS,
+    ENABLE_RERANKING, RERANK_CANDIDATES, RERANK_TOP_K, TOP_K,
+    get_anthropic_client,
+)
+from app.retriever import retrieve
+from app.ingest import get_all_pdfs
+from app.drive_lookup import lookup_drive, search_drives, detect_part_number
+from app.reranker import rerank
+
+logger = logging.getLogger(__name__)
+
+
+class RateLimitExceeded(Exception):
+    """Raised when Claude API rate limit is hit after all retries."""
+    pass
+
+SYSTEM_PROMPT = """You are an expert AMC technical support assistant. You help support engineers answer customer questions using AMC communication manuals and hardware installation manuals. You are talking to experienced engineers — be direct and technical.
+
+You have access to tools that let you search AMC manuals (both communication and hardware installation), identify drives by part number, and list available manuals. Use them proactively to find the information needed to answer the question.
+
+MANUAL TYPES:
+- **Communication manuals** (AMC_CommManual_*): Cover protocols, registers, object dictionaries, network configuration, PDO/SDO mapping, baud rates, etc.
+- **Hardware installation manuals** (AMC_HWManual_*): Cover physical installation, wiring, connectors, pinouts, mounting, thermal requirements, LED indicators, power connections, I/O wiring, and safety.
+- **Software manuals** (AMC_SW_Manual_*): Cover AMC software tools — ACE (primary drive configuration & tuning), DriveWare (alternative configuration tool), and ClickMove (simple point-to-point motion). Include setup procedures, parameter configuration, tuning, firmware updates, and troubleshooting.
+- **Software quick references** (AMC_SW_QuickRef_*): Condensed guides for ACE, DriveWare, and ClickMove software.
+
+STRATEGY:
+1. If the user mentions a part number, call detect_drive_manual first to identify the correct manuals and protocol.
+2. Determine if the question is about communication/software OR hardware/installation, and search the appropriate manual type.
+3. Use search_manuals to find relevant information. Be specific with your queries — use technical terms, register names, protocol keywords, connector names, pin numbers, etc.
+4. If your first search doesn't find enough detail, try different queries or broaden/narrow your search. You can call search_manuals multiple times with different terms.
+5. When you know the target manual, use the manual_filter parameter to focus results.
+6. For complex questions, search for each sub-topic separately (e.g., search for "PDO mapping" and "sync manager configuration" as separate queries).
+7. For hardware questions, search HW manuals with terms like: wiring, connector, pinout, mounting, dimensions, thermal, LED, power supply, I/O, fuse, grounding, shielding.
+8. For software questions (ACE, DriveWare, ClickMove), search software manuals with terms like: setup, installation, connection, tuning, auto-tune, parameter, firmware, scope, project, workspace, motion profile.
+9. ACE is the primary software tool for all AMC drives. DriveWare is an alternative. ClickMove is for simple motion profiles. If the user doesn't specify which tool, default to ACE.
+
+RULES:
+1. Always cite sources with section context when available: [Source: filename, Page X, Section: heading]. Include the section heading — it helps engineers navigate directly to the right part of the manual.
+2. Give ACTIONABLE answers. Engineers need specific steps, register addresses, parameter values, wiring diagrams, pinouts, and configuration procedures — not vague suggestions to "consult the manual." Synthesize search results into clear step-by-step instructions.
+3. When referencing register values, hex addresses, object dictionary entries, pin numbers, or parameter settings, quote them exactly from the search results.
+4. If searches don't fully answer the question, give what you CAN from what you found, then clearly state what's missing and which manual section to check.
+5. Format answers with numbered steps for procedures, bullet points for lists, and tables for parameter values or pinouts.
+6. If a table or data structure spans multiple search results, reconstruct the relevant rows.
+7. You may use your general knowledge of servo drive communication protocols and hardware installation to fill in standard procedures, but always prioritize and cite the manual search results.
+8. When search results show LOW RELEVANCE or low average scores (<0.15), try different search terms — use more specific technical terms, register names, or exact phrases from the manual. Do NOT just answer from weak results.
+9. For questions that span multiple topics (e.g., "How do I set up and wire this drive?"), search comm manuals AND HW manuals separately with targeted queries for each.
+10. If a drive's part number is ambiguous, misspelled, or not found in the database, ASK the user to clarify rather than guessing which manual to use.
+11. When detect_drive_manual returns no comm manual for a drive, explain why (e.g., "AxCent drives use analog/PWM signaling and don't have a communication protocol manual").
+
+DRIVE FAMILY & MANUAL ROUTING:
+AMC has 120+ drives across multiple families. The system has a complete product database (CSV) with every drive's family, form factor, and network type.
+When detect_drive_manual returns results, it tells you EXACTLY which comm manual and HW manual to use. Trust it.
+
+**Drive families**: FlexPro, DigiFlex Performance, AxCent, Classic
+**Form factors**: Panel Mount, PCB Mount, Vehicle Mount, Machine Embedded, Development Board
+  - Machine Embedded and Development Board use the same HW manual as PCB Mount for their family.
+  - FlexPro Panel Mount also uses the FlexPro PCB HW manual.
+
+**Key protocol notes**:
+- "EM" in a FlexPro part number = EtherCAT (NOT Ethernet/IP)
+- "IPM" in a FlexPro part number = Ethernet/IP (NOT EtherCAT)
+- EtherCAT and Ethernet/IP are COMPLETELY DIFFERENT PROTOCOLS. Never confuse them.
+- DigiFlex "RA" drives can be Serial (RS-485) OR Modbus RTU — you MUST ask the user which protocol they are using.
+- AxCent drives have no network communication (analog/PWM only) — they only have HW installation manuals.
+
+**Software tools**: ACE and DriveWare work with all drive families. ClickMove is a simplified motion tool. Software manuals are NOT drive-specific — they are tool-specific.
+
+IMPORTANT: EtherCAT and Ethernet/IP are completely different protocols. Do NOT confuse them. "EM" = EtherCAT, "IPM" = Ethernet/IP."""
+
+
+# ---------------------------------------------------------------------------
+# Tool schemas for Anthropic tool-use API
+# ---------------------------------------------------------------------------
+
+TOOLS = [
+    {
+        "name": "search_manuals",
+        "description": (
+            "Search AMC manuals (communication, hardware installation, and software) for relevant information. "
+            "Uses keyword matching, so provide specific technical terms, register names, "
+            "object dictionary indices, protocol keywords, connector names, pinouts, etc. "
+            "You can call this multiple times with different queries to find more information. "
+            "Use manual_filter when you know which specific manual to search."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query. Use specific technical terms, register names, protocol keywords. More specific = better results.",
+                },
+                "manual_filter": {
+                    "type": "string",
+                    "description": "Optional: filter results to a specific manual filename (e.g., 'AMC_CommManual_FP_EtherCAT.pdf' or 'AMC_HWManual_FlexPro_PCB.pdf'). Use when you know which manual is relevant.",
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "detect_drive_manual",
+        "description": (
+            "Look up an AMC drive part number in the product database and return its drive family, "
+            "form factor, network communication type, and the exact comm manual and HW install manual filenames. "
+            "Call this whenever the user mentions a part number like FE060-25-EM, DPRALTE-020B080, or AZBH10A4. "
+            "This uses a complete database of 120+ drives — it will give you definitive routing."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "part_number": {
+                    "type": "string",
+                    "description": "AMC drive part number / SKU (e.g., 'FE060-25-EM', 'DPRALTE-020B080', 'AZBH10A4')",
+                },
+            },
+            "required": ["part_number"],
+        },
+    },
+    {
+        "name": "list_available_manuals",
+        "description": (
+            "List all AMC manuals (communication, hardware installation, and software) that are indexed and available for searching. "
+            "Use this when you're unsure which manual to search or want to see what's available."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        },
+    },
+]
+
+
+# Labels for manual filenames (used by list_available_manuals)
+MANUAL_LABELS = {
+    # Communication manuals
+    "AMC_CommManual_CANopen": "Comm: DigiFlex CANopen",
+    "AMC_CommManual_EtherCAT": "Comm: DigiFlex EtherCAT",
+    "AMC_CommManual_EthernetIP_FP": "Comm: FlexPro Ethernet/IP",
+    "AMC_CommManual_FP_CANopen": "Comm: FlexPro CANopen",
+    "AMC_CommManual_FP_EtherCAT": "Comm: FlexPro EtherCAT",
+    "AMC_CommManual_FP_Serial": "Comm: FlexPro Serial",
+    "AMC_CommManual_Modbus": "Comm: DigiFlex Modbus RTU",
+    "AMC_CommManual_RS485": "Comm: DigiFlex RS485 Serial",
+    # Hardware installation manuals
+    "AMC_HWManual_AnalogDrives": "HW: Analog Drives",
+    "AMC_HWManual_AxCent_PCB": "HW: AxCent PCB",
+    "AMC_HWManual_AxCent_Panel": "HW: AxCent Panel",
+    "AMC_HWManual_AxCent_Vehicle": "HW: AxCent Vehicle",
+    "AMC_HWManual_DigiFlex_PCB_CANopen": "HW: DigiFlex PCB CANopen",
+    "AMC_HWManual_DigiFlex_PCB_RS485-ModbusRTU": "HW: DigiFlex PCB RS485/Modbus",
+    "AMC_HWManual_DigiFlex_PCB_XEnv": "HW: DigiFlex PCB XEnv (EtherCAT/POWERLINK/DxM)",
+    "AMC_HWManual_DigiFlex_Panel_CANopen": "HW: DigiFlex Panel CANopen",
+    "AMC_HWManual_DigiFlex_Panel_EtherCAT": "HW: DigiFlex Panel EtherCAT",
+    "AMC_HWManual_DigiFlex_Panel_RS485-ModbusRTU": "HW: DigiFlex Panel RS485/Modbus",
+    "AMC_HWManual_DigiFlex_Vehicle": "HW: DigiFlex Vehicle",
+    "AMC_HWManual_FlexPro_PCB": "HW: FlexPro PCB (all form factors)",
+    # Software manuals
+    "AMC_SW_Manual_ACE": "SW: ACE Configuration & Tuning",
+    "AMC_SW_Manual_DriveWare": "SW: DriveWare Configuration",
+    "AMC_SW_QuickRef_ClickMove": "SW: ClickMove Quick Reference",
+    "AMC_SW_QuickRef_DriveWare": "SW: DriveWare Quick Reference",
+    "AMC_SW_QuickRef_ACE": "SW: ACE Quick Reference",
+}
+
+
+def expand_query(user_message: str) -> str:
+    """Use Claude Haiku to generate alternative search terms for better TF-IDF retrieval."""
+    if not ENABLE_QUERY_EXPANSION:
+        return user_message
+
+    try:
+        client = get_anthropic_client()
+        response = client.messages.create(
+            model=QUERY_EXPANSION_MODEL,
+            max_tokens=150,
+            system=(
+                "You are a query expansion engine for AMC servo drive technical manuals "
+                "covering communication protocols (CANopen, EtherCAT, Ethernet/IP, Modbus, Serial, RS485) "
+                "hardware installation (wiring, connectors, pinouts, mounting, power, I/O), "
+                "and software tools (ACE setup, DriveWare configuration, ClickMove motion, auto-tune, scope, firmware update). "
+                "AMC has drive families: FlexPro (part numbers FE/FM/FD/FMP/FX), "
+                "DigiFlex (part numbers DV/DP/DZ/DX), and AxCent (AZ). "
+                "Given a user question, output 5-8 alternative phrasings and key technical terms "
+                "that would appear in the manual. Include synonyms, abbreviations, register names, "
+                "object dictionary indices, specific configuration parameters, connector names, and pin numbers. "
+                "For comm questions, include terms like: node address, PDO mapping, SDO, object dictionary, baud rate. "
+                "For HW questions, include terms like: connector, pinout, wiring diagram, mounting, thermal, LED, power supply, fuse. "
+                "For software questions, include terms like: setup wizard, connection, auto-tune, scope, parameter tree, firmware, project, workspace, motion profile. "
+                "Output ONLY the search terms, one per line. No explanation."
+            ),
+            messages=[{"role": "user", "content": user_message}],
+        )
+        expanded_terms = response.content[0].text.strip()
+        return f"{user_message} {expanded_terms}"
+    except Exception as e:
+        logger.warning("Query expansion failed: %s", e)
+        return user_message
+
+
+def _expand_query_cached(query: str, cache: dict) -> str:
+    """expand_query() with a per-request cache to avoid redundant Haiku calls."""
+    if query not in cache:
+        cache[query] = expand_query(query)
+    return cache[query]
+
+
+def rewrite_followup(user_message: str, history: list[dict]) -> str:
+    """Rewrite a vague follow-up question into a standalone question using conversation context."""
+    followup_indicators = ["it", "that", "this", "those", "them", "same", "also", "too",
+                           "what about", "how about", "and for", "more", "details"]
+    msg_lower = user_message.lower()
+    is_followup = (
+        len(user_message.split()) < 10
+        and any(word in msg_lower for word in followup_indicators)
+    )
+
+    if not is_followup or not history:
+        return user_message
+
+    recent = history[-4:]
+    context_str = "\n".join(
+        f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:300]}"
+        for m in recent
+    )
+
+    try:
+        client = get_anthropic_client()
+        response = client.messages.create(
+            model=QUERY_EXPANSION_MODEL,
+            max_tokens=100,
+            system=(
+                "Given the conversation history and the user's follow-up question, "
+                "rewrite the follow-up as a complete standalone question. "
+                "Output ONLY the rewritten question, nothing else."
+            ),
+            messages=[{
+                "role": "user",
+                "content": f"Conversation:\n{context_str}\n\nFollow-up: {user_message}",
+            }],
+        )
+        return response.content[0].text.strip()
+    except Exception as e:
+        logger.warning("Follow-up rewrite failed: %s", e)
+        return user_message
+
+
+def build_context(chunks: list[dict]) -> str:
+    """Format retrieved chunks into a context block for tool results."""
+    if not chunks:
+        return "No results found for this search query."
+    context_parts = []
+    for i, chunk in enumerate(chunks, 1):
+        heading = chunk.get("heading", "")
+        heading_str = f", Section: {heading}" if heading else ""
+        score = chunk.get("score", 0)
+        context_parts.append(
+            f"--- Excerpt {i} [Source: {chunk['source']}, Page {chunk['page']}{heading_str}, Relevance: {score:.2f}] ---\n"
+            f"{chunk['text']}\n"
+        )
+    return "\n".join(context_parts)
+
+
+# ---------------------------------------------------------------------------
+# Tool handlers
+# ---------------------------------------------------------------------------
+
+def handle_search_manuals(query: str, manual_filter: str | None = None, expansion_cache: dict | None = None) -> tuple[str, list[dict]]:
+    """Search manuals with query expansion and optional re-ranking."""
+    expanded_query = _expand_query_cached(query, expansion_cache) if expansion_cache is not None else expand_query(query)
+
+    # Fetch more candidates when re-ranking is enabled
+    fetch_k = RERANK_CANDIDATES if ENABLE_RERANKING else TOP_K
+    supplemented = False
+
+    if manual_filter:
+        chunks = retrieve(expanded_query, top_k=fetch_k, source_filter=manual_filter)
+        # Supplement with unfiltered results if too few matches
+        if len(chunks) < 3:
+            supplemented = True
+            extra = retrieve(expanded_query, top_k=fetch_k)
+            seen_texts = {c["text"][:100] for c in chunks}
+            for c in extra:
+                if c["text"][:100] not in seen_texts:
+                    chunks.append(c)
+                    if len(chunks) >= fetch_k:
+                        break
+    else:
+        chunks = retrieve(expanded_query, top_k=fetch_k)
+
+    candidates_before_rerank = len(chunks)
+
+    # Re-rank with Haiku for semantic relevance
+    # Note: rerank uses original query (not expanded) — this prevents expansion
+    # noise from inflating scores. Haiku judges against what the user actually asked.
+    if ENABLE_RERANKING and len(chunks) > RERANK_TOP_K:
+        chunks = rerank(query, chunks, top_k=RERANK_TOP_K)
+
+    # Build context with retrieval quality stats
+    scores = [c.get("score", 0) for c in chunks]
+    avg_score = sum(scores) / len(scores) if scores else 0
+    max_score = max(scores) if scores else 0
+
+    header_lines = [
+        f'Search results for "{query}" (manual: {manual_filter or "all"}):',
+        f"  - Candidates retrieved: {candidates_before_rerank}, After reranking: {len(chunks)}",
+        f"  - Average relevance: {avg_score:.2f}, Highest: {max_score:.2f}",
+    ]
+    if supplemented:
+        header_lines.append("  - NOTE: Filtered search had <3 results, supplemented with results from other manuals.")
+    if avg_score < 0.15:
+        header_lines.append("  - LOW RELEVANCE: Consider rephrasing your search with more specific technical terms.")
+    header = "\n".join(header_lines) + "\n\n"
+
+    return header + build_context(chunks), chunks
+
+
+def handle_detect_drive_manual(part_number: str) -> tuple[str, list[dict]]:
+    """Look up a part number using the CSV-powered drive database."""
+    result = lookup_drive(part_number)
+
+    if result:
+        info = {
+            "part_number": result["sku"],
+            "title": result["title"],
+            "drive_family": result["family"],
+            "form_factor": result["form_factor"],
+            "network_communication": result["network"],
+            "comm_protocol": result["comm_protocol"],
+            "comm_manual": result["comm_manual"],
+            "hw_manual": result["hw_manual"],
+        }
+
+        if result["comm_ambiguous"]:
+            info["WARNING"] = (
+                "This drive supports both Serial (RS-485) and Modbus RTU. "
+                "Ask the user which protocol they are using before searching."
+            )
+            info["comm_options"] = result["comm_options"]
+
+        notes = []
+        if result["comm_manual"]:
+            notes.append(f"For comm questions, use manual_filter='{result['comm_manual']}'")
+        if result["hw_manual"]:
+            notes.append(f"For HW/installation questions, use manual_filter='{result['hw_manual']}'")
+        notes.append("For software/configuration questions, search AMC_SW_Manual_ACE.pdf or AMC_SW_Manual_DriveWare.pdf")
+        if notes:
+            info["usage_notes"] = notes
+
+        return json.dumps(info, indent=2), []
+
+    # Fallback: try regex-based detection for part numbers not in CSV
+    pn_upper = part_number.upper()
+    family = None
+    if re.search(r'(FE|FM|FD|FMP|FX)', pn_upper):
+        family = "FlexPro"
+    elif re.search(r'(DV|DP|DZ|DX)', pn_upper):
+        family = "DigiFlex Performance"
+    elif re.search(r'AZ', pn_upper):
+        family = "AxCent"
+
+    protocol = None
+    if "IPM" in pn_upper:
+        protocol = "Ethernet/IP"
+    elif "EM" in pn_upper:
+        protocol = "EtherCAT"
+    elif "RM" in pn_upper:
+        protocol = "Serial"
+    elif "CM" in pn_upper:
+        protocol = "CANopen"
+    elif "EAN" in pn_upper:
+        protocol = "EtherCAT"
+    elif "CAN" in pn_upper or "DVC" in pn_upper:
+        protocol = "CANopen"
+    elif "RA" in pn_upper:
+        protocol = "ambiguous - could be Serial (RS485) or Modbus RTU"
+
+    result = {
+        "part_number": part_number,
+        "drive_family": family,
+        "protocol": protocol,
+        "comm_manual": None,
+        "hw_manual": None,
+        "note": "Part number not found in product database. Using regex-based detection (less reliable).",
+    }
+
+    return json.dumps(result, indent=2), []
+
+
+def handle_list_available_manuals() -> tuple[str, list[dict]]:
+    """List all indexed manuals with protocol labels."""
+    pdfs = get_all_pdfs()
+    if not pdfs:
+        return "No manuals are currently indexed.", []
+
+    comm_manuals = []
+    hw_manuals = []
+    sw_manuals = []
+    for pdf in pdfs:
+        name = pdf.stem
+        label = MANUAL_LABELS.get(name, "")
+        label_str = f" ({label})" if label else ""
+        entry = f"  - {pdf.name}{label_str}"
+        if "HWManual" in name:
+            hw_manuals.append(entry)
+        elif "CommManual" in name:
+            comm_manuals.append(entry)
+        elif "SW_" in name:
+            sw_manuals.append(entry)
+        else:
+            comm_manuals.append(entry)
+
+    lines = ["Available AMC manuals:\n"]
+    if comm_manuals:
+        lines.append("COMMUNICATION MANUALS:")
+        lines.extend(comm_manuals)
+        lines.append("")
+    if hw_manuals:
+        lines.append("HARDWARE INSTALLATION MANUALS:")
+        lines.extend(hw_manuals)
+        lines.append("")
+    if sw_manuals:
+        lines.append("SOFTWARE MANUALS:")
+        lines.extend(sw_manuals)
+
+    return "\n".join(lines), []
+
+
+def _dedup_sources(all_sources: list[dict]) -> list[dict]:
+    """Deduplicate sources by (source, page) key."""
+    sources = []
+    seen = set()
+    for chunk in all_sources:
+        key = (chunk["source"], chunk["page"])
+        if key not in seen:
+            seen.add(key)
+            sources.append({
+                "source": chunk["source"],
+                "page": chunk["page"],
+                "heading": chunk.get("heading", ""),
+            })
+    return sources
+
+
+def dispatch_tool(tool_name: str, tool_input: dict, expansion_cache: dict | None = None) -> tuple[str, list[dict]]:
+    """Route a tool call to the appropriate handler. Returns (result_text, chunks)."""
+    try:
+        if tool_name == "search_manuals":
+            return handle_search_manuals(
+                query=tool_input["query"],
+                manual_filter=tool_input.get("manual_filter"),
+                expansion_cache=expansion_cache,
+            )
+        elif tool_name == "detect_drive_manual":
+            return handle_detect_drive_manual(
+                part_number=tool_input["part_number"],
+            )
+        elif tool_name == "list_available_manuals":
+            return handle_list_available_manuals()
+        else:
+            return f"Unknown tool: {tool_name}", []
+    except Exception as e:
+        return f"Tool error: {e}", []
+
+
+# ---------------------------------------------------------------------------
+# Main chat function — agentic tool-use loop
+# ---------------------------------------------------------------------------
+
+def chat(user_message: str, history: list[dict] = None) -> dict:
+    """
+    Process a user question using agentic tool-use.
+    Claude decides what to search for and can do multiple retrieval passes.
+    Returns dict with 'answer' and 'sources'.
+    """
+    if history is None:
+        history = []
+
+    # Rewrite follow-up questions into standalone queries
+    standalone_query = rewrite_followup(user_message, history)
+
+    # Build messages array with conversation history + user question
+    messages = []
+    for msg in history[-10:]:
+        messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": standalone_query})
+
+    # Agentic tool-use loop
+    client = get_anthropic_client()
+    all_sources = []
+    answer = ""
+    expansion_cache: dict = {}
+
+    for _ in range(MAX_TOOL_ROUNDS):
+        try:
+            response = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=4096,
+                system=SYSTEM_PROMPT,
+                tools=TOOLS,
+                messages=messages,
+            )
+        except anthropic.RateLimitError as e:
+            logger.warning("Rate limit hit after retries: %s", e)
+            raise RateLimitExceeded("The AI service is busy. Please wait a moment and try again.") from e
+        except anthropic.APIStatusError as e:
+            logger.error("Claude API error: %s", e)
+            raise
+
+        # If Claude is done (no more tool calls), extract the final answer
+        if response.stop_reason == "end_turn":
+            for block in response.content:
+                if block.type == "text":
+                    answer += block.text
+            break
+
+        # Append Claude's response (contains tool_use blocks) to messages
+        messages.append({"role": "assistant", "content": response.content})
+
+        # Process each tool call and build tool_result messages
+        tool_results = []
+        for block in response.content:
+            if block.type == "tool_use":
+                result_text, chunks = dispatch_tool(block.name, block.input, expansion_cache)
+                all_sources.extend(chunks)
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": result_text,
+                })
+
+        # Send tool results back to Claude
+        messages.append({"role": "user", "content": tool_results})
+
+    else:
+        # Safety: hit MAX_TOOL_ROUNDS without end_turn
+        for block in response.content:
+            if block.type == "text":
+                answer += block.text
+        if not answer:
+            answer = "I was unable to complete the search. Please try rephrasing your question."
+
+    return {"answer": answer, "sources": _dedup_sources(all_sources)}
+
+
+def _tool_call_description(name: str, tool_input: dict) -> str:
+    """Generate a human-readable description of a tool call for status updates."""
+    if name == "search_manuals":
+        query = tool_input.get("query", "")[:60]
+        manual = tool_input.get("manual_filter", "")
+        if manual:
+            short_manual = manual.replace("AMC_CommManual_", "").replace("AMC_HWManual_", "").replace("AMC_SW_Manual_", "").replace(".pdf", "")
+            return f"Searching {short_manual} for \"{query}\"..."
+        return f"Searching manuals for \"{query}\"..."
+    elif name == "detect_drive_manual":
+        pn = tool_input.get("part_number", "")
+        return f"Looking up drive {pn}..."
+    elif name == "list_available_manuals":
+        return "Listing available manuals..."
+    return f"Running {name}..."
+
+
+def chat_stream(user_message: str, history: list[dict] = None):
+    """
+    Streaming version of chat(). Yields event dicts:
+    - {"type": "status", "text": "..."} — progress updates during tool calls
+    - {"type": "token", "text": "..."} — streamed text tokens from final answer
+    - {"type": "done", "sources": [...]} — completion with sources
+    """
+    if history is None:
+        history = []
+
+    yield {"type": "status", "text": "Analyzing your question..."}
+
+    # Rewrite follow-up questions
+    standalone_query = rewrite_followup(user_message, history)
+
+    # Build messages
+    messages = []
+    for msg in history[-10:]:
+        messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": standalone_query})
+
+    client = get_anthropic_client()
+    all_sources = []
+    answer = ""
+    round_num = 0
+    expansion_cache: dict = {}
+
+    for _ in range(MAX_TOOL_ROUNDS):
+        round_num += 1
+
+        try:
+            # For each round, first try non-streaming to check if there are tool calls
+            response = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=4096,
+                system=SYSTEM_PROMPT,
+                tools=TOOLS,
+                messages=messages,
+            )
+        except anthropic.RateLimitError as e:
+            logger.warning("Rate limit hit after retries: %s", e)
+            raise RateLimitExceeded("The AI service is busy. Please wait a moment and try again.") from e
+        except anthropic.APIStatusError as e:
+            logger.error("Claude API error: %s", e)
+            raise
+
+        # Check if this is the final answer (no tool calls)
+        has_tool_use = any(block.type == "tool_use" for block in response.content)
+
+        if not has_tool_use:
+            # Final answer — stream it token by token
+            for block in response.content:
+                if block.type == "text":
+                    # Simulate streaming by yielding chunks of the response
+                    text = block.text
+                    chunk_size = 20  # characters per token event
+                    for i in range(0, len(text), chunk_size):
+                        yield {"type": "token", "text": text[i:i + chunk_size]}
+                    answer += text
+            break
+
+        # Tool calls — process them and yield status updates
+        messages.append({"role": "assistant", "content": response.content})
+
+        tool_results = []
+        round_result_count = 0
+        for block in response.content:
+            if block.type == "tool_use":
+                yield {"type": "status", "text": _tool_call_description(block.name, block.input)}
+                result_text, chunks = dispatch_tool(block.name, block.input, expansion_cache)
+                all_sources.extend(chunks)
+                round_result_count += len(chunks)
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": result_text,
+                })
+
+        if round_result_count > 0:
+            yield {"type": "status", "text": f"Found {round_result_count} results, analyzing..."}
+
+        messages.append({"role": "user", "content": tool_results})
+
+    else:
+        # Hit MAX_TOOL_ROUNDS
+        for block in response.content:
+            if block.type == "text":
+                yield {"type": "token", "text": block.text}
+                answer += block.text
+        if not answer:
+            yield {"type": "token", "text": "I was unable to complete the search. Please try rephrasing your question."}
+
+    yield {"type": "done", "sources": _dedup_sources(all_sources)}
