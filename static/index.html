@@ -6,6 +6,7 @@
     <title>AMC Support Assistant</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="/static/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -303,7 +304,7 @@
                 Stop
             </button>
         </div>
-        <div class="input-footer">Searches 25 AMC manuals &mdash; Communication protocols + Hardware installation + Software tools</div>
+        <div class="input-footer">Searches 86 AMC documents &mdash; Comm + Hardware + Software manuals + 55 Application Notes</div>
     </div>
 
     <script>
@@ -313,6 +314,16 @@
         let sessionId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
 
         marked.setOptions({ breaks: true, gfm: true });
+
+        // Sanitize HTML to prevent XSS from LLM output
+        function sanitizeHTML(html) {
+            if (typeof DOMPurify !== 'undefined') {
+                return DOMPurify.sanitize(html);
+            }
+            return html;  // Fallback if DOMPurify CDN fails to load
+        }
+
+        const MAX_RATE_LIMIT_RETRIES = 3;
 
         messageInput.addEventListener('input', () => {
             messageInput.style.height = 'auto';
@@ -374,7 +385,7 @@
                 contentDiv.textContent = content;
             } else {
                 contentDiv.className = 'msg-content-ai';
-                contentDiv.innerHTML = '<div class="md">' + marked.parse(content) + '</div>';
+                contentDiv.innerHTML = '<div class="md">' + sanitizeHTML(marked.parse(content)) + '</div>';
 
                 const copyBtn = document.createElement('button');
                 copyBtn.className = 'copy-btn';
@@ -548,7 +559,7 @@
             return { msgEl: msg, countdownSpan };
         }
 
-        async function sendMessage(retryText) {
+        async function sendMessage(retryText, retryCount = 0) {
             const text = retryText || messageInput.value.trim();
             if (!text) return;
 
@@ -588,13 +599,18 @@
                     clearInterval(timerInterval);
                     removeTyping();
                     if (res.status === 429) {
+                        if (retryCount >= MAX_RATE_LIMIT_RETRIES) {
+                            addMessage('assistant', '**Rate limited.** The AI service is busy. Please try again in a few minutes.');
+                            resetInputState();
+                            return;
+                        }
                         let countdown = 30;
                         resetInputState();
                         const { msgEl: retryMsg, countdownSpan } = addRateLimitMessage(countdown);
                         const ci = setInterval(() => {
                             countdown--;
                             countdownSpan.textContent = countdown;
-                            if (countdown <= 0) { clearInterval(ci); retryMsg.remove(); sendMessage(text); }
+                            if (countdown <= 0) { clearInterval(ci); retryMsg.remove(); sendMessage(text, retryCount + 1); }
                         }, 1000);
                         return;
                     }
@@ -671,7 +687,7 @@
                                 streamSources = data.sources || [];
                                 clearInterval(timerInterval);
                                 removeTyping();
-                                if (mdDiv) mdDiv.innerHTML = marked.parse(streamAnswer);
+                                if (mdDiv) mdDiv.innerHTML = sanitizeHTML(marked.parse(streamAnswer));
                                 // Add copy button
                                 if (msgEl) {
                                     const contentDiv = msgEl.querySelector('.msg-content-ai');
@@ -701,13 +717,18 @@
                                 clearInterval(timerInterval);
                                 removeTyping();
                                 if (data.retry_after) {
+                                    if (retryCount >= MAX_RATE_LIMIT_RETRIES) {
+                                        addMessage('assistant', '**Rate limited.** The AI service is busy. Please try again in a few minutes.');
+                                        resetInputState();
+                                        return;
+                                    }
                                     let countdown = data.retry_after;
                                     resetInputState();
                                     const { msgEl: retryMsg, countdownSpan } = addRateLimitMessage(countdown);
                                     const ci = setInterval(() => {
                                         countdown--;
                                         countdownSpan.textContent = countdown;
-                                        if (countdown <= 0) { clearInterval(ci); retryMsg.remove(); sendMessage(text); }
+                                        if (countdown <= 0) { clearInterval(ci); retryMsg.remove(); sendMessage(text, retryCount + 1); }
                                     }, 1000);
                                     return;
                                 }
@@ -719,7 +740,7 @@
 
                 // Handle incomplete stream (partial content received but no done event)
                 if (msgEl && streamAnswer && !streamSources.length) {
-                    if (mdDiv) mdDiv.innerHTML = marked.parse(streamAnswer);
+                    if (mdDiv) mdDiv.innerHTML = sanitizeHTML(marked.parse(streamAnswer));
                     const note = document.createElement('em');
                     note.style.cssText = 'font-size:12px;color:var(--text-muted);display:block;margin-top:6px';
                     note.textContent = '(response may be incomplete)';
@@ -738,7 +759,7 @@
                 removeTyping();
                 if (e.name === 'AbortError') {
                     if (msgEl && streamAnswer) {
-                        if (mdDiv) mdDiv.innerHTML = marked.parse(streamAnswer);
+                        if (mdDiv) mdDiv.innerHTML = sanitizeHTML(marked.parse(streamAnswer));
                         const note = document.createElement('em');
                         note.style.cssText = 'font-size:12px;color:var(--text-muted);display:block;margin-top:6px';
                         note.textContent = '(response stopped)';

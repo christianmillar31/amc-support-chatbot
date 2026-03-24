@@ -21,6 +21,12 @@ __pycache__/
 venv/
 env/
 
+# macOS
+.DS_Store
+
+# Claude Code workspace
+.claude/
+
 # Windows
 desktop.ini
 Thumbs.db

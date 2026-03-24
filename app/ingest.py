@@ -5,7 +5,7 @@ import fitz  # PyMuPDF
 from sklearn.feature_extraction.text import TfidfVectorizer
 from pathlib import Path
 
-from app.config import PDF_DIR, INDEX_DIR, CHUNK_SIZE, CHUNK_OVERLAP
+from app.config import PDF_DIR, INDEX_DIR, CHUNK_SIZE, CHUNK_OVERLAP, EMBEDDING_MODEL
 
 
 def extract_text_with_headings(pdf_path: Path) -> list[dict]:
@@ -37,7 +37,7 @@ def extract_text_with_headings(pdf_path: Path) -> list[dict]:
                 for span in line["spans"]:
                     line_text += span["text"]
                     max_size = max(max_size, span["size"])
-                    if "bold" in span["font"].lower() or "Bold" in span["font"]:
+                    if "bold" in span["font"].lower():
                         is_bold = True
 
                 line_text = line_text.strip()
@@ -49,7 +49,7 @@ def extract_text_with_headings(pdf_path: Path) -> list[dict]:
                     (is_bold or max_size >= 14)
                     and len(line_text) < 120
                     and not line_text.startswith("0x")
-                    and not re.match(r'^\d', line_text)
+                    and not re.match(r'^\d+\.?\d*$', line_text)
                     and not re.search(r'0x[0-9A-Fa-f]{2,}', line_text)
                 )
                 if is_any_heading:
@@ -92,7 +92,7 @@ def extract_text_with_headings(pdf_path: Path) -> list[dict]:
     return pages
 
 
-def smart_chunk_text(text: str, heading: str = "",
+def smart_chunk_text(text: str, heading: str = "", source: str = "",
                      chunk_size: int = CHUNK_SIZE,
                      overlap: int = CHUNK_OVERLAP) -> list[str]:
     """
@@ -153,16 +153,71 @@ def smart_chunk_text(text: str, heading: str = "",
             if sub_chunk.strip():
                 final_chunks.append(sub_chunk.strip())
 
-    # Prepend heading and filter out tiny/useless chunks
+    # Prepend full context hierarchy (manual + heading) and filter out tiny/useless chunks
     result = []
+    # Build context prefix: "Manual: AMC_CommManual_FP_EtherCAT.pdf > Section: EtherCAT Configuration > PDO Mapping"
+    context_parts = []
+    if source:
+        manual_label = source.replace(".pdf", "").replace("AMC_", "").replace("_", " ")
+        context_parts.append(f"Manual: {manual_label}")
+    if heading:
+        context_parts.append(f"Section: {heading}")
+    context_prefix = " > ".join(context_parts)
+
     for chunk in final_chunks:
         if len(chunk) < 40:
             continue  # Skip tiny fragments
-        if heading:
-            chunk = f"[Section: {heading}]\n{chunk}"
+        if context_prefix:
+            chunk = f"[{context_prefix}]\n{chunk}"
         result.append(chunk)
 
     return result
+
+
+def _classify_doc_type(filename: str) -> str:
+    """Derive document type from PDF filename pattern."""
+    name = filename.upper()
+    if "COMMMANUAL" in name:
+        return "comm"
+    elif "HWMANUAL" in name:
+        return "hw"
+    elif "SW_MANUAL" in name:
+        return "sw"
+    elif "SW_QUICKREF" in name or "SW_QUICKREFERENCE" in name:
+        return "sw_ref"
+    elif "DATASHEET" in name:
+        return "datasheet"
+    elif "APPNOTE" in name:
+        return "app_note"
+    elif "PRODUCTNOTE" in name:
+        return "product_note"
+    elif "WHITEPAPER" in name:
+        return "white_paper"
+    return "other"
+
+
+def _extract_tables_as_markdown(page) -> list[str]:
+    """Extract tables from a PDF page as markdown-formatted strings."""
+    tables = []
+    try:
+        found_tables = page.find_tables()
+        for table in found_tables:
+            data = table.extract()
+            if not data or len(data) < 2:
+                continue
+            # Build markdown table
+            headers = data[0]
+            header_line = "| " + " | ".join(str(h or "") for h in headers) + " |"
+            separator = "| " + " | ".join("---" for _ in headers) + " |"
+            rows = []
+            for row in data[1:]:
+                rows.append("| " + " | ".join(str(c or "") for c in row) + " |")
+            md_table = "\n".join([header_line, separator] + rows)
+            if len(md_table) > 60:  # Skip trivially small tables
+                tables.append(md_table)
+    except Exception:
+        pass  # find_tables() may not be available in older PyMuPDF versions
+    return tables
 
 
 def get_all_pdfs() -> list[Path]:
@@ -180,38 +235,93 @@ def build_index():
 
     for pdf_path in pdfs:
         print(f"  Processing: {pdf_path.name}")
+        doc_type = _classify_doc_type(pdf_path.name)
         pages = extract_text_with_headings(pdf_path)
+
+        # Extract tables from the PDF
+        try:
+            doc = fitz.open(pdf_path)
+            for page_num in range(len(doc)):
+                page = doc[page_num]
+                tables = _extract_tables_as_markdown(page)
+                for table_text in tables:
+                    # Find the heading for this page from the pages list
+                    page_heading = ""
+                    for p in pages:
+                        if p["page"] == page_num + 1:
+                            page_heading = p.get("heading", "")
+                            break
+                    chunk = f"[Section: {page_heading}]\n[TABLE]\n{table_text}" if page_heading else f"[TABLE]\n{table_text}"
+                    all_chunks.append(chunk)
+                    all_metadatas.append({
+                        "source": pdf_path.name,
+                        "page": page_num + 1,
+                        "heading": page_heading,
+                        "doc_type": doc_type,
+                    })
+            doc.close()
+        except Exception as e:
+            print(f"  Warning: Table extraction failed for {pdf_path.name}: {e}")
 
         for page_data in pages:
             heading = page_data.get("heading", "")
-            chunks = smart_chunk_text(page_data["text"], heading=heading)
+            chunks = smart_chunk_text(page_data["text"], heading=heading, source=page_data["source"])
             for chunk in chunks:
                 all_chunks.append(chunk)
                 all_metadatas.append({
                     "source": page_data["source"],
                     "page": page_data["page"],
                     "heading": heading,
+                    "doc_type": doc_type,
                 })
 
-    print(f"Building TF-IDF index for {len(all_chunks)} chunks...")
-    vectorizer = TfidfVectorizer(
-        max_features=30000,
-        stop_words="english",
-        ngram_range=(1, 3),  # Up to trigrams for technical terms
-        sublinear_tf=True,
-        min_df=1,
-        max_df=0.85,  # Ignore terms that appear in >85% of chunks (boilerplate)
-    )
-    tfidf_matrix = vectorizer.fit_transform(all_chunks)
-
-    # Save to disk
+    # Save chunks + metadata to disk
     INDEX_DIR.mkdir(exist_ok=True)
-    with open(INDEX_DIR / "vectorizer.pkl", "wb") as f:
-        pickle.dump(vectorizer, f)
-    with open(INDEX_DIR / "tfidf_matrix.pkl", "wb") as f:
-        pickle.dump(tfidf_matrix, f)
     with open(INDEX_DIR / "chunks.json", "w", encoding="utf-8") as f:
         json.dump({"chunks": all_chunks, "metadatas": all_metadatas}, f)
+
+    # --- BM25 index (replaces TF-IDF — better term saturation + length normalization) ---
+    if not all_chunks:
+        print("No chunks to index. Add PDF manuals and re-run ingestion.")
+        INDEX_DIR.mkdir(exist_ok=True)
+        with open(INDEX_DIR / "chunks.json", "w", encoding="utf-8") as f:
+            json.dump({"chunks": [], "metadatas": []}, f)
+        return 0
+
+    print(f"Building BM25 index for {len(all_chunks)} chunks...")
+    try:
+        from rank_bm25 import BM25Okapi
+        # Tokenize chunks for BM25
+        tokenized_chunks = [chunk.lower().split() for chunk in all_chunks]
+        bm25 = BM25Okapi(tokenized_chunks)
+        with open(INDEX_DIR / "bm25.pkl", "wb") as f:
+            pickle.dump(bm25, f)
+        print("BM25 index saved.")
+    except ImportError:
+        print("rank_bm25 not installed. Falling back to TF-IDF.")
+        vectorizer = TfidfVectorizer(
+            max_features=30000, stop_words="english",
+            ngram_range=(1, 3), sublinear_tf=True, min_df=1, max_df=0.85,
+        )
+        tfidf_matrix = vectorizer.fit_transform(all_chunks)
+        with open(INDEX_DIR / "vectorizer.pkl", "wb") as f:
+            pickle.dump(vectorizer, f)
+        with open(INDEX_DIR / "tfidf_matrix.pkl", "wb") as f:
+            pickle.dump(tfidf_matrix, f)
+
+    # --- Semantic embeddings (upgraded model) ---
+    try:
+        import numpy as np
+        from sentence_transformers import SentenceTransformer
+        print(f"Building semantic embeddings with {EMBEDDING_MODEL}...")
+        embed_model = SentenceTransformer(EMBEDDING_MODEL)
+        embeddings = embed_model.encode(all_chunks, show_progress_bar=True, batch_size=32)
+        np.save(INDEX_DIR / "embeddings.npy", embeddings)
+        print(f"Semantic embeddings saved ({embeddings.shape}).")
+    except ImportError:
+        print("sentence-transformers not installed. Skipping semantic embeddings.")
+    except Exception as e:
+        print(f"Warning: Semantic embedding failed: {e}.")
 
     print(f"Ingestion complete. {len(all_chunks)} chunks indexed.")
     return len(all_chunks)
@@ -219,4 +329,7 @@ def build_index():
 
 def is_indexed() -> bool:
     """Check if the index files already exist."""
-    return (INDEX_DIR / "vectorizer.pkl").exists() and (INDEX_DIR / "chunks.json").exists()
+    has_chunks = (INDEX_DIR / "chunks.json").exists()
+    has_bm25 = (INDEX_DIR / "bm25.pkl").exists()
+    has_tfidf = (INDEX_DIR / "vectorizer.pkl").exists()
+    return has_chunks and (has_bm25 or has_tfidf)

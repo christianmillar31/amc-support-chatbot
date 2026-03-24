@@ -6,6 +6,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+import pydantic
 from pydantic import BaseModel
 from cachetools import TTLCache
 
@@ -40,7 +41,7 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 
 
 class ChatRequest(BaseModel):
-    message: str
+    message: str = pydantic.Field(max_length=2000)
     session_id: Optional[str] = None
 
 

@@ -4,3 +4,7 @@ anthropic
 PyMuPDF
 scikit-learn
 python-dotenv
+cachetools
+sentence-transformers
+rank_bm25
+numpy

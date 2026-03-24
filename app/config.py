@@ -36,8 +36,12 @@ MAX_SESSIONS = 100
 
 # Re-ranking
 ENABLE_RERANKING = True
-RERANK_CANDIDATES = 20  # fetch this many from TF-IDF
-RERANK_TOP_K = 8  # keep this many after Haiku re-ranking
+RERANK_CANDIDATES = 20  # fetch this many from BM25/hybrid retrieval
+RERANK_TOP_K = 8  # keep this many after cross-encoder re-ranking
+
+# Models
+EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"  # semantic embeddings (good accuracy, ~440MB vs 1.3GB for large)
+RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L-12-v2"  # cross-encoder reranker (replaces LLM reranking)
 
 # Shared Anthropic client (singleton)
 import anthropic as _anthropic  # noqa: E402

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import json
 import logging
 import re
@@ -29,6 +30,9 @@ MANUAL TYPES:
 - **Hardware installation manuals** (AMC_HWManual_*): Cover physical installation, wiring, connectors, pinouts, mounting, thermal requirements, LED indicators, power connections, I/O wiring, and safety.
 - **Software manuals** (AMC_SW_Manual_*): Cover AMC software tools — ACE (primary drive configuration & tuning), DriveWare (alternative configuration tool), and ClickMove (simple point-to-point motion). Include setup procedures, parameter configuration, tuning, firmware updates, and troubleshooting.
 - **Software quick references** (AMC_SW_QuickRef_*): Condensed guides for ACE, DriveWare, and ClickMove software.
+- **Application notes** (AMC_AppNote_*): Detailed how-to guides covering specific topics like PVT trajectories, current loop tuning, stepper motor setup, TwinCAT multi-axis configuration, mode switching, sequencing, G-code, Click&Move projects, EtherCAT PDO assignments, power supply sizing, ferrite recommendations, and more. Search these when the question is about a specific procedure or advanced topic.
+- **Product notes** (AMC_ProductNote_*): Retrofit guides (AxCent replacing analog), product identification, wiring recommendations, and specific product instructions.
+- **Datasheets** (AMC_Datasheet_*): Per-drive specification sheets with current ratings (continuous/peak), supply voltages (DC/AC), dimensions, weight, network communication type, functional safety, control/command modes, feedback types, operating modes, and motor compatibility. Each drive SKU has its own datasheet. Search these for spec comparisons, sizing questions, or any "what is the X of drive Y?" questions.
 
 STRATEGY:
 1. If the user mentions a part number, call detect_drive_manual first to identify the correct manuals and protocol.
@@ -40,6 +44,9 @@ STRATEGY:
 7. For hardware questions, search HW manuals with terms like: wiring, connector, pinout, mounting, dimensions, thermal, LED, power supply, I/O, fuse, grounding, shielding.
 8. For software questions (ACE, DriveWare, ClickMove), search software manuals with terms like: setup, installation, connection, tuning, auto-tune, parameter, firmware, scope, project, workspace, motion profile.
 9. ACE is the primary software tool for all AMC drives. DriveWare is an alternative. ClickMove is for simple motion profiles. If the user doesn't specify which tool, default to ACE.
+10. For advanced topics (PVT trajectories, current loop tuning, stepper setup, TwinCAT configuration, EtherCAT PDO assignments, power supply sizing, mode switching, sequencing, G-code, troubleshooting), search the application notes (doc_type="app_note") — they contain detailed step-by-step procedures.
+11. For retrofit/replacement questions (replacing analog drives with AxCent), search product notes (doc_type="product_note").
+12. For specification questions (current rating, voltage range, dimensions, weight, pinout, motor compatibility), search datasheets (doc_type="datasheet") — each drive has its own datasheet with exact specs. You can also search by SKU directly using manual_filter="AMC_Datasheet_{SKU}.pdf".
 
 RULES:
 1. Always cite sources with section context when available: [Source: filename, Page X, Section: heading]. Include the section heading — it helps engineers navigate directly to the right part of the manual.
@@ -99,6 +106,11 @@ TOOLS = [
                 "manual_filter": {
                     "type": "string",
                     "description": "Optional: filter results to a specific manual filename (e.g., 'AMC_CommManual_FP_EtherCAT.pdf' or 'AMC_HWManual_FlexPro_PCB.pdf'). Use when you know which manual is relevant.",
+                },
+                "doc_type": {
+                    "type": "string",
+                    "enum": ["comm", "hw", "sw", "sw_ref", "app_note", "product_note", "datasheet"],
+                    "description": "Optional: filter by document type. 'comm' = communication manuals, 'hw' = hardware installation manuals, 'sw' = software manuals, 'sw_ref' = software quick references, 'app_note' = application notes (detailed how-to guides), 'product_note' = product notes (retrofit guides, wiring recommendations), 'datasheet' = per-drive datasheets with specifications, current ratings, voltages, dimensions, weight, pinouts. Use when you want all manuals of a type without specifying a filename.",
                 },
             },
             "required": ["query"],
@@ -171,13 +183,23 @@ MANUAL_LABELS = {
 }
 
 
-def expand_query(user_message: str) -> str:
+from cachetools import TTLCache
+
+# Global query expansion cache — avoids re-expanding frequently asked questions
+_expansion_cache: TTLCache = TTLCache(maxsize=500, ttl=3600)
+
+
+def expand_query(user_message: str, context: str = "") -> str:
     """Use Claude Haiku to generate alternative search terms for better TF-IDF retrieval."""
     if not ENABLE_QUERY_EXPANSION:
         return user_message
 
     try:
         client = get_anthropic_client()
+        prompt_content = user_message
+        if context:
+            prompt_content = f"Recent conversation context:\n{context}\n\nCurrent question: {user_message}"
+
         response = client.messages.create(
             model=QUERY_EXPANSION_MODEL,
             max_tokens=150,
@@ -188,15 +210,16 @@ def expand_query(user_message: str) -> str:
                 "and software tools (ACE setup, DriveWare configuration, ClickMove motion, auto-tune, scope, firmware update). "
                 "AMC has drive families: FlexPro (part numbers FE/FM/FD/FMP/FX), "
                 "DigiFlex (part numbers DV/DP/DZ/DX), and AxCent (AZ). "
-                "Given a user question, output 5-8 alternative phrasings and key technical terms "
-                "that would appear in the manual. Include synonyms, abbreviations, register names, "
+                "Given a user question (and optional conversation context), output 5-8 alternative phrasings and key technical terms "
+                "that would appear in the manual. Use conversation context to add drive-specific or topic-specific terms. "
+                "Include synonyms, abbreviations, register names, "
                 "object dictionary indices, specific configuration parameters, connector names, and pin numbers. "
                 "For comm questions, include terms like: node address, PDO mapping, SDO, object dictionary, baud rate. "
                 "For HW questions, include terms like: connector, pinout, wiring diagram, mounting, thermal, LED, power supply, fuse. "
                 "For software questions, include terms like: setup wizard, connection, auto-tune, scope, parameter tree, firmware, project, workspace, motion profile. "
                 "Output ONLY the search terms, one per line. No explanation."
             ),
-            messages=[{"role": "user", "content": user_message}],
+            messages=[{"role": "user", "content": prompt_content}],
         )
         expanded_terms = response.content[0].text.strip()
         return f"{user_message} {expanded_terms}"
@@ -205,21 +228,31 @@ def expand_query(user_message: str) -> str:
         return user_message
 
 
-def _expand_query_cached(query: str, cache: dict) -> str:
-    """expand_query() with a per-request cache to avoid redundant Haiku calls."""
-    if query not in cache:
-        cache[query] = expand_query(query)
-    return cache[query]
+def _expand_query_cached(query: str, cache: dict, context: str = "") -> str:
+    """expand_query() with a per-request + global cache to avoid redundant Haiku calls."""
+    cache_key = f"{query}||{context}"
+    # Check per-request cache first
+    if cache_key in cache:
+        return cache[cache_key]
+    # Check global cache
+    if cache_key in _expansion_cache:
+        result = _expansion_cache[cache_key]
+        cache[cache_key] = result
+        return result
+    result = expand_query(query, context=context)
+    cache[cache_key] = result
+    _expansion_cache[cache_key] = result
+    return result
 
 
 def rewrite_followup(user_message: str, history: list[dict]) -> str:
     """Rewrite a vague follow-up question into a standalone question using conversation context."""
-    followup_indicators = ["it", "that", "this", "those", "them", "same", "also", "too",
-                           "what about", "how about", "and for", "more", "details"]
+    followup_indicators = [r'\bthem\b', r'\bthose\b', r'\bsame\b', r'\balso\b',
+                           r'\bwhat about\b', r'\bhow about\b', r'\band for\b']
     msg_lower = user_message.lower()
     is_followup = (
-        len(user_message.split()) < 10
-        and any(word in msg_lower for word in followup_indicators)
+        len(user_message.split()) < 6
+        and any(re.search(pattern, msg_lower) for pattern in followup_indicators)
     )
 
     if not is_followup or not history:
@@ -272,9 +305,9 @@ def build_context(chunks: list[dict]) -> str:
 # Tool handlers
 # ---------------------------------------------------------------------------
 
-def handle_search_manuals(query: str, manual_filter: str | None = None, expansion_cache: dict | None = None) -> tuple[str, list[dict]]:
+def handle_search_manuals(query: str, manual_filter: str | None = None, doc_type_filter: str | None = None, expansion_cache: dict | None = None, conversation_context: str = "") -> tuple[str, list[dict]]:
     """Search manuals with query expansion and optional re-ranking."""
-    expanded_query = _expand_query_cached(query, expansion_cache) if expansion_cache is not None else expand_query(query)
+    expanded_query = _expand_query_cached(query, expansion_cache, context=conversation_context) if expansion_cache is not None else expand_query(query, context=conversation_context)
 
     # Fetch more candidates when re-ranking is enabled
     fetch_k = RERANK_CANDIDATES if ENABLE_RERANKING else TOP_K
@@ -285,7 +318,7 @@ def handle_search_manuals(query: str, manual_filter: str | None = None, expansio
         # Supplement with unfiltered results if too few matches
         if len(chunks) < 3:
             supplemented = True
-            extra = retrieve(expanded_query, top_k=fetch_k)
+            extra = retrieve(expanded_query, top_k=fetch_k, doc_type_filter=doc_type_filter)
             seen_texts = {c["text"][:100] for c in chunks}
             for c in extra:
                 if c["text"][:100] not in seen_texts:
@@ -293,7 +326,7 @@ def handle_search_manuals(query: str, manual_filter: str | None = None, expansio
                     if len(chunks) >= fetch_k:
                         break
     else:
-        chunks = retrieve(expanded_query, top_k=fetch_k)
+        chunks = retrieve(expanded_query, top_k=fetch_k, doc_type_filter=doc_type_filter)
 
     candidates_before_rerank = len(chunks)
 
@@ -357,29 +390,29 @@ def handle_detect_drive_manual(part_number: str) -> tuple[str, list[dict]]:
         return json.dumps(info, indent=2), []
 
     # Fallback: try regex-based detection for part numbers not in CSV
-    pn_upper = part_number.upper()
+    pn_upper = part_number.strip().upper()
     family = None
-    if re.search(r'(FE|FM|FD|FMP|FX)', pn_upper):
+    if re.match(r'(FE|FM|FD|FMP|FX)', pn_upper):
         family = "FlexPro"
-    elif re.search(r'(DV|DP|DZ|DX)', pn_upper):
+    elif re.match(r'(DV|DP|DZ|DX)', pn_upper):
         family = "DigiFlex Performance"
-    elif re.search(r'AZ', pn_upper):
+    elif re.match(r'AZ', pn_upper):
         family = "AxCent"
 
     protocol = None
-    if "IPM" in pn_upper:
+    if re.search(r'[-.]IPM\b', pn_upper):
         protocol = "Ethernet/IP"
-    elif "EM" in pn_upper:
+    elif re.search(r'[-.]EM\b', pn_upper):
         protocol = "EtherCAT"
-    elif "RM" in pn_upper:
+    elif re.search(r'[-.]RM\b', pn_upper):
         protocol = "Serial"
-    elif "CM" in pn_upper:
+    elif re.search(r'[-.]CM\b', pn_upper):
         protocol = "CANopen"
     elif "EAN" in pn_upper:
         protocol = "EtherCAT"
-    elif "CAN" in pn_upper or "DVC" in pn_upper:
+    elif re.search(r'\bDVC', pn_upper) or re.search(r'\bCAN\b', pn_upper):
         protocol = "CANopen"
-    elif "RA" in pn_upper:
+    elif re.search(r'[-.]RA\b', pn_upper):
         protocol = "ambiguous - could be Serial (RS485) or Modbus RTU"
 
     result = {
@@ -403,6 +436,10 @@ def handle_list_available_manuals() -> tuple[str, list[dict]]:
     comm_manuals = []
     hw_manuals = []
     sw_manuals = []
+    app_notes = []
+    product_notes = []
+    datasheets = []
+    other_docs = []
     for pdf in pdfs:
         name = pdf.stem
         label = MANUAL_LABELS.get(name, "")
@@ -414,21 +451,45 @@ def handle_list_available_manuals() -> tuple[str, list[dict]]:
             comm_manuals.append(entry)
         elif "SW_" in name:
             sw_manuals.append(entry)
+        elif "Datasheet" in name:
+            datasheets.append(entry)
+        elif "AppNote" in name:
+            app_notes.append(entry)
+        elif "ProductNote" in name:
+            product_notes.append(entry)
+        elif "WhitePaper" in name:
+            other_docs.append(entry)
         else:
-            comm_manuals.append(entry)
+            other_docs.append(entry)
 
     lines = ["Available AMC manuals:\n"]
     if comm_manuals:
-        lines.append("COMMUNICATION MANUALS:")
+        lines.append(f"COMMUNICATION MANUALS ({len(comm_manuals)}):")
         lines.extend(comm_manuals)
         lines.append("")
     if hw_manuals:
-        lines.append("HARDWARE INSTALLATION MANUALS:")
+        lines.append(f"HARDWARE INSTALLATION MANUALS ({len(hw_manuals)}):")
         lines.extend(hw_manuals)
         lines.append("")
     if sw_manuals:
-        lines.append("SOFTWARE MANUALS:")
+        lines.append(f"SOFTWARE MANUALS ({len(sw_manuals)}):")
         lines.extend(sw_manuals)
+        lines.append("")
+    if datasheets:
+        lines.append(f"DATASHEETS ({len(datasheets)}): Per-drive specification sheets — search by SKU")
+        lines.append(f"  (Use manual_filter='AMC_Datasheet_{{SKU}}.pdf' or doc_type='datasheet')")
+        lines.append("")
+    if app_notes:
+        lines.append(f"APPLICATION NOTES ({len(app_notes)}):")
+        lines.extend(app_notes)
+        lines.append("")
+    if product_notes:
+        lines.append(f"PRODUCT NOTES ({len(product_notes)}):")
+        lines.extend(product_notes)
+        lines.append("")
+    if other_docs:
+        lines.append(f"OTHER DOCUMENTS ({len(other_docs)}):")
+        lines.extend(other_docs)
 
     return "\n".join(lines), []
 
@@ -449,14 +510,16 @@ def _dedup_sources(all_sources: list[dict]) -> list[dict]:
     return sources
 
 
-def dispatch_tool(tool_name: str, tool_input: dict, expansion_cache: dict | None = None) -> tuple[str, list[dict]]:
+def dispatch_tool(tool_name: str, tool_input: dict, expansion_cache: dict | None = None, conversation_context: str = "") -> tuple[str, list[dict]]:
     """Route a tool call to the appropriate handler. Returns (result_text, chunks)."""
     try:
         if tool_name == "search_manuals":
             return handle_search_manuals(
                 query=tool_input["query"],
                 manual_filter=tool_input.get("manual_filter"),
+                doc_type_filter=tool_input.get("doc_type"),
                 expansion_cache=expansion_cache,
+                conversation_context=conversation_context,
             )
         elif tool_name == "detect_drive_manual":
             return handle_detect_drive_manual(
@@ -491,6 +554,15 @@ def chat(user_message: str, history: list[dict] = None) -> dict:
     for msg in history[-10:]:
         messages.append({"role": msg["role"], "content": msg["content"]})
     messages.append({"role": "user", "content": standalone_query})
+
+    # Build conversation context for query expansion (last 2 exchanges)
+    conv_context = ""
+    if history:
+        recent = history[-4:]
+        conv_context = "\n".join(
+            f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:200]}"
+            for m in recent
+        )
 
     # Agentic tool-use loop
     client = get_anthropic_client()
@@ -528,7 +600,7 @@ def chat(user_message: str, history: list[dict] = None) -> dict:
         tool_results = []
         for block in response.content:
             if block.type == "tool_use":
-                result_text, chunks = dispatch_tool(block.name, block.input, expansion_cache)
+                result_text, chunks = dispatch_tool(block.name, block.input, expansion_cache, conversation_context=conv_context)
                 all_sources.extend(chunks)
                 tool_results.append({
                     "type": "tool_result",
@@ -588,6 +660,15 @@ def chat_stream(user_message: str, history: list[dict] = None):
         messages.append({"role": msg["role"], "content": msg["content"]})
     messages.append({"role": "user", "content": standalone_query})
 
+    # Build conversation context for query expansion
+    conv_context = ""
+    if history:
+        recent = history[-4:]
+        conv_context = "\n".join(
+            f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:200]}"
+            for m in recent
+        )
+
     client = get_anthropic_client()
     all_sources = []
     answer = ""
@@ -617,15 +698,24 @@ def chat_stream(user_message: str, history: list[dict] = None):
         has_tool_use = any(block.type == "tool_use" for block in response.content)
 
         if not has_tool_use:
-            # Final answer — stream it token by token
-            for block in response.content:
-                if block.type == "text":
-                    # Simulate streaming by yielding chunks of the response
-                    text = block.text
-                    chunk_size = 20  # characters per token event
-                    for i in range(0, len(text), chunk_size):
-                        yield {"type": "token", "text": text[i:i + chunk_size]}
-                    answer += text
+            # Final answer — re-request with true streaming for real-time token delivery
+            try:
+                with client.messages.stream(
+                    model=CLAUDE_MODEL,
+                    max_tokens=4096,
+                    system=SYSTEM_PROMPT,
+                    tools=TOOLS,
+                    messages=messages,
+                ) as stream:
+                    for text in stream.text_stream:
+                        yield {"type": "token", "text": text}
+                        answer += text
+            except Exception:
+                # Fallback: use the already-received non-streaming response
+                for block in response.content:
+                    if block.type == "text":
+                        yield {"type": "token", "text": block.text}
+                        answer += block.text
             break
 
         # Tool calls — process them and yield status updates
@@ -636,7 +726,7 @@ def chat_stream(user_message: str, history: list[dict] = None):
         for block in response.content:
             if block.type == "tool_use":
                 yield {"type": "status", "text": _tool_call_description(block.name, block.input)}
-                result_text, chunks = dispatch_tool(block.name, block.input, expansion_cache)
+                result_text, chunks = dispatch_tool(block.name, block.input, expansion_cache, conversation_context=conv_context)
                 all_sources.extend(chunks)
                 round_result_count += len(chunks)
                 tool_results.append({
