@@ -15,6 +15,7 @@ from app.ingest import build_index, is_indexed
 from app.chat import chat, chat_stream, RateLimitExceeded
 from app.retriever import reload as reload_index
 from app.feedback import log_feedback
+from app.chatlog import log_chat, get_chatlog
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +78,12 @@ async def chat_endpoint(request: ChatRequest):
             history = history[-MAX_HISTORY:]
         sessions[session_id] = history
 
+        # Log chat for manager dashboard
+        try:
+            log_chat(session_id, request.message, result["answer"], result["sources"])
+        except Exception as e:
+            logger.warning("Chat logging failed: %s", e)
+
         return ChatResponse(answer=result["answer"], sources=result["sources"])
     except RateLimitExceeded:
         return JSONResponse(
@@ -119,6 +126,12 @@ async def chat_stream_endpoint(request: ChatRequest):
             history.append({"role": "assistant", "content": full_answer})
             sessions[session_id] = history[-MAX_HISTORY:]
 
+            # Log chat for manager dashboard
+            try:
+                log_chat(session_id, request.message, full_answer, all_sources)
+            except Exception as e:
+                logger.warning("Chat logging failed: %s", e)
+
         except RateLimitExceeded:
             yield f"event: error\ndata: {json.dumps({'detail': 'The AI service is busy. Please wait a moment and try again.', 'retry_after': 30})}\n\n"
         except Exception as e:
@@ -155,6 +168,19 @@ async def feedback_endpoint(request: FeedbackRequest):
     except Exception as e:
         logger.error("Feedback error: %s", e, exc_info=True)
         return JSONResponse(status_code=500, content={"detail": "Failed to save feedback."})
+
+
+@app.get("/chatlog")
+async def chatlog_page():
+    """Serve the chat log dashboard."""
+    return FileResponse(BASE_DIR / "static" / "chatlog.html")
+
+
+@app.get("/api/chatlog")
+async def chatlog_api():
+    """Return chat log entries as JSON."""
+    entries = get_chatlog()
+    return {"entries": entries, "total": len(entries)}
 
 
 @app.post("/ingest")
