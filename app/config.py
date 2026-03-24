@@ -10,7 +10,7 @@ PDF_DIR = BASE_DIR
 INDEX_DIR = BASE_DIR / "index_data"
 
 # Anthropic
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 INGEST_API_KEY = os.getenv("INGEST_API_KEY", "")  # Empty = dev mode (no auth required)
 CLAUDE_MODEL = "claude-sonnet-4-20250514"
 QUERY_EXPANSION_MODEL = "claude-haiku-4-5-20251001"
