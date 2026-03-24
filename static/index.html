@@ -224,10 +224,64 @@
         .md blockquote { border-left: 3px solid var(--amc-blue); padding-left: 14px; margin: 8px 0; color: #475569; }
         .md hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
 
+        /* Loading skeleton */
+        .skeleton-line {
+            height: 14px; border-radius: 6px; background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+            background-size: 200% 100%; animation: skeleton-shimmer 1.5s ease-in-out infinite;
+        }
+        .skeleton-line + .skeleton-line { margin-top: 10px; }
+        .skeleton-line:nth-child(2) { width: 85%; }
+        .skeleton-line:nth-child(3) { width: 70%; }
+        @keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Keyboard hint */
+        .input-hint {
+            text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 4px;
+            opacity: 0.7; transition: opacity 0.5s;
+        }
+        .input-hint.hidden { opacity: 0; pointer-events: none; }
+
+        /* Mobile */
         @media (max-width: 640px) {
             .examples { grid-template-columns: 1fr; }
             .msg { max-width: 100%; }
             .input-wrapper { max-width: 100%; }
+            .header { padding: 10px 16px; }
+            .header h1 { font-size: 15px; }
+            .input-area { padding: 10px 12px env(safe-area-inset-bottom, 0); }
+            .welcome { margin-top: 30px; }
+            .welcome h2 { font-size: 20px; }
+        }
+
+        /* Dark mode */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --surface: #1e293b;
+                --border: #334155;
+                --border-hover: #60a5fa;
+                --text: #e2e8f0;
+                --text-secondary: #94a3b8;
+                --text-muted: #64748b;
+            }
+            .header { box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
+            .example-btn:hover { background: #1e3a5f; }
+            .msg-content-ai { box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+            .copy-btn:hover { background: #334155; }
+            .feedback-btn:hover { background: #334155; }
+            .source-tag { background: #334155; }
+            .source-tag:hover { background: #475569; }
+            .md code { background: #334155; color: #f472b6; }
+            .md th { background: #334155; }
+            .md tr:nth-child(even) { background: #1a2332; }
+            .md h3 { color: #cbd5e1; }
+            .md blockquote { color: #94a3b8; }
+            #message-input { background: var(--surface); color: var(--text); }
+            #message-input::placeholder { color: var(--text-muted); }
+            #send-btn:disabled { background: #475569; }
+            .feedback-comment input { background: var(--surface); color: var(--text); }
+            .skeleton-line { background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%); background-size: 200% 100%; animation: skeleton-shimmer 1.5s ease-in-out infinite; }
+            #chat-container::-webkit-scrollbar-thumb { background: #475569; }
         }
     </style>
 </head>
@@ -235,11 +289,11 @@
     <div class="header">
         <div class="header-left">
             <div class="header-icon">
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 22h20L12 2z" fill="#dc2626" stroke="#dc2626" stroke-width="0.5"/><path d="M12 7l-5.5 11h11L12 7z" fill="#1e3a5f"/></svg>
             </div>
             <div>
                 <h1>AMC Support Assistant</h1>
-                <div class="header-sub">Search communication, hardware &amp; software manuals with AI</div>
+                <div class="header-sub">Search 372 AMC manuals, datasheets &amp; app notes with AI</div>
             </div>
         </div>
         <button class="new-chat-btn" onclick="newChat()">
@@ -304,7 +358,8 @@
                 Stop
             </button>
         </div>
-        <div class="input-footer">Searches 86 AMC documents &mdash; Comm + Hardware + Software manuals + 55 Application Notes</div>
+        <div class="input-hint" id="input-hint">Press Enter to send &middot; Shift+Enter for new line</div>
+        <div class="input-footer">Searches 372 AMC documents &mdash; 31 Manuals + 268 Datasheets + 55 App Notes + Product Notes &amp; White Papers</div>
     </div>
 
     <script>
@@ -346,7 +401,7 @@
         }
 
         function formatSourceName(source) {
-            return source.replace('AMC_CommManual_', 'Comm: ').replace('AMC_HWManual_', 'HW: ').replace('AMC_SW_Manual_', 'SW: ').replace('AMC_SW_QuickRef_', 'SW QR: ').replace('.pdf', '').replace(/_/g, ' ');
+            return source.replace('AMC_CommManual_', 'Comm: ').replace('AMC_HWManual_', 'HW: ').replace('AMC_SW_Manual_', 'SW: ').replace('AMC_SW_QuickRef_', 'SW QR: ').replace('AMC_Datasheet_', 'Datasheet: ').replace('AMC_AppNote_', 'App Note ').replace('AMC_ProductNote_', 'Product: ').replace('AMC_WhitePaper_', 'Paper: ').replace('.pdf', '').replace(/_/g, ' ');
         }
 
         function createSourceTags(sources) {
@@ -431,7 +486,7 @@
             body.className = 'msg-body';
             const content = document.createElement('div');
             content.className = 'msg-content-ai typing-body';
-            content.innerHTML = '<div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div><span class="typing-label">Searching manuals...</span>';
+            content.innerHTML = '<div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div><span class="typing-label">Searching manuals...</span><div style="margin-top:12px;width:100%"><div class="skeleton-line" style="width:90%"></div><div class="skeleton-line"></div><div class="skeleton-line"></div></div>';
             body.appendChild(content);
 
             msg.appendChild(avatar);
@@ -562,6 +617,10 @@
         async function sendMessage(retryText, retryCount = 0) {
             const text = retryText || messageInput.value.trim();
             if (!text) return;
+
+            // Hide keyboard hint after first message
+            const hint = document.getElementById('input-hint');
+            if (hint) hint.classList.add('hidden');
 
             if (!retryText) {
                 messageInput.value = '';
