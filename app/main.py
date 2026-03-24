@@ -26,11 +26,13 @@ MAX_HISTORY = 20  # max messages per session (10 exchanges)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # On startup: auto-ingest PDFs if not already indexed
+    print("Starting AMC Support Chatbot...", flush=True)
     if not is_indexed():
-        print("No existing index found. Ingesting PDFs...")
+        print("No existing index found. Ingesting PDFs...", flush=True)
         build_index()
     else:
-        print("Index already exists. Skipping ingestion.")
+        print("Index already exists. Skipping ingestion.", flush=True)
+    print("Startup complete. Ready to serve requests.", flush=True)
     yield
 
 
