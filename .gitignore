@@ -4,8 +4,8 @@
 # Proprietary PDFs (too large, not redistributable)
 *.pdf
 
-# Generated TF-IDF index — rebuilt by calling /ingest after cloning
-index_data/
+# Generated index — included in repo for deployment (Render)
+# index_data/
 
 # User feedback data
 feedback.json

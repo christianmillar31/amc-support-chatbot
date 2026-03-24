@@ -5,6 +5,7 @@ PyMuPDF
 scikit-learn
 python-dotenv
 cachetools
-sentence-transformers
+sentence-transformers<4.0
+transformers>=4.41,<4.50
 rank_bm25
 numpy
