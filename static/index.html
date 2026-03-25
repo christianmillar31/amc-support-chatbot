@@ -331,22 +331,26 @@
     </div>
 
     <div class="input-area">
-        <div class="input-wrapper" style="flex-direction:column;gap:0;padding:0;overflow:visible;">
-            <!-- Drive selector row -->
-            <div id="drive-selector" style="display:flex;align-items:center;gap:6px;padding:8px 12px 4px;border-bottom:1px solid var(--border);position:relative;">
-                <svg width="14" height="14" fill="none" stroke="var(--text-muted)" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
-                <input id="drive-input" type="text" placeholder="Select drive (optional)"
+        <div id="drive-selector-bar" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:0 16px 6px;position:relative;">
+            <span style="font-size:12px;color:var(--text-muted);flex-shrink:0;">Drive:</span>
+            <!-- No drive selected: show input -->
+            <div id="drive-no-selection" style="position:relative;">
+                <input id="drive-input" type="text" placeholder="None selected"
                     autocomplete="off" spellcheck="false"
-                    style="flex:1;padding:4px 0;border:none;outline:none;font-size:13px;font-family:inherit;background:transparent;color:var(--text);">
-                <div id="drive-info" style="display:none;font-size:12px;color:var(--text-secondary);white-space:nowrap;">
-                    <span id="drive-family"></span> · <span id="drive-network"></span>
-                    <button onclick="clearDrive()" style="background:none;border:none;color:var(--amc-blue);cursor:pointer;font-size:12px;margin-left:4px;" title="Clear drive">✕</button>
-                </div>
-                <div id="drive-dropdown" style="display:none;position:absolute;bottom:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius-sm) var(--radius-sm) 0 0;z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,0.15);"></div>
+                    style="width:180px;padding:5px 10px;border:1px solid var(--border);border-radius:20px;font-size:12px;font-family:inherit;background:var(--surface);color:var(--text);">
+                <div id="drive-dropdown" style="display:none;position:absolute;bottom:calc(100% + 4px);left:0;width:280px;max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,0.15);"></div>
             </div>
-            <!-- Message input row -->
-            <div style="display:flex;align-items:flex-end;gap:8px;padding:4px 4px 4px 12px;">
-                <textarea id="message-input" rows="1" placeholder="Ask about AMC drives, protocols, hardware, software..." style="flex:1;border:none;outline:none;resize:none;font-size:14px;font-family:inherit;background:transparent;color:var(--text);padding:8px 0;min-height:36px;max-height:120px;"></textarea>
+            <!-- Drive selected: show pill + info -->
+            <div id="drive-info" style="display:none;align-items:center;gap:6px;">
+                <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 8px 4px 10px;background:var(--amc-blue);color:white;border-radius:20px;font-size:12px;font-weight:500;">
+                    <span id="drive-selected-sku"></span>
+                    <button onclick="clearDrive()" style="background:none;border:none;color:rgba(255,255,255,0.7);cursor:pointer;font-size:14px;line-height:1;padding:0 2px;" title="Clear drive">×</button>
+                </span>
+                <span style="font-size:11px;color:var(--text-secondary);"><span id="drive-family"></span> · <span id="drive-network"></span></span>
+            </div>
+        </div>
+        <div class="input-wrapper">
+            <textarea id="message-input" rows="1" placeholder="Ask about AMC drives, protocols, hardware, software..."></textarea>
             <button id="send-btn" onclick="sendMessage()" aria-label="Send message">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                 Send
@@ -355,7 +359,6 @@
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 Stop
             </button>
-            </div>
         </div>
         <div class="input-hint" id="input-hint">Press Enter to send &middot; Shift+Enter for new line</div>
     </div>
@@ -424,18 +427,19 @@
         }
 
         function showDriveInfo(d) {
-            driveInput.placeholder = d.sku;
-            driveInput.value = '';
+            document.getElementById('drive-no-selection').style.display = 'none';
+            document.getElementById('drive-selected-sku').textContent = d.sku;
             document.getElementById('drive-family').textContent = d.family + ' ' + d.form_factor;
-            document.getElementById('drive-network').textContent = d.network || 'Analog (no network)';
-            driveInfo.style.display = 'inline';
+            document.getElementById('drive-network').textContent = d.network || 'Analog';
+            driveInfo.style.display = 'flex';
         }
 
         function clearDrive() {
             selectedDriveSku = null;
             sessionStorage.removeItem('selectedDriveSku');
-            driveInput.placeholder = 'Optional: type a drive part number...';
+            document.getElementById('drive-no-selection').style.display = 'flex';
             driveInfo.style.display = 'none';
+            driveInput.value = '';
         }
 
         messageInput.addEventListener('input', () => {
