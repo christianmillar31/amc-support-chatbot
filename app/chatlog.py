@@ -17,27 +17,57 @@ logger = logging.getLogger(__name__)
 
 CHATLOG_FILE = BASE_DIR / "chatlog.json"
 
-# HF Hub sync config — pushes chatlog to a private dataset repo
+# HF Hub sync config
 HF_TOKEN = os.getenv("HF_TOKEN", "")
 HF_CHATLOG_REPO = os.getenv("HF_CHATLOG_REPO", "FlameEnterprise/amc-chatlog")
 
-# Email config — SMTP2GO REST API (HTTPS-based, works on HF Spaces)
+# Email config
 SMTP2GO_API_KEY = os.getenv("SMTP2GO_API_KEY", "")
 NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "cmillar@a-m-c.com,christianmillar31@gmail.com")
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", "christianmillar31@gmail.com")
 
+# In-memory cache of all entries (survives local file issues)
+_entries_cache: list = []
+_cache_loaded = False
 
-def _sync_to_hf_async(entries: list) -> None:
-    """Push chatlog.json to a private HF Dataset repo in background thread."""
+
+def _load_from_hf() -> list:
+    """Download chatlog.json from HF Dataset repo. Force-skips cache."""
+    if not HF_TOKEN:
+        logger.info("HF_TOKEN not set — skipping HF chatlog load")
+        return []
+    try:
+        from huggingface_hub import hf_hub_download
+        logger.info("Loading chatlog from HF repo: %s", HF_CHATLOG_REPO)
+        path = hf_hub_download(
+            repo_id=HF_CHATLOG_REPO,
+            filename="chatlog.json",
+            repo_type="dataset",
+            token=HF_TOKEN,
+            force_download=True,
+        )
+        with open(path, "r", encoding="utf-8") as f:
+            entries = json.load(f)
+        # Filter out debug/test entries
+        entries = [e for e in entries if not e.get("test")]
+        logger.info("Loaded %d chatlog entries from HF repo", len(entries))
+        return entries
+    except Exception as e:
+        logger.warning("Could not load chatlog from HF: %s", e)
+        return []
+
+
+def _sync_to_hf(entries: list) -> None:
+    """Push chatlog.json to HF Dataset repo. Runs in background thread."""
     if not HF_TOKEN:
         return
 
-    def _sync():
+    def _do_sync():
         try:
             from huggingface_hub import HfApi
             api = HfApi(token=HF_TOKEN)
 
-            # Ensure repo exists (create if not)
+            # Ensure repo exists
             try:
                 api.create_repo(
                     repo_id=HF_CHATLOG_REPO,
@@ -46,9 +76,9 @@ def _sync_to_hf_async(entries: list) -> None:
                     exist_ok=True,
                 )
             except Exception:
-                pass  # Already exists
+                pass
 
-            # Write to temp file and upload
+            # Write and upload
             tmp = tempfile.NamedTemporaryFile(
                 mode="w", suffix=".json", delete=False, encoding="utf-8"
             )
@@ -60,40 +90,22 @@ def _sync_to_hf_async(entries: list) -> None:
                     path_in_repo="chatlog.json",
                     repo_id=HF_CHATLOG_REPO,
                     repo_type="dataset",
-                    commit_message=f"Chatlog update: {len(entries)} entries",
+                    commit_message=f"Chatlog: {len(entries)} entries",
                 )
                 logger.info("Chatlog synced to HF: %d entries", len(entries))
             finally:
-                os.unlink(tmp.name)
+                try:
+                    os.unlink(tmp.name)
+                except OSError:
+                    pass
         except Exception as e:
             logger.warning("HF chatlog sync failed: %s", e)
 
-    threading.Thread(target=_sync, daemon=True).start()
-
-
-def _load_from_hf() -> list:
-    """Load chatlog from HF Dataset repo on startup (if local file is empty)."""
-    if not HF_TOKEN:
-        return []
-    try:
-        from huggingface_hub import hf_hub_download
-        path = hf_hub_download(
-            repo_id=HF_CHATLOG_REPO,
-            filename="chatlog.json",
-            repo_type="dataset",
-            token=HF_TOKEN,
-        )
-        with open(path, "r", encoding="utf-8") as f:
-            entries = json.load(f)
-        logger.info("Loaded %d chatlog entries from HF repo", len(entries))
-        return entries
-    except Exception as e:
-        logger.info("No existing chatlog on HF: %s", e)
-        return []
+    threading.Thread(target=_do_sync, daemon=True).start()
 
 
 def _send_email_async(subject: str, body: str) -> None:
-    """Send email via SMTP2GO REST API in background thread (non-blocking)."""
+    """Send email via SMTP2GO REST API in background thread."""
     if not SMTP2GO_API_KEY or not NOTIFY_EMAIL:
         return
 
@@ -115,12 +127,74 @@ def _send_email_async(subject: str, body: str) -> None:
                 method="POST",
             )
             with urlopen(req, timeout=10) as resp:
-                result = resp.read().decode()
-                logger.info("SMTP2GO email sent: %s", result)
+                resp.read()
         except Exception as e:
-            logger.warning("SMTP2GO email failed: %s", e)
+            logger.warning("Email failed: %s", e)
 
     threading.Thread(target=_send, daemon=True).start()
+
+
+def _write_local(entries: list) -> None:
+    """Atomic write to local chatlog.json."""
+    try:
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=CHATLOG_FILE.parent, suffix=".tmp")
+        with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+            json.dump(entries, f, indent=2, ensure_ascii=False)
+        os.replace(tmp_path, CHATLOG_FILE)
+    except Exception as e:
+        logger.warning("Local chatlog write failed: %s", e)
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+
+def _ensure_loaded() -> list:
+    """Load entries from local file + HF repo on first call. Merge and deduplicate."""
+    global _entries_cache, _cache_loaded
+    if _cache_loaded:
+        return _entries_cache
+
+    _cache_loaded = True
+
+    # Load local entries
+    local_entries = []
+    if CHATLOG_FILE.exists():
+        try:
+            with open(CHATLOG_FILE, "r", encoding="utf-8") as f:
+                local_entries = json.load(f)
+        except Exception:
+            pass
+
+    # Load HF entries
+    hf_entries = _load_from_hf()
+
+    # Merge: combine both, deduplicate by timestamp+question
+    seen = set()
+    merged = []
+    for entry in hf_entries + local_entries:
+        key = (entry.get("timestamp", ""), entry.get("question", "")[:100])
+        if key not in seen:
+            seen.add(key)
+            merged.append(entry)
+
+    # Sort by timestamp
+    merged.sort(key=lambda e: e.get("timestamp", ""))
+
+    # Cap at 1000
+    if len(merged) > 1000:
+        merged = merged[-1000:]
+
+    _entries_cache = merged
+
+    # Write merged result locally
+    if merged:
+        _write_local(merged)
+
+    logger.info("Chatlog loaded: %d local + %d HF = %d merged entries",
+                len(local_entries), len(hf_entries), len(merged))
+
+    return _entries_cache
 
 
 def log_chat(
@@ -129,7 +203,7 @@ def log_chat(
     answer: str,
     sources: list,
 ) -> None:
-    """Append a chat entry to chatlog.json, sync to HF, and send email."""
+    """Log a chat entry. Saves locally, syncs to HF, sends email."""
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "session_id": session_id,
@@ -142,7 +216,7 @@ def log_chat(
         ],
     }
 
-    # Send email notification
+    # Email notification
     source_list = ", ".join(s.get("source", "") for s in (sources or [])[:3])
     _send_email_async(
         subject=f"AMC Bot: {question[:60]}",
@@ -155,43 +229,35 @@ def log_chat(
         """
     )
 
-    entries = get_chatlog()
+    # Add to cache and persist
+    entries = _ensure_loaded()
     entries.append(entry)
 
     if len(entries) > 1000:
         entries = entries[-1000:]
 
-    _write_entries(entries)
-    _sync_to_hf_async(entries)
+    _entries_cache.clear()
+    _entries_cache.extend(entries)
 
-
-def _write_entries(entries: list) -> None:
-    """Atomic write entries to local chatlog.json."""
-    tmp_fd, tmp_path = tempfile.mkstemp(dir=CHATLOG_FILE.parent, suffix=".tmp")
-    try:
-        with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
-            json.dump(entries, f, indent=2, ensure_ascii=False)
-        os.replace(tmp_path, CHATLOG_FILE)
-    except Exception:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
-        raise
+    _write_local(entries)
+    _sync_to_hf(entries)
 
 
 def update_rating(session_id: str, question: str, rating: str) -> None:
-    """Update the rating on the most recent matching chatlog entry."""
-    entries = get_chatlog()
+    """Update rating on the most recent matching entry."""
+    entries = _ensure_loaded()
+    matched_entry = None
     for entry in reversed(entries):
         if entry.get("session_id") == session_id and entry.get("question", "")[:100] == question[:100]:
             entry["rating"] = rating
+            matched_entry = entry
             break
-    else:
+
+    if not matched_entry:
         return
 
-    _write_entries(entries)
-    _sync_to_hf_async(entries)
+    _write_local(entries)
+    _sync_to_hf(entries)
 
     if rating == "down":
         _send_email_async(
@@ -199,25 +265,12 @@ def update_rating(session_id: str, question: str, rating: str) -> None:
             body=f"""
             <h3 style="color:red;">&#x1F44E; Negative Feedback</h3>
             <p><b>Question:</b> {question[:500]}</p>
-            <p><b>Answer given:</b> {entry.get('answer', '')[:1000]}</p>
+            <p><b>Answer given:</b> {matched_entry.get('answer', '')[:1000]}</p>
             <p><small>Session: {session_id}</small></p>
             """
         )
 
 
 def get_chatlog() -> list:
-    """Read chat log entries. Loads from HF on first call if local file is empty."""
-    if CHATLOG_FILE.exists():
-        try:
-            with open(CHATLOG_FILE, "r", encoding="utf-8") as f:
-                entries = json.load(f)
-            if entries:
-                return entries
-        except Exception:
-            pass
-
-    # Local file empty or missing — try loading from HF
-    entries = _load_from_hf()
-    if entries:
-        _write_entries(entries)  # Cache locally
-    return entries
+    """Return all chat log entries (merged local + HF)."""
+    return list(_ensure_loaded())

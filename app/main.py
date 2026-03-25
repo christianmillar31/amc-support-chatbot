@@ -246,7 +246,7 @@ async def debug_email():
 
 @app.get("/debug/chatlog-sync")
 async def debug_chatlog_sync():
-    """Debug endpoint — tests HF Dataset sync for chatlog persistence."""
+    """Debug endpoint — READ-ONLY check of HF Dataset sync status."""
     import os as _os
     hf_token = _os.getenv("HF_TOKEN", "")
     hf_repo = _os.getenv("HF_CHATLOG_REPO", "FlameEnterprise/amc-chatlog")
@@ -255,7 +255,7 @@ async def debug_chatlog_sync():
         "HF_TOKEN": (hf_token[:8] + "..." + hf_token[-4:]) if hf_token else "NOT SET",
         "HF_TOKEN_LENGTH": len(hf_token),
         "HF_CHATLOG_REPO": hf_repo,
-        "local_chatlog_entries": len(get_chatlog()),
+        "local_entries": len(get_chatlog()),
     }
 
     if not hf_token:
@@ -265,25 +265,24 @@ async def debug_chatlog_sync():
         from huggingface_hub import HfApi
         api = HfApi(token=hf_token)
 
-        # Test: create repo
-        api.create_repo(repo_id=hf_repo, repo_type="dataset", private=True, exist_ok=True)
-        info["repo_created"] = True
+        # Check repo exists (read-only — does NOT upload or overwrite)
+        repo_info = api.repo_info(repo_id=hf_repo, repo_type="dataset", token=hf_token)
+        info["repo_exists"] = True
+        info["repo_private"] = repo_info.private
 
-        # Test: upload a test entry
-        import tempfile
-        test_data = [{"test": True, "timestamp": "debug", "message": "sync test"}]
-        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8")
-        json.dump(test_data, tmp)
-        tmp.close()
-        api.upload_file(
-            path_or_fileobj=tmp.name,
-            path_in_repo="chatlog.json",
-            repo_id=hf_repo,
-            repo_type="dataset",
-            commit_message="Debug sync test",
-        )
-        _os.unlink(tmp.name)
-        info["upload_success"] = True
+        # Try to read the chatlog from HF
+        try:
+            from huggingface_hub import hf_hub_download
+            path = hf_hub_download(
+                repo_id=hf_repo, filename="chatlog.json",
+                repo_type="dataset", token=hf_token, force_download=True,
+            )
+            with open(path, "r", encoding="utf-8") as f:
+                hf_entries = json.load(f)
+            info["hf_entries"] = len(hf_entries)
+        except Exception as e:
+            info["hf_entries"] = 0
+            info["hf_read_error"] = str(e)
 
         return {"status": "OK", "info": info}
     except Exception as e:
