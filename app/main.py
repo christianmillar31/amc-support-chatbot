@@ -17,6 +17,7 @@ from app.config import ENABLE_SINGLE_SHOT
 from app.retriever import reload as reload_index
 from app.feedback import log_feedback
 from app.chatlog import log_chat, get_chatlog
+from app.faq import match_faq
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,35 @@ async def chat_stream_endpoint(request: ChatRequest):
 
     session_id = request.session_id or "default"
     history = sessions.get(session_id, [])
+
+    # --- FAQ instant-match: answer in <1 second with zero API tokens ---
+    faq_result = match_faq(request.message)
+    if faq_result:
+        async def faq_event_generator():
+            heading = faq_result.get("section", "")
+            heading_str = f", Section: {heading}" if heading else ""
+            answer = faq_result["answer"]
+            source = faq_result["source"]
+            page = faq_result["page"]
+
+            yield f"event: status\ndata: {json.dumps({'type': 'status', 'text': 'Found in FAQ database...'})}\n\n"
+            yield f"event: token\ndata: {json.dumps({'type': 'token', 'text': answer})}\n\n"
+
+            sources = [{"source": source, "page": int(page) if page.isdigit() else 0, "heading": heading}]
+            yield f"event: done\ndata: {json.dumps({'type': 'done', 'sources': sources})}\n\n"
+
+            # Update session history
+            history.append({"role": "user", "content": request.message})
+            history.append({"role": "assistant", "content": answer})
+            sessions[session_id] = history[-MAX_HISTORY:]
+
+            # Log for dashboard
+            try:
+                log_chat(session_id, request.message, answer, sources)
+            except Exception:
+                pass
+
+        return StreamingResponse(faq_event_generator(), media_type="text/event-stream")
 
     async def event_generator():
         try:
