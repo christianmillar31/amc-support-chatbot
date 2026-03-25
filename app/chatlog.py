@@ -1,7 +1,7 @@
 """
 Chat logging — automatically logs every question + answer for manager review.
 Stored in chatlog.json. Viewable at /chatlog dashboard.
-Sends email notifications via Resend API (works on HF Spaces).
+Sends email notifications via SMTP2GO REST API (HTTPS, works on HF Spaces).
 """
 import json
 import logging
@@ -18,44 +18,44 @@ logger = logging.getLogger(__name__)
 
 CHATLOG_FILE = BASE_DIR / "chatlog.json"
 
-# Email config — Resend API (HTTPS-based, works on HF Spaces)
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+# Email config — SMTP2GO REST API (HTTPS-based, works on HF Spaces)
+SMTP2GO_API_KEY = os.getenv("SMTP2GO_API_KEY", "")
 NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "cmillar@a-m-c.com,christianmillar31@gmail.com")
+SENDER_EMAIL = os.getenv("SENDER_EMAIL", "christianmillar31@gmail.com")
 
 
 def _send_email_async(subject: str, body: str) -> None:
-    """Send email via Resend API in background thread (non-blocking)."""
-    if not RESEND_API_KEY or not NOTIFY_EMAIL:
+    """Send email via SMTP2GO REST API in background thread (non-blocking)."""
+    if not SMTP2GO_API_KEY or not NOTIFY_EMAIL:
         return
 
     def _send():
         try:
             recipients = [e.strip() for e in NOTIFY_EMAIL.split(",")]
-            to_list = [{"email": e} for e in recipients]
 
             payload = json.dumps({
-                "from": "AMC Support Bot <onboarding@resend.dev>",
+                "api_key": SMTP2GO_API_KEY,
                 "to": recipients,
+                "sender": SENDER_EMAIL,
                 "subject": subject,
-                "html": body,
+                "html_body": body,
             }).encode("utf-8")
 
             req = Request(
-                "https://api.resend.com/emails",
+                "https://api.smtp2go.com/v3/mail/send",
                 data=payload,
                 headers={
-                    "Authorization": f"Bearer {RESEND_API_KEY}",
                     "Content-Type": "application/json",
                 },
                 method="POST",
             )
             with urlopen(req, timeout=10) as resp:
                 result = resp.read().decode()
-                logger.info("Resend email sent: %s", result)
+                logger.info("SMTP2GO email sent: %s", result)
         except URLError as e:
-            logger.warning("Resend email failed: %s", e)
+            logger.warning("SMTP2GO email failed: %s", e)
         except Exception as e:
-            logger.warning("Resend email failed: %s", e)
+            logger.warning("SMTP2GO email failed: %s", e)
 
     threading.Thread(target=_send, daemon=True).start()
 

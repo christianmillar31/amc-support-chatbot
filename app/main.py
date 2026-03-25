@@ -191,46 +191,48 @@ async def chat_stream_endpoint(request: ChatRequest):
 
 @app.get("/debug/email")
 async def debug_email():
-    """Debug endpoint — tests Resend API and sends a test email."""
+    """Debug endpoint — tests SMTP2GO API and sends a test email."""
     from urllib.request import Request, urlopen
     from urllib.error import URLError
 
-    resend_key = os.getenv("RESEND_API_KEY", "")
+    api_key = os.getenv("SMTP2GO_API_KEY", "")
     notify_email = os.getenv("NOTIFY_EMAIL", "cmillar@a-m-c.com,christianmillar31@gmail.com")
+    sender = os.getenv("SENDER_EMAIL", "christianmillar31@gmail.com")
 
     config = {
-        "RESEND_API_KEY": (resend_key[:8] + "..." + resend_key[-4:]) if resend_key else "NOT SET",
-        "RESEND_KEY_LENGTH": len(resend_key),
+        "SMTP2GO_API_KEY": (api_key[:8] + "..." + api_key[-4:]) if api_key else "NOT SET",
+        "SMTP2GO_KEY_LENGTH": len(api_key),
         "NOTIFY_EMAIL": notify_email,
+        "SENDER_EMAIL": sender,
     }
 
-    if not resend_key:
-        return {"status": "FAIL", "error": "RESEND_API_KEY not set", "config": config}
+    if not api_key:
+        return {"status": "FAIL", "error": "SMTP2GO_API_KEY not set", "config": config}
 
     steps = []
     try:
         recipients = [e.strip() for e in notify_email.split(",")]
-        steps.append(f"Sending to {recipients} via Resend API...")
+        steps.append(f"Sending to {recipients} via SMTP2GO API...")
 
         payload = json.dumps({
-            "from": "AMC Support Bot <onboarding@resend.dev>",
+            "api_key": api_key,
             "to": recipients,
+            "sender": sender,
             "subject": "AMC Bot: Email Test",
-            "html": "<h3>AMC Chatbot Email Test</h3><p>If you see this, Resend email notifications are working!</p>",
+            "html_body": "<h3>AMC Chatbot Email Test</h3><p>If you see this, SMTP2GO email notifications are working!</p>",
         }).encode("utf-8")
 
         req = Request(
-            "https://api.resend.com/emails",
+            "https://api.smtp2go.com/v3/mail/send",
             data=payload,
             headers={
-                "Authorization": f"Bearer {resend_key}",
                 "Content-Type": "application/json",
             },
             method="POST",
         )
         with urlopen(req, timeout=10) as resp:
             result = resp.read().decode()
-            steps.append(f"Resend response: {result}")
+            steps.append(f"SMTP2GO response: {result}")
 
         return {"status": "OK", "steps": steps, "config": config}
 
