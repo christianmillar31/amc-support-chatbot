@@ -244,6 +244,53 @@ async def debug_email():
         return {"status": "FAIL", "steps": steps, "config": config, "error": str(e)}
 
 
+@app.get("/debug/chatlog-sync")
+async def debug_chatlog_sync():
+    """Debug endpoint — tests HF Dataset sync for chatlog persistence."""
+    import os as _os
+    hf_token = _os.getenv("HF_TOKEN", "")
+    hf_repo = _os.getenv("HF_CHATLOG_REPO", "FlameEnterprise/amc-chatlog")
+
+    info = {
+        "HF_TOKEN": (hf_token[:8] + "..." + hf_token[-4:]) if hf_token else "NOT SET",
+        "HF_TOKEN_LENGTH": len(hf_token),
+        "HF_CHATLOG_REPO": hf_repo,
+        "local_chatlog_entries": len(get_chatlog()),
+    }
+
+    if not hf_token:
+        return {"status": "FAIL", "error": "HF_TOKEN not set", "info": info}
+
+    try:
+        from huggingface_hub import HfApi
+        api = HfApi(token=hf_token)
+
+        # Test: create repo
+        api.create_repo(repo_id=hf_repo, repo_type="dataset", private=True, exist_ok=True)
+        info["repo_created"] = True
+
+        # Test: upload a test entry
+        import tempfile
+        test_data = [{"test": True, "timestamp": "debug", "message": "sync test"}]
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8")
+        json.dump(test_data, tmp)
+        tmp.close()
+        api.upload_file(
+            path_or_fileobj=tmp.name,
+            path_in_repo="chatlog.json",
+            repo_id=hf_repo,
+            repo_type="dataset",
+            commit_message="Debug sync test",
+        )
+        _os.unlink(tmp.name)
+        info["upload_success"] = True
+
+        return {"status": "OK", "info": info}
+    except Exception as e:
+        info["error"] = f"{type(e).__name__}: {e}"
+        return {"status": "FAIL", "info": info}
+
+
 class FeedbackRequest(BaseModel):
     session_id: str
     question: str
