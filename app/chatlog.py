@@ -1,7 +1,7 @@
 """
 Chat logging — automatically logs every question + answer for manager review.
-Stored in chatlog.json. Viewable at /chatlog dashboard.
-Sends email notifications via SMTP2GO REST API (HTTPS, works on HF Spaces).
+Stored locally in chatlog.json + synced to HF Dataset repo for persistence.
+Viewable at /chatlog dashboard.
 """
 import json
 import logging
@@ -10,21 +10,86 @@ import tempfile
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.request import Request, urlopen
-from urllib.error import URLError
 
 from app.config import BASE_DIR
 
 logger = logging.getLogger(__name__)
 
-# Use /data for persistent storage on HF Spaces, fallback to BASE_DIR locally
-PERSISTENT_DIR = Path("/data") if Path("/data").exists() else BASE_DIR
-CHATLOG_FILE = PERSISTENT_DIR / "chatlog.json"
+CHATLOG_FILE = BASE_DIR / "chatlog.json"
+
+# HF Hub sync config — pushes chatlog to a private dataset repo
+HF_TOKEN = os.getenv("HF_TOKEN", "")
+HF_CHATLOG_REPO = os.getenv("HF_CHATLOG_REPO", "FlameEnterprise/amc-chatlog")
 
 # Email config — SMTP2GO REST API (HTTPS-based, works on HF Spaces)
 SMTP2GO_API_KEY = os.getenv("SMTP2GO_API_KEY", "")
 NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "cmillar@a-m-c.com,christianmillar31@gmail.com")
 SENDER_EMAIL = os.getenv("SENDER_EMAIL", "christianmillar31@gmail.com")
+
+
+def _sync_to_hf_async(entries: list) -> None:
+    """Push chatlog.json to a private HF Dataset repo in background thread."""
+    if not HF_TOKEN:
+        return
+
+    def _sync():
+        try:
+            from huggingface_hub import HfApi
+            api = HfApi(token=HF_TOKEN)
+
+            # Ensure repo exists (create if not)
+            try:
+                api.create_repo(
+                    repo_id=HF_CHATLOG_REPO,
+                    repo_type="dataset",
+                    private=True,
+                    exist_ok=True,
+                )
+            except Exception:
+                pass  # Already exists
+
+            # Write to temp file and upload
+            tmp = tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False, encoding="utf-8"
+            )
+            try:
+                json.dump(entries, tmp, indent=2, ensure_ascii=False)
+                tmp.close()
+                api.upload_file(
+                    path_or_fileobj=tmp.name,
+                    path_in_repo="chatlog.json",
+                    repo_id=HF_CHATLOG_REPO,
+                    repo_type="dataset",
+                    commit_message=f"Chatlog update: {len(entries)} entries",
+                )
+                logger.info("Chatlog synced to HF: %d entries", len(entries))
+            finally:
+                os.unlink(tmp.name)
+        except Exception as e:
+            logger.warning("HF chatlog sync failed: %s", e)
+
+    threading.Thread(target=_sync, daemon=True).start()
+
+
+def _load_from_hf() -> list:
+    """Load chatlog from HF Dataset repo on startup (if local file is empty)."""
+    if not HF_TOKEN:
+        return []
+    try:
+        from huggingface_hub import hf_hub_download
+        path = hf_hub_download(
+            repo_id=HF_CHATLOG_REPO,
+            filename="chatlog.json",
+            repo_type="dataset",
+            token=HF_TOKEN,
+        )
+        with open(path, "r", encoding="utf-8") as f:
+            entries = json.load(f)
+        logger.info("Loaded %d chatlog entries from HF repo", len(entries))
+        return entries
+    except Exception as e:
+        logger.info("No existing chatlog on HF: %s", e)
+        return []
 
 
 def _send_email_async(subject: str, body: str) -> None:
@@ -34,8 +99,8 @@ def _send_email_async(subject: str, body: str) -> None:
 
     def _send():
         try:
+            from urllib.request import Request, urlopen
             recipients = [e.strip() for e in NOTIFY_EMAIL.split(",")]
-
             payload = json.dumps({
                 "api_key": SMTP2GO_API_KEY,
                 "to": recipients,
@@ -43,20 +108,15 @@ def _send_email_async(subject: str, body: str) -> None:
                 "subject": subject,
                 "html_body": body,
             }).encode("utf-8")
-
             req = Request(
                 "https://api.smtp2go.com/v3/mail/send",
                 data=payload,
-                headers={
-                    "Content-Type": "application/json",
-                },
+                headers={"Content-Type": "application/json"},
                 method="POST",
             )
             with urlopen(req, timeout=10) as resp:
                 result = resp.read().decode()
                 logger.info("SMTP2GO email sent: %s", result)
-        except URLError as e:
-            logger.warning("SMTP2GO email failed: %s", e)
         except Exception as e:
             logger.warning("SMTP2GO email failed: %s", e)
 
@@ -69,7 +129,7 @@ def log_chat(
     answer: str,
     sources: list,
 ) -> None:
-    """Append a chat entry to chatlog.json and send email notification."""
+    """Append a chat entry to chatlog.json, sync to HF, and send email."""
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "session_id": session_id,
@@ -95,24 +155,18 @@ def log_chat(
         """
     )
 
-    entries = []
-    if CHATLOG_FILE.exists():
-        try:
-            with open(CHATLOG_FILE, "r", encoding="utf-8") as f:
-                entries = json.load(f)
-        except Exception:
-            logger.warning("Could not read chatlog file, starting fresh")
-
+    entries = get_chatlog()
     entries.append(entry)
 
-    if len(entries) > 500:
-        entries = entries[-500:]
+    if len(entries) > 1000:
+        entries = entries[-1000:]
 
     _write_entries(entries)
+    _sync_to_hf_async(entries)
 
 
 def _write_entries(entries: list) -> None:
-    """Atomic write entries to chatlog.json."""
+    """Atomic write entries to local chatlog.json."""
     tmp_fd, tmp_path = tempfile.mkstemp(dir=CHATLOG_FILE.parent, suffix=".tmp")
     try:
         with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
@@ -137,6 +191,7 @@ def update_rating(session_id: str, question: str, rating: str) -> None:
         return
 
     _write_entries(entries)
+    _sync_to_hf_async(entries)
 
     if rating == "down":
         _send_email_async(
@@ -151,11 +206,18 @@ def update_rating(session_id: str, question: str, rating: str) -> None:
 
 
 def get_chatlog() -> list:
-    """Read all chat log entries."""
-    if not CHATLOG_FILE.exists():
-        return []
-    try:
-        with open(CHATLOG_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return []
+    """Read chat log entries. Loads from HF on first call if local file is empty."""
+    if CHATLOG_FILE.exists():
+        try:
+            with open(CHATLOG_FILE, "r", encoding="utf-8") as f:
+                entries = json.load(f)
+            if entries:
+                return entries
+        except Exception:
+            pass
+
+    # Local file empty or missing — try loading from HF
+    entries = _load_from_hf()
+    if entries:
+        _write_entries(entries)  # Cache locally
+    return entries
