@@ -39,6 +39,69 @@ def _normalize_family(raw: str) -> str:
     return raw
 
 
+def _infer_network_from_sku(sku: str, family: str) -> str:
+    """Infer network protocol from SKU naming convention when CSV field is empty.
+
+    DigiFlex Performance naming:
+      DP"CAN"  = CANopen        DP"R" = Serial (RS-485/232)
+      DP"EAN"  = EtherCAT       DP"M" = Modbus RTU
+      DP"P"    = POWERLINK      DZ"X" prefix = Extended environment
+      DVC      = CANopen (Vehicle)
+
+    FlexPro naming:
+      -EM  = EtherCAT    -IPM = Ethernet/IP
+      -RM  = Serial       -CM  = CANopen
+
+    AxCent: Always analog/PWM (no network)
+    """
+    s = sku.upper()
+
+    if family == "FlexPro":
+        if s.endswith("-EM") or "-EM" in s:
+            return "EtherCAT"
+        elif s.endswith("-IPM") or "-IPM" in s:
+            return "Ethernet/IP"
+        elif s.endswith("-RM") or "-RM" in s:
+            return "RS-485/232"
+        elif s.endswith("-CM") or "-CM" in s:
+            return "CANopen"
+
+    elif "DigiFlex" in family:
+        # Check for specific protocol indicators in the SKU prefix
+        if s.startswith("DVC"):
+            return "CANopen"
+        # After the family prefix (DP/DZ/DV/DX), check the next letters
+        # Remove family prefix to get the protocol section
+        prefix = ""
+        for p in ["DZXC", "DZX", "DZC", "DZS", "DZE", "DZP", "DZM", "DZ",
+                   "DPC", "DPE", "DPM", "DPP", "DPR", "DPQ", "DP",
+                   "DVC", "DV", "DX"]:
+            if s.startswith(p):
+                prefix = p
+                break
+
+        if "CAN" in prefix or prefix in ("DPC", "DZXC", "DZC", "DVC"):
+            return "CANopen"
+        elif "EAN" in s[:8] or prefix in ("DPE", "DZE"):
+            return "EtherCAT"
+        elif prefix in ("DPR", "DZR") or "RAL" in s[:8] or "RAN" in s[:8] or "RAH" in s[:8]:
+            return "Modbus RTU|RS-485/232"
+        elif prefix in ("DPM", "DZM"):
+            return "Modbus RTU|RS-485/232"
+        elif prefix in ("DPP", "DZP"):
+            return "POWERLINK"
+        elif prefix in ("DPS", "DZS"):
+            return "Modbus RTU|RS-485/232"
+
+    elif family == "AxCent":
+        return "None (analog/PWM)"
+
+    elif family == "Classic":
+        return "None (analog)"
+
+    return ""
+
+
 def _load_csv():
     """Load the CSV into memory once."""
     global _DRIVE_DB
@@ -65,10 +128,16 @@ def _load_csv():
             if not sku or not family:
                 continue
 
+            norm_family = _normalize_family(family)
+
+            # Infer network from SKU if CSV field is empty
+            if not network:
+                network = _infer_network_from_sku(sku, norm_family)
+
             _DRIVE_DB[sku.upper()] = {
                 "sku": sku,
                 "title": title,
-                "family": _normalize_family(family),
+                "family": norm_family,
                 "form_factor": form_factor,
                 "network": network,
             }
@@ -326,6 +395,22 @@ def detect_part_number(message: str) -> str | None:
     return None
 
 
+def _friendly_network(network: str) -> str:
+    """Convert raw CSV network values to user-friendly display labels."""
+    if not network:
+        return "Analog"
+    mapping = {
+        "Modbus RTU|RS-485/232": "Serial / Modbus",
+        "RS-485/232": "Serial",
+        "Ethernet POWERLINK|Ethernet|Modbus TCP": "POWERLINK",
+        "EtherCAT|DxM Technology": "EtherCAT",
+        "DxM Technology": "DxM",
+        "None (analog/PWM)": "Analog/PWM",
+        "None (analog)": "Analog",
+    }
+    return mapping.get(network, network)
+
+
 def get_all_drives() -> list[dict]:
     """Return all unique drives from the CSV for the frontend autocomplete dropdown."""
     _load_csv()
@@ -339,7 +424,7 @@ def get_all_drives() -> list[dict]:
             "sku": sku,
             "family": drive["family"],
             "form_factor": drive["form_factor"],
-            "network": drive["network"],
+            "network": _friendly_network(drive["network"]),
         })
     # Sort by family then SKU
     drives.sort(key=lambda d: (d["family"], d["sku"]))
