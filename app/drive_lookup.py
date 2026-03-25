@@ -74,7 +74,7 @@ def _infer_network_from_sku(sku: str, family: str) -> str:
         # Remove family prefix to get the protocol section
         prefix = ""
         for p in ["DZXC", "DZX", "DZC", "DZS", "DZE", "DZP", "DZM", "DZ",
-                   "DPC", "DPE", "DPM", "DPP", "DPR", "DPQ", "DP",
+                   "DPC", "DPE", "DPM", "DPP", "DPQ", "DPR", "DP",
                    "DVC", "DV", "DX"]:
             if s.startswith(p):
                 prefix = p
@@ -92,6 +92,8 @@ def _infer_network_from_sku(sku: str, family: str) -> str:
             return "POWERLINK"
         elif prefix in ("DPS", "DZS"):
             return "Modbus RTU|RS-485/232"
+        elif prefix in ("DPQ",):
+            return "SynqNet"
 
     elif family == "AxCent":
         return "None (analog/PWM)"

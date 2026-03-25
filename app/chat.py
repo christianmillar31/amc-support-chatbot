@@ -46,7 +46,15 @@ KEY NOTES:
 - DigiFlex "RA" drives: ask user if Serial or Modbus.
 - AxCent: analog/PWM only, no comm manual.
 - ACE is default software tool. DriveWare is alternative.
-- Machine Embedded/Dev Board use PCB Mount HW manual. FlexPro Panel uses FlexPro PCB HW manual."""
+- Machine Embedded/Dev Board use PCB Mount HW manual. FlexPro Panel uses FlexPro PCB HW manual.
+
+CRITICAL — DRIVE CLASSIFICATION:
+- There is NO SUCH THING as an "analog DigiFlex drive." ALL DigiFlex drives are DIGITAL servo drives.
+- Some DigiFlex drives accept ±10V analog COMMAND INPUT — this is an input option, NOT the drive type.
+- "Analog drives" refers ONLY to the Classic/Analog family (B-series, like B30A40, 100A40, 120A10). These are a completely separate product line.
+- AxCent drives also accept analog/PWM command input but they are DIGITAL drives, not "analog drives."
+- NEVER describe a FlexPro, DigiFlex, or AxCent drive as an "analog drive." Say "accepts ±10V analog command input" instead.
+- DPQ drives (e.g., DPQNNIE) are SynqNet protocol drives."""
 
 
 # ---------------------------------------------------------------------------
