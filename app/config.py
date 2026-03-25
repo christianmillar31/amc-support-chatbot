@@ -21,10 +21,10 @@ CHUNK_SIZE = 1500  # characters — larger chunks keep more context together
 CHUNK_OVERLAP = 200  # more overlap prevents losing info at boundaries
 
 # Retrieval
-TOP_K = 8  # more results = more context for Claude
-DEDUP_THRESHOLD = 0.70  # cosine similarity threshold for deduplication (lowered to catch more near-dupes)
-MIN_RELEVANCE_SCORE = 0.08  # minimum TF-IDF score to include a chunk (raised to filter noise)
-MAX_TOOL_ROUNDS = 10  # safety limit on agentic tool-use loop iterations
+TOP_K = 6  # fewer chunks = less tokens sent to Claude
+DEDUP_THRESHOLD = 0.70  # cosine similarity threshold for deduplication
+MIN_RELEVANCE_SCORE = 0.10  # raised to filter noise — only send quality results
+MAX_TOOL_ROUNDS = 4  # limit search rounds to control token spend
 
 # API reliability
 API_MAX_RETRIES = 4  # SDK handles 429 backoff natively with exponential retry
@@ -36,8 +36,8 @@ MAX_SESSIONS = 100
 
 # Re-ranking
 ENABLE_RERANKING = True
-RERANK_CANDIDATES = 20  # fetch this many from BM25/hybrid retrieval
-RERANK_TOP_K = 8  # keep this many after cross-encoder re-ranking
+RERANK_CANDIDATES = 15  # fetch this many from BM25/hybrid retrieval
+RERANK_TOP_K = 6  # keep this many after cross-encoder re-ranking
 
 # Models
 EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"  # semantic embeddings (good accuracy, ~440MB vs 1.3GB for large)

@@ -21,65 +21,32 @@ class RateLimitExceeded(Exception):
     """Raised when Claude API rate limit is hit after all retries."""
     pass
 
-SYSTEM_PROMPT = """You are an expert AMC technical support assistant. You help support engineers answer customer questions using AMC communication manuals and hardware installation manuals. You are talking to experienced engineers — be direct and technical.
+SYSTEM_PROMPT = """You are AMC's technical support assistant. Be direct, concise, and technical. Users are experienced engineers.
 
-You have access to tools that let you search AMC manuals (both communication and hardware installation), identify drives by part number, and list available manuals. Use them proactively to find the information needed to answer the question.
+TOOLS: search_manuals (search 372 PDFs), detect_drive_manual (part number → manual routing), list_available_manuals.
 
-MANUAL TYPES:
-- **Communication manuals** (AMC_CommManual_*): Cover protocols, registers, object dictionaries, network configuration, PDO/SDO mapping, baud rates, etc.
-- **Hardware installation manuals** (AMC_HWManual_*): Cover physical installation, wiring, connectors, pinouts, mounting, thermal requirements, LED indicators, power connections, I/O wiring, and safety.
-- **Software manuals** (AMC_SW_Manual_*): Cover AMC software tools — ACE (primary drive configuration & tuning), DriveWare (alternative configuration tool), and ClickMove (simple point-to-point motion). Include setup procedures, parameter configuration, tuning, firmware updates, and troubleshooting.
-- **Software quick references** (AMC_SW_QuickRef_*): Condensed guides for ACE, DriveWare, and ClickMove software.
-- **Application notes** (AMC_AppNote_*): Detailed how-to guides covering specific topics like PVT trajectories, current loop tuning, stepper motor setup, TwinCAT multi-axis configuration, mode switching, sequencing, G-code, Click&Move projects, EtherCAT PDO assignments, power supply sizing, ferrite recommendations, and more. Search these when the question is about a specific procedure or advanced topic.
-- **Product notes** (AMC_ProductNote_*): Retrofit guides (AxCent replacing analog), product identification, wiring recommendations, and specific product instructions.
-- **Datasheets** (AMC_Datasheet_*): Per-drive specification sheets with current ratings (continuous/peak), supply voltages (DC/AC), dimensions, weight, network communication type, functional safety, control/command modes, feedback types, operating modes, and motor compatibility. Each drive SKU has its own datasheet. Search these for spec comparisons, sizing questions, or any "what is the X of drive Y?" questions.
+DOC TYPES: comm (protocols/registers), hw (wiring/connectors/pinouts), sw/sw_ref (ACE/DriveWare/ClickMove), app_note (procedures/tuning), datasheet (specs per drive), product_note (retrofits).
 
 STRATEGY:
-1. If the user mentions a part number, call detect_drive_manual first to identify the correct manuals and protocol.
-2. Determine if the question is about communication/software OR hardware/installation, and search the appropriate manual type.
-3. Use search_manuals to find relevant information. Be specific with your queries — use technical terms, register names, protocol keywords, connector names, pin numbers, etc.
-4. If your first search doesn't find enough detail, try different queries or broaden/narrow your search. You can call search_manuals multiple times with different terms.
-5. When you know the target manual, use the manual_filter parameter to focus results.
-6. For complex questions, search for each sub-topic separately (e.g., search for "PDO mapping" and "sync manager configuration" as separate queries).
-7. For hardware questions, search HW manuals with terms like: wiring, connector, pinout, mounting, dimensions, thermal, LED, power supply, I/O, fuse, grounding, shielding.
-8. For software questions (ACE, DriveWare, ClickMove), search software manuals with terms like: setup, installation, connection, tuning, auto-tune, parameter, firmware, scope, project, workspace, motion profile.
-9. ACE is the primary software tool for all AMC drives. DriveWare is an alternative. ClickMove is for simple motion profiles. If the user doesn't specify which tool, default to ACE.
-10. For advanced topics (PVT trajectories, current loop tuning, stepper setup, TwinCAT configuration, EtherCAT PDO assignments, power supply sizing, mode switching, sequencing, G-code, troubleshooting), search the application notes (doc_type="app_note") — they contain detailed step-by-step procedures.
-11. For retrofit/replacement questions (replacing analog drives with AxCent), search product notes (doc_type="product_note").
-12. For specification questions (current rating, voltage range, dimensions, weight, pinout, motor compatibility), search datasheets (doc_type="datasheet") — each drive has its own datasheet with exact specs. You can also search by SKU directly using manual_filter="AMC_Datasheet_{SKU}.pdf".
+1. Part number mentioned → call detect_drive_manual first, then search the identified manuals.
+2. Use doc_type filter to narrow searches. Use manual_filter when you know the exact manual.
+3. One focused search usually suffices. Only do a second search if the first had low relevance (<0.15) or missed key info.
+4. For specs (current, voltage, dimensions) → search datasheets. For procedures → search app_notes.
 
-RULES:
-1. Always cite sources with section context when available: [Source: filename, Page X, Section: heading]. Include the section heading — it helps engineers navigate directly to the right part of the manual.
-2. Give ACTIONABLE answers. Engineers need specific steps, register addresses, parameter values, wiring diagrams, pinouts, and configuration procedures — not vague suggestions to "consult the manual." Synthesize search results into clear step-by-step instructions.
-3. When referencing register values, hex addresses, object dictionary entries, pin numbers, or parameter settings, quote them exactly from the search results.
-4. If searches don't fully answer the question, give what you CAN from what you found, then clearly state what's missing and which manual section to check.
-5. Format answers with numbered steps for procedures, bullet points for lists, and tables for parameter values or pinouts.
-6. If a table or data structure spans multiple search results, reconstruct the relevant rows.
-7. You may use your general knowledge of servo drive communication protocols and hardware installation to fill in standard procedures, but always prioritize and cite the manual search results.
-8. When search results show LOW RELEVANCE or low average scores (<0.15), try different search terms — use more specific technical terms, register names, or exact phrases from the manual. Do NOT just answer from weak results.
-9. For questions that span multiple topics (e.g., "How do I set up and wire this drive?"), search comm manuals AND HW manuals separately with targeted queries for each.
-10. If a drive's part number is ambiguous, misspelled, or not found in the database, ASK the user to clarify rather than guessing which manual to use.
-11. When detect_drive_manual returns no comm manual for a drive, explain why (e.g., "AxCent drives use analog/PWM signaling and don't have a communication protocol manual").
+ANSWER RULES:
+1. Be CONCISE. Give the direct answer with exact values, steps, or parameters. No filler.
+2. Cite sources: [Source: filename, Page X]. Include section heading if available.
+3. Quote exact register addresses, hex values, pin numbers, and parameter settings from results.
+4. Use numbered steps for procedures, tables for specs/pinouts, bullets for lists.
+5. If info is incomplete, state what's missing and which manual section to check.
+6. Max 2 search rounds per question. Don't over-search.
 
-DRIVE FAMILY & MANUAL ROUTING:
-AMC has 120+ drives across multiple families. The system has a complete product database (CSV) with every drive's family, form factor, and network type.
-When detect_drive_manual returns results, it tells you EXACTLY which comm manual and HW manual to use. Trust it.
-
-**Drive families**: FlexPro, DigiFlex Performance, AxCent, Classic
-**Form factors**: Panel Mount, PCB Mount, Vehicle Mount, Machine Embedded, Development Board
-  - Machine Embedded and Development Board use the same HW manual as PCB Mount for their family.
-  - FlexPro Panel Mount also uses the FlexPro PCB HW manual.
-
-**Key protocol notes**:
-- "EM" in a FlexPro part number = EtherCAT (NOT Ethernet/IP)
-- "IPM" in a FlexPro part number = Ethernet/IP (NOT EtherCAT)
-- EtherCAT and Ethernet/IP are COMPLETELY DIFFERENT PROTOCOLS. Never confuse them.
-- DigiFlex "RA" drives can be Serial (RS-485) OR Modbus RTU — you MUST ask the user which protocol they are using.
-- AxCent drives have no network communication (analog/PWM only) — they only have HW installation manuals.
-
-**Software tools**: ACE and DriveWare work with all drive families. ClickMove is a simplified motion tool. Software manuals are NOT drive-specific — they are tool-specific.
-
-IMPORTANT: EtherCAT and Ethernet/IP are completely different protocols. Do NOT confuse them. "EM" = EtherCAT, "IPM" = Ethernet/IP."""
+KEY NOTES:
+- "EM" = EtherCAT, "IPM" = Ethernet/IP — NEVER confuse these.
+- DigiFlex "RA" drives: ask user if Serial or Modbus.
+- AxCent: analog/PWM only, no comm manual.
+- ACE is default software tool. DriveWare is alternative.
+- Machine Embedded/Dev Board use PCB Mount HW manual. FlexPro Panel uses FlexPro PCB HW manual."""
 
 
 # ---------------------------------------------------------------------------
@@ -285,8 +252,9 @@ def rewrite_followup(user_message: str, history: list[dict]) -> str:
         return user_message
 
 
-def build_context(chunks: list[dict]) -> str:
-    """Format retrieved chunks into a context block for tool results."""
+def build_context(chunks: list[dict], max_chunk_chars: int = 1000) -> str:
+    """Format retrieved chunks into a context block for tool results.
+    Caps each chunk to max_chunk_chars to control token usage."""
     if not chunks:
         return "No results found for this search query."
     context_parts = []
@@ -294,9 +262,12 @@ def build_context(chunks: list[dict]) -> str:
         heading = chunk.get("heading", "")
         heading_str = f", Section: {heading}" if heading else ""
         score = chunk.get("score", 0)
+        text = chunk['text'][:max_chunk_chars]
+        if len(chunk['text']) > max_chunk_chars:
+            text += "..."
         context_parts.append(
-            f"--- Excerpt {i} [Source: {chunk['source']}, Page {chunk['page']}{heading_str}, Relevance: {score:.2f}] ---\n"
-            f"{chunk['text']}\n"
+            f"--- [{i}] {chunk['source']}, p.{chunk['page']}{heading_str} (rel:{score:.2f}) ---\n"
+            f"{text}\n"
         )
     return "\n".join(context_parts)
 
@@ -551,7 +522,7 @@ def chat(user_message: str, history: list[dict] = None) -> dict:
 
     # Build messages array with conversation history + user question
     messages = []
-    for msg in history[-10:]:
+    for msg in history[-6:]:
         messages.append({"role": msg["role"], "content": msg["content"]})
     messages.append({"role": "user", "content": standalone_query})
 
@@ -574,7 +545,7 @@ def chat(user_message: str, history: list[dict] = None) -> dict:
         try:
             response = client.messages.create(
                 model=CLAUDE_MODEL,
-                max_tokens=4096,
+                max_tokens=2048,
                 system=SYSTEM_PROMPT,
                 tools=TOOLS,
                 messages=messages,
@@ -656,7 +627,7 @@ def chat_stream(user_message: str, history: list[dict] = None):
 
     # Build messages
     messages = []
-    for msg in history[-10:]:
+    for msg in history[-6:]:
         messages.append({"role": msg["role"], "content": msg["content"]})
     messages.append({"role": "user", "content": standalone_query})
 
@@ -682,7 +653,7 @@ def chat_stream(user_message: str, history: list[dict] = None):
             # For each round, first try non-streaming to check if there are tool calls
             response = client.messages.create(
                 model=CLAUDE_MODEL,
-                max_tokens=4096,
+                max_tokens=2048,
                 system=SYSTEM_PROMPT,
                 tools=TOOLS,
                 messages=messages,
@@ -702,7 +673,7 @@ def chat_stream(user_message: str, history: list[dict] = None):
             try:
                 with client.messages.stream(
                     model=CLAUDE_MODEL,
-                    max_tokens=4096,
+                    max_tokens=2048,
                     system=SYSTEM_PROMPT,
                     tools=TOOLS,
                     messages=messages,
