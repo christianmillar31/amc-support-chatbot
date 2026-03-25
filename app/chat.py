@@ -7,7 +7,7 @@ from app.config import (
     CLAUDE_MODEL, QUERY_EXPANSION_MODEL, ENABLE_QUERY_EXPANSION,
     MAX_TOOL_ROUNDS,
     ENABLE_RERANKING, RERANK_CANDIDATES, RERANK_TOP_K, TOP_K,
-    get_anthropic_client,
+    get_anthropic_client, ENABLE_SINGLE_SHOT,
 )
 from app.retriever import retrieve
 from app.ingest import get_all_pdfs
@@ -113,7 +113,13 @@ TOOLS = [
             "properties": {},
             "required": [],
         },
+        "cache_control": {"type": "ephemeral"},  # Cache tools across rounds
     },
+]
+
+# Cached system prompt — saves ~90% on re-sends after first round
+SYSTEM_PROMPT_CACHED = [
+    {"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}
 ]
 
 
@@ -505,7 +511,173 @@ def dispatch_tool(tool_name: str, tool_input: dict, expansion_cache: dict | None
 
 
 # ---------------------------------------------------------------------------
-# Main chat function — agentic tool-use loop
+# Smart routing — decide what to search without calling an LLM
+# ---------------------------------------------------------------------------
+
+def _classify_query_type(message: str) -> str:
+    """Rule-based classification of query intent. No LLM needed."""
+    msg_lower = message.lower()
+
+    # Keyword-based doc type detection
+    hw_keywords = ['wiring', 'wire', 'connector', 'pinout', 'pin ', 'mounting', 'mount',
+                   'dimension', 'thermal', 'led', 'power supply', 'fuse', 'grounding',
+                   'shielding', 'installation', 'install', 'weight', 'size']
+    sw_keywords = ['ace ', 'driveware', 'clickmove', 'click&move', 'software', 'auto-tune',
+                   'autotune', 'firmware', 'scope', 'parameter', 'workspace', 'project',
+                   'tuning', 'tune']
+    comm_keywords = ['canopen', 'ethercat', 'ethernet/ip', 'modbus', 'rs485', 'rs232',
+                     'serial', 'pdo', 'sdo', 'object dictionary', 'baud', 'register',
+                     'protocol', 'communication', 'network', 'node id', 'node address']
+    spec_keywords = ['current rating', 'voltage range', 'specification', 'specs', 'datasheet',
+                     'continuous current', 'peak current', 'supply voltage']
+    appnote_keywords = ['pvt', 'trajectory', 'current loop', 'stepper', 'twincat',
+                        'sequencing', 'g-code', 'gcode', 'mode switch', 'inrush',
+                        'ferrite', 'power supply sizing']
+
+    if any(kw in msg_lower for kw in spec_keywords):
+        return 'datasheet'
+    if any(kw in msg_lower for kw in appnote_keywords):
+        return 'app_note'
+    if any(kw in msg_lower for kw in hw_keywords):
+        return 'hw'
+    if any(kw in msg_lower for kw in sw_keywords):
+        return 'sw'
+    if any(kw in msg_lower for kw in comm_keywords):
+        return 'comm'
+    return None  # Can't determine — let the search be unfiltered
+
+
+def _smart_route(user_message: str, history: list[dict] = None) -> tuple[str, list[dict], str]:
+    """
+    Search without calling any LLM. Returns (context_text, source_chunks, drive_info).
+    Uses rule-based routing + BM25/semantic search directly.
+    """
+    expansion_cache = {}
+    conv_context = ""
+    if history:
+        recent = history[-4:]
+        conv_context = "\n".join(
+            f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:200]}"
+            for m in recent
+        )
+
+    # Detect part number from message
+    part_number = detect_part_number(user_message)
+    drive_info = ""
+    manual_filter = None
+
+    if part_number:
+        result = lookup_drive(part_number)
+        if result:
+            drive_info = json.dumps({
+                "part_number": result["sku"],
+                "family": result["family"],
+                "form_factor": result["form_factor"],
+                "network": result["network"],
+                "comm_manual": result["comm_manual"],
+                "hw_manual": result["hw_manual"],
+            }, indent=2)
+            # Determine which manual to search based on query type
+            doc_type = _classify_query_type(user_message)
+            if doc_type == 'hw' and result["hw_manual"]:
+                manual_filter = result["hw_manual"]
+            elif doc_type == 'comm' and result["comm_manual"]:
+                manual_filter = result["comm_manual"]
+            elif doc_type == 'datasheet':
+                manual_filter = f"AMC_Datasheet_{result['sku']}.pdf"
+
+    # Classify doc type for filtering
+    doc_type = _classify_query_type(user_message)
+
+    # Search with query expansion
+    expanded_query = _expand_query_cached(user_message, expansion_cache, context=conv_context)
+
+    fetch_k = RERANK_CANDIDATES if ENABLE_RERANKING else TOP_K
+
+    if manual_filter:
+        chunks = retrieve(expanded_query, top_k=fetch_k, source_filter=manual_filter)
+        # Supplement if too few results
+        if len(chunks) < 3:
+            extra = retrieve(expanded_query, top_k=fetch_k, doc_type_filter=doc_type)
+            seen = {c["text"][:100] for c in chunks}
+            for c in extra:
+                if c["text"][:100] not in seen:
+                    chunks.append(c)
+                    if len(chunks) >= fetch_k:
+                        break
+    else:
+        chunks = retrieve(expanded_query, top_k=fetch_k, doc_type_filter=doc_type)
+
+    # Rerank
+    if ENABLE_RERANKING and len(chunks) > RERANK_TOP_K:
+        chunks = rerank(user_message, chunks, top_k=RERANK_TOP_K)
+
+    context_text = build_context(chunks)
+    return context_text, chunks, drive_info
+
+
+def single_shot_chat_stream(user_message: str, history: list[dict] = None):
+    """
+    Single-shot RAG: search in Python (0 Sonnet calls), then 1 Sonnet call for the answer.
+    Falls back to agentic mode if Sonnet says it needs more info.
+    Yields same event format as chat_stream().
+    """
+    if history is None:
+        history = []
+
+    yield {"type": "status", "text": "Searching manuals..."}
+
+    # Rewrite follow-ups
+    standalone_query = rewrite_followup(user_message, history)
+
+    # Search entirely in Python — no LLM calls
+    context_text, chunks, drive_info = _smart_route(standalone_query, history)
+    all_sources = list(chunks)
+
+    if chunks:
+        yield {"type": "status", "text": f"Found {len(chunks)} results, generating answer..."}
+
+    # Build a single prompt with all context
+    user_content = standalone_query
+    if drive_info:
+        user_content += f"\n\n[Drive Info]\n{drive_info}"
+    if context_text:
+        user_content += f"\n\n[Search Results]\n{context_text}"
+    else:
+        user_content += "\n\n[No search results found. Answer from general knowledge or suggest what to search.]"
+
+    # Build messages with history
+    messages = []
+    for msg in history[-6:]:
+        messages.append({"role": msg["role"], "content": msg["content"]})
+    messages.append({"role": "user", "content": user_content})
+
+    # ONE Sonnet call — stream the answer
+    client = get_anthropic_client()
+    answer = ""
+
+    try:
+        with client.messages.stream(
+            model=CLAUDE_MODEL,
+            max_tokens=4096,
+            system=SYSTEM_PROMPT_CACHED,
+            messages=messages,
+        ) as stream:
+            for text in stream.text_stream:
+                yield {"type": "token", "text": text}
+                answer += text
+    except anthropic.RateLimitError as e:
+        logger.warning("Rate limit hit: %s", e)
+        raise RateLimitExceeded("The AI service is busy. Please wait a moment and try again.") from e
+    except Exception as e:
+        logger.error("Single-shot error: %s", e, exc_info=True)
+        yield {"type": "token", "text": "An error occurred generating the answer. Please try again."}
+
+    yield {"type": "done", "sources": _dedup_sources(all_sources)}
+
+
+# ---------------------------------------------------------------------------
+# Main chat function — agentic tool-use loop (fallback)
 # ---------------------------------------------------------------------------
 
 def chat(user_message: str, history: list[dict] = None) -> dict:
@@ -546,7 +718,7 @@ def chat(user_message: str, history: list[dict] = None) -> dict:
             response = client.messages.create(
                 model=CLAUDE_MODEL,
                 max_tokens=4096,
-                system=SYSTEM_PROMPT,
+                system=SYSTEM_PROMPT_CACHED,
                 tools=TOOLS,
                 messages=messages,
             )
@@ -654,7 +826,7 @@ def chat_stream(user_message: str, history: list[dict] = None):
             response = client.messages.create(
                 model=CLAUDE_MODEL,
                 max_tokens=4096,
-                system=SYSTEM_PROMPT,
+                system=SYSTEM_PROMPT_CACHED,
                 tools=TOOLS,
                 messages=messages,
             )
@@ -674,7 +846,7 @@ def chat_stream(user_message: str, history: list[dict] = None):
                 with client.messages.stream(
                     model=CLAUDE_MODEL,
                     max_tokens=4096,
-                    system=SYSTEM_PROMPT,
+                    system=SYSTEM_PROMPT_CACHED,
                     tools=TOOLS,
                     messages=messages,
                 ) as stream:

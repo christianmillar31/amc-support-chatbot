@@ -25,6 +25,7 @@ TOP_K = 6  # fewer chunks = less tokens sent to Claude
 DEDUP_THRESHOLD = 0.70  # cosine similarity threshold for deduplication
 MIN_RELEVANCE_SCORE = 0.10  # raised to filter noise — only send quality results
 MAX_TOOL_ROUNDS = 4  # limit search rounds to control token spend
+ENABLE_SINGLE_SHOT = True  # search in Python first, send to Sonnet once (saves ~60% tokens)
 
 # API reliability
 API_MAX_RETRIES = 4  # SDK handles 429 backoff natively with exponential retry

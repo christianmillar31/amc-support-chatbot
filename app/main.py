@@ -12,7 +12,8 @@ from cachetools import TTLCache
 
 from app.config import BASE_DIR, SESSION_TTL_SECONDS, MAX_SESSIONS, INGEST_API_KEY
 from app.ingest import build_index, is_indexed
-from app.chat import chat, chat_stream, RateLimitExceeded
+from app.chat import chat, chat_stream, single_shot_chat_stream, RateLimitExceeded
+from app.config import ENABLE_SINGLE_SHOT
 from app.retriever import reload as reload_index
 from app.feedback import log_feedback
 from app.chatlog import log_chat, get_chatlog
@@ -111,7 +112,9 @@ async def chat_stream_endpoint(request: ChatRequest):
         try:
             full_answer = ""
             all_sources = []
-            for event in chat_stream(request.message, history=history):
+            # Use single-shot (1 Sonnet call) by default, fall back to agentic if disabled
+            stream_fn = single_shot_chat_stream if ENABLE_SINGLE_SHOT else chat_stream
+            for event in stream_fn(request.message, history=history):
                 if event["type"] == "status":
                     yield f"event: status\ndata: {json.dumps(event)}\n\n"
                 elif event["type"] == "token":
