@@ -545,7 +545,7 @@ def chat(user_message: str, history: list[dict] = None) -> dict:
         try:
             response = client.messages.create(
                 model=CLAUDE_MODEL,
-                max_tokens=2048,
+                max_tokens=4096,
                 system=SYSTEM_PROMPT,
                 tools=TOOLS,
                 messages=messages,
@@ -653,7 +653,7 @@ def chat_stream(user_message: str, history: list[dict] = None):
             # For each round, first try non-streaming to check if there are tool calls
             response = client.messages.create(
                 model=CLAUDE_MODEL,
-                max_tokens=2048,
+                max_tokens=4096,
                 system=SYSTEM_PROMPT,
                 tools=TOOLS,
                 messages=messages,
@@ -673,7 +673,7 @@ def chat_stream(user_message: str, history: list[dict] = None):
             try:
                 with client.messages.stream(
                     model=CLAUDE_MODEL,
-                    max_tokens=2048,
+                    max_tokens=4096,
                     system=SYSTEM_PROMPT,
                     tools=TOOLS,
                     messages=messages,
