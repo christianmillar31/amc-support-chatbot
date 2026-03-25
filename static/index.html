@@ -311,8 +311,8 @@
             <p>Ask me anything about AMC drives. I'll search the manuals and give you answers with page references.</p>
             <div class="examples">
                 <button class="example-btn" onclick="askExample(this)">
-                    <span class="example-label">EtherCAT</span>
-                    How do I configure PDO mapping on a FlexPro drive?
+                    <span class="example-label">Software</span>
+                    How do I connect to a drive and auto-tune in ACE?
                 </button>
                 <button class="example-btn" onclick="askExample(this)">
                     <span class="example-label">Hardware</span>
@@ -331,21 +331,22 @@
     </div>
 
     <div class="input-area">
-        <!-- Drive Selector -->
-        <div id="drive-selector" style="display:flex;align-items:center;gap:8px;padding:0 16px 8px;max-width:720px;margin:0 auto;width:100%;">
-            <div style="position:relative;flex:1;">
-                <input id="drive-input" type="text" placeholder="Optional: select your drive (e.g. FE060-5-EM)..."
+        <div class="input-wrapper" style="flex-direction:column;gap:0;padding:0;overflow:visible;">
+            <!-- Drive selector row -->
+            <div id="drive-selector" style="display:flex;align-items:center;gap:6px;padding:8px 12px 4px;border-bottom:1px solid var(--border);position:relative;">
+                <svg width="14" height="14" fill="none" stroke="var(--text-muted)" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/></svg>
+                <input id="drive-input" type="text" placeholder="Select drive (optional)"
                     autocomplete="off" spellcheck="false"
-                    style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);">
-                <div id="drive-dropdown" style="display:none;position:absolute;bottom:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius-sm) var(--radius-sm) 0 0;z-index:100;box-shadow:0 -4px 12px rgba(0,0,0,0.1);"></div>
+                    style="flex:1;padding:4px 0;border:none;outline:none;font-size:13px;font-family:inherit;background:transparent;color:var(--text);">
+                <div id="drive-info" style="display:none;font-size:12px;color:var(--text-secondary);white-space:nowrap;">
+                    <span id="drive-family"></span> · <span id="drive-network"></span>
+                    <button onclick="clearDrive()" style="background:none;border:none;color:var(--amc-blue);cursor:pointer;font-size:12px;margin-left:4px;" title="Clear drive">✕</button>
+                </div>
+                <div id="drive-dropdown" style="display:none;position:absolute;bottom:100%;left:0;right:0;max-height:220px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius-sm) var(--radius-sm) 0 0;z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,0.15);"></div>
             </div>
-            <div id="drive-info" style="display:none;font-size:12px;color:var(--text-secondary);white-space:nowrap;">
-                <span id="drive-family"></span> · <span id="drive-network"></span>
-                <button onclick="clearDrive()" style="background:none;border:none;color:var(--amc-blue);cursor:pointer;font-size:12px;margin-left:4px;">✕</button>
-            </div>
-        </div>
-        <div class="input-wrapper">
-            <textarea id="message-input" rows="1" placeholder="Ask about AMC drives, protocols, hardware, software..."></textarea>
+            <!-- Message input row -->
+            <div style="display:flex;align-items:flex-end;gap:8px;padding:4px 4px 4px 12px;">
+                <textarea id="message-input" rows="1" placeholder="Ask about AMC drives, protocols, hardware, software..." style="flex:1;border:none;outline:none;resize:none;font-size:14px;font-family:inherit;background:transparent;color:var(--text);padding:8px 0;min-height:36px;max-height:120px;"></textarea>
             <button id="send-btn" onclick="sendMessage()" aria-label="Send message">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                 Send
@@ -354,6 +355,7 @@
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 Stop
             </button>
+            </div>
         </div>
         <div class="input-hint" id="input-hint">Press Enter to send &middot; Shift+Enter for new line</div>
     </div>
