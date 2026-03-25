@@ -9,3 +9,4 @@ services:
         sync: false
       - key: PYTHON_VERSION
         value: "3.11"
+# Trigger rebuild
