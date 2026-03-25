@@ -1,16 +1,16 @@
 """
 Chat logging — automatically logs every question + answer for manager review.
 Stored in chatlog.json. Viewable at /chatlog dashboard.
-Optionally sends email notifications.
+Sends email notifications via Resend API (works on HF Spaces).
 """
 import json
 import logging
 import os
-import smtplib
 import tempfile
 import threading
-from email.mime.text import MIMEText
 from datetime import datetime, timezone
+from urllib.request import Request, urlopen
+from urllib.error import URLError
 
 from app.config import BASE_DIR
 
@@ -18,33 +18,44 @@ logger = logging.getLogger(__name__)
 
 CHATLOG_FILE = BASE_DIR / "chatlog.json"
 
-# Email config — set these env vars to enable email notifications
+# Email config — Resend API (HTTPS-based, works on HF Spaces)
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 NOTIFY_EMAIL = os.getenv("NOTIFY_EMAIL", "cmillar@a-m-c.com,christianmillar31@gmail.com")
-SMTP_HOST = os.getenv("SMTP_HOST", "")  # e.g. smtp.gmail.com
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASS = os.getenv("SMTP_PASS", "")
 
 
 def _send_email_async(subject: str, body: str) -> None:
-    """Send email notification in background thread (non-blocking)."""
-    if not all([SMTP_HOST, SMTP_USER, SMTP_PASS, NOTIFY_EMAIL]):
-        return  # Email not configured
+    """Send email via Resend API in background thread (non-blocking)."""
+    if not RESEND_API_KEY or not NOTIFY_EMAIL:
+        return
 
     def _send():
         try:
-            msg = MIMEText(body, "html")
-            msg["Subject"] = subject
-            msg["From"] = SMTP_USER
             recipients = [e.strip() for e in NOTIFY_EMAIL.split(",")]
-            msg["To"] = ", ".join(recipients)
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-                server.starttls()
-                server.login(SMTP_USER, SMTP_PASS)
-                server.send_message(msg, to_addrs=recipients)
-            logger.info("Email notification sent to %s", NOTIFY_EMAIL)
+            to_list = [{"email": e} for e in recipients]
+
+            payload = json.dumps({
+                "from": "AMC Support Bot <onboarding@resend.dev>",
+                "to": recipients,
+                "subject": subject,
+                "html": body,
+            }).encode("utf-8")
+
+            req = Request(
+                "https://api.resend.com/emails",
+                data=payload,
+                headers={
+                    "Authorization": f"Bearer {RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                method="POST",
+            )
+            with urlopen(req, timeout=10) as resp:
+                result = resp.read().decode()
+                logger.info("Resend email sent: %s", result)
+        except URLError as e:
+            logger.warning("Resend email failed: %s", e)
         except Exception as e:
-            logger.warning("Email notification failed: %s", e)
+            logger.warning("Resend email failed: %s", e)
 
     threading.Thread(target=_send, daemon=True).start()
 
@@ -55,13 +66,13 @@ def log_chat(
     answer: str,
     sources: list,
 ) -> None:
-    """Append a chat entry to chatlog.json and optionally send email."""
+    """Append a chat entry to chatlog.json and send email notification."""
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "session_id": session_id,
         "question": question[:2000],
         "answer": answer[:5000],
-        "rating": None,  # Will be updated by feedback endpoint
+        "rating": None,
         "sources": [
             {"source": s.get("source", ""), "page": s.get("page", ""), "heading": s.get("heading", "")}
             for s in (sources or [])
@@ -91,7 +102,6 @@ def log_chat(
 
     entries.append(entry)
 
-    # Keep last 500 entries to prevent unbounded growth
     if len(entries) > 500:
         entries = entries[-500:]
 
@@ -116,22 +126,20 @@ def _write_entries(entries: list) -> None:
 def update_rating(session_id: str, question: str, rating: str) -> None:
     """Update the rating on the most recent matching chatlog entry."""
     entries = get_chatlog()
-    # Find the most recent entry matching this session + question
     for entry in reversed(entries):
         if entry.get("session_id") == session_id and entry.get("question", "")[:100] == question[:100]:
             entry["rating"] = rating
             break
     else:
-        return  # No match found
+        return
 
     _write_entries(entries)
 
-    # Send email for thumbs-down feedback
     if rating == "down":
         _send_email_async(
             subject=f"AMC Bot: THUMBS DOWN — {question[:50]}",
             body=f"""
-            <h3 style="color:red;">Negative Feedback</h3>
+            <h3 style="color:red;">&#x1F44E; Negative Feedback</h3>
             <p><b>Question:</b> {question[:500]}</p>
             <p><b>Answer given:</b> {entry.get('answer', '')[:1000]}</p>
             <p><small>Session: {session_id}</small></p>
