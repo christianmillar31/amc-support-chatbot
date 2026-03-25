@@ -18,6 +18,7 @@ from app.retriever import reload as reload_index
 from app.feedback import log_feedback
 from app.chatlog import log_chat, get_chatlog
 from app.faq import match_faq
+from app.drive_lookup import get_all_drives, lookup_drive
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="stat
 class ChatRequest(BaseModel):
     message: str = pydantic.Field(max_length=2000)
     session_id: Optional[str] = None
+    drive_sku: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -58,6 +60,13 @@ class ChatResponse(BaseModel):
 @app.get("/")
 async def index():
     return FileResponse(str(BASE_DIR / "static" / "index.html"))
+
+
+@app.get("/api/drives")
+async def drives_endpoint():
+    """Return all drives for the frontend autocomplete selector."""
+    drives = get_all_drives()
+    return {"drives": drives, "total": len(drives)}
 
 
 @app.post("/chat", response_model=ChatResponse)
@@ -142,9 +151,14 @@ async def chat_stream_endpoint(request: ChatRequest):
         try:
             full_answer = ""
             all_sources = []
+            # Resolve drive context if user pre-selected a drive
+            drive_context = None
+            if request.drive_sku:
+                drive_context = lookup_drive(request.drive_sku)
+
             # Use single-shot (1 Sonnet call) by default, fall back to agentic if disabled
             stream_fn = single_shot_chat_stream if ENABLE_SINGLE_SHOT else chat_stream
-            for event in stream_fn(request.message, history=history):
+            for event in stream_fn(request.message, history=history, drive_context=drive_context):
                 if event["type"] == "status":
                     yield f"event: status\ndata: {json.dumps(event)}\n\n"
                 elif event["type"] == "token":

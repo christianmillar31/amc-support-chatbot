@@ -308,45 +308,42 @@
                 <img src="/static/AMC-Logo-Long.jpg" alt="ADVANCED Motion Controls" style="max-width:320px;width:100%;height:auto;border-radius:12px;background:#ffffff;padding:8px 16px;">
             </div>
             <h2>How can I help?</h2>
-            <p>Ask me anything about AMC drives — communication protocols, hardware installation, software setup, tuning, and more. I'll search the manuals and give you answers with page references.</p>
+            <p>Ask me anything about AMC drives. I'll search the manuals and give you answers with page references.</p>
             <div class="examples">
                 <button class="example-btn" onclick="askExample(this)">
-                    <span class="example-label">CANopen</span>
-                    How do I configure baud rate?
-                </button>
-                <button class="example-btn" onclick="askExample(this)">
                     <span class="example-label">EtherCAT</span>
-                    What are the setup steps?
-                </button>
-                <button class="example-btn" onclick="askExample(this)">
-                    <span class="example-label">Modbus</span>
-                    Explain register mapping for motor parameters
-                </button>
-                <button class="example-btn" onclick="askExample(this)">
-                    <span class="example-label">RS485</span>
-                    How do I troubleshoot communication errors?
+                    How do I configure PDO mapping on a FlexPro drive?
                 </button>
                 <button class="example-btn" onclick="askExample(this)">
                     <span class="example-label">Hardware</span>
-                    What are the connector pinouts for a FlexPro PCB drive?
+                    What are the connector pinouts for a DigiFlex Panel drive?
                 </button>
                 <button class="example-btn" onclick="askExample(this)">
-                    <span class="example-label">Wiring</span>
-                    How do I wire power to a DigiFlex Panel drive?
+                    <span class="example-label">Tuning</span>
+                    How do I auto-tune the current loop in ACE?
                 </button>
                 <button class="example-btn" onclick="askExample(this)">
-                    <span class="example-label">ACE Software</span>
-                    How do I connect to a drive and auto-tune?
-                </button>
-                <button class="example-btn" onclick="askExample(this)">
-                    <span class="example-label">DriveWare</span>
-                    How do I update drive firmware?
+                    <span class="example-label">Troubleshooting</span>
+                    My analog drive has a red LED — what does it mean?
                 </button>
             </div>
         </div>
     </div>
 
     <div class="input-area">
+        <!-- Drive Selector -->
+        <div id="drive-selector" style="display:flex;align-items:center;gap:8px;padding:0 16px 8px;max-width:720px;margin:0 auto;width:100%;">
+            <div style="position:relative;flex:1;">
+                <input id="drive-input" type="text" placeholder="Optional: select your drive (e.g. FE060-5-EM)..."
+                    autocomplete="off" spellcheck="false"
+                    style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface);color:var(--text);">
+                <div id="drive-dropdown" style="display:none;position:absolute;bottom:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius-sm) var(--radius-sm) 0 0;z-index:100;box-shadow:0 -4px 12px rgba(0,0,0,0.1);"></div>
+            </div>
+            <div id="drive-info" style="display:none;font-size:12px;color:var(--text-secondary);white-space:nowrap;">
+                <span id="drive-family"></span> · <span id="drive-network"></span>
+                <button onclick="clearDrive()" style="background:none;border:none;color:var(--amc-blue);cursor:pointer;font-size:12px;margin-left:4px;">✕</button>
+            </div>
+        </div>
         <div class="input-wrapper">
             <textarea id="message-input" rows="1" placeholder="Ask about AMC drives, protocols, hardware, software..."></textarea>
             <button id="send-btn" onclick="sendMessage()" aria-label="Send message">
@@ -378,6 +375,66 @@
         }
 
         const MAX_RATE_LIMIT_RETRIES = 3;
+
+        // --- Drive Selector ---
+        let selectedDriveSku = sessionStorage.getItem('selectedDriveSku') || null;
+        let allDrives = [];
+        const driveInput = document.getElementById('drive-input');
+        const driveDropdown = document.getElementById('drive-dropdown');
+        const driveInfo = document.getElementById('drive-info');
+
+        // Load drive list on startup
+        fetch('/api/drives').then(r => r.json()).then(data => {
+            allDrives = data.drives || [];
+            // Restore previous selection
+            if (selectedDriveSku) {
+                const d = allDrives.find(d => d.sku === selectedDriveSku);
+                if (d) showDriveInfo(d);
+            }
+        }).catch(() => {});
+
+        driveInput.addEventListener('input', () => {
+            const q = driveInput.value.trim().toUpperCase();
+            if (q.length < 2) { driveDropdown.style.display = 'none'; return; }
+            const matches = allDrives.filter(d => d.sku.includes(q)).slice(0, 15);
+            if (!matches.length) { driveDropdown.style.display = 'none'; return; }
+            driveDropdown.innerHTML = matches.map(d =>
+                `<div onclick="selectDrive('${d.sku}')" style="padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='var(--surface)'">
+                    <span style="font-weight:600;">${d.sku}</span>
+                    <span style="color:var(--text-secondary);font-size:11px;">${d.family} · ${d.network || 'Analog'}</span>
+                </div>`
+            ).join('');
+            driveDropdown.style.display = 'block';
+        });
+
+        driveInput.addEventListener('blur', () => {
+            setTimeout(() => { driveDropdown.style.display = 'none'; }, 200);
+        });
+
+        function selectDrive(sku) {
+            selectedDriveSku = sku;
+            sessionStorage.setItem('selectedDriveSku', sku);
+            const d = allDrives.find(d => d.sku === sku);
+            if (d) showDriveInfo(d);
+            driveDropdown.style.display = 'none';
+            driveInput.value = '';
+            messageInput.focus();
+        }
+
+        function showDriveInfo(d) {
+            driveInput.placeholder = d.sku;
+            driveInput.value = '';
+            document.getElementById('drive-family').textContent = d.family + ' ' + d.form_factor;
+            document.getElementById('drive-network').textContent = d.network || 'Analog (no network)';
+            driveInfo.style.display = 'inline';
+        }
+
+        function clearDrive() {
+            selectedDriveSku = null;
+            sessionStorage.removeItem('selectedDriveSku');
+            driveInput.placeholder = 'Optional: type a drive part number...';
+            driveInfo.style.display = 'none';
+        }
 
         messageInput.addEventListener('input', () => {
             messageInput.style.height = 'auto';
@@ -649,7 +706,7 @@
                 const res = await fetch('/chat/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: text, session_id: sessionId }),
+                    body: JSON.stringify({ message: text, session_id: sessionId, drive_sku: selectedDriveSku || undefined }),
                     signal: currentAbort.signal,
                 });
 

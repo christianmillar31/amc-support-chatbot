@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 FAQ instant-match system — answers common questions in <1 second with zero API tokens.
 

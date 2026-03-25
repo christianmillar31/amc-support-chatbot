@@ -547,10 +547,12 @@ def _classify_query_type(message: str) -> str:
     return None  # Can't determine — let the search be unfiltered
 
 
-def _smart_route(user_message: str, history: list[dict] = None) -> tuple[str, list[dict], str]:
+def _smart_route(user_message: str, history: list[dict] = None, drive_context: dict = None) -> tuple[str, list[dict], str]:
     """
     Search without calling any LLM. Returns (context_text, source_chunks, drive_info).
     Uses rule-based routing + BM25/semantic search directly.
+    If drive_context is provided (user pre-selected a drive), searches in priority order:
+      1. Drive datasheet  2. HW manual  3. Comm manual  4. App notes + fallback
     """
     expansion_cache = {}
     conv_context = ""
@@ -561,51 +563,77 @@ def _smart_route(user_message: str, history: list[dict] = None) -> tuple[str, li
             for m in recent
         )
 
-    # Detect part number from message
-    part_number = detect_part_number(user_message)
     drive_info = ""
-    manual_filter = None
+    result = drive_context  # Pre-resolved from frontend selector
 
-    if part_number:
-        result = lookup_drive(part_number)
-        if result:
-            drive_info = json.dumps({
-                "part_number": result["sku"],
-                "family": result["family"],
-                "form_factor": result["form_factor"],
-                "network": result["network"],
-                "comm_manual": result["comm_manual"],
-                "hw_manual": result["hw_manual"],
-            }, indent=2)
-            # Determine which manual to search based on query type
-            doc_type = _classify_query_type(user_message)
-            if doc_type == 'hw' and result["hw_manual"]:
-                manual_filter = result["hw_manual"]
-            elif doc_type == 'comm' and result["comm_manual"]:
-                manual_filter = result["comm_manual"]
-            elif doc_type == 'datasheet':
-                manual_filter = f"AMC_Datasheet_{result['sku']}.pdf"
+    # If no pre-selected drive, detect from message
+    if not result:
+        part_number = detect_part_number(user_message)
+        if part_number:
+            result = lookup_drive(part_number)
 
-    # Classify doc type for filtering
-    doc_type = _classify_query_type(user_message)
+    if result:
+        drive_info = json.dumps({
+            "part_number": result["sku"],
+            "family": result["family"],
+            "form_factor": result["form_factor"],
+            "network": result["network"],
+            "comm_manual": result["comm_manual"],
+            "hw_manual": result["hw_manual"],
+        }, indent=2)
 
     # Search with query expansion
     expanded_query = _expand_query_cached(user_message, expansion_cache, context=conv_context)
-
     fetch_k = RERANK_CANDIDATES if ENABLE_RERANKING else TOP_K
 
-    if manual_filter:
-        chunks = retrieve(expanded_query, top_k=fetch_k, source_filter=manual_filter)
-        # Supplement if too few results
-        if len(chunks) < 3:
-            extra = retrieve(expanded_query, top_k=fetch_k, doc_type_filter=doc_type)
-            seen = {c["text"][:100] for c in chunks}
-            for c in extra:
-                if c["text"][:100] not in seen:
+    if result:
+        # --- Drive-aware priority search ---
+        # Priority 1: Drive datasheet (most specific to this exact drive)
+        # Priority 2: HW manual (wiring, connectors, mounting)
+        # Priority 3: Comm manual (protocol, registers, object dictionary)
+        # Priority 4: App notes + everything else (fallback)
+        chunks = []
+        seen = set()
+
+        priority_manuals = []
+        datasheet_name = f"AMC_Datasheet_{result['sku']}.pdf"
+        priority_manuals.append(datasheet_name)
+        if result.get("hw_manual"):
+            priority_manuals.append(result["hw_manual"])
+        if result.get("comm_manual"):
+            priority_manuals.append(result["comm_manual"])
+
+        # Search each priority manual
+        for manual in priority_manuals:
+            manual_chunks = retrieve(expanded_query, top_k=fetch_k, source_filter=manual)
+            for c in manual_chunks:
+                key = c["text"][:100]
+                if key not in seen:
+                    seen.add(key)
                     chunks.append(c)
-                    if len(chunks) >= fetch_k:
-                        break
+
+        # Always search app notes as supplement (procedures, tuning, troubleshooting)
+        app_chunks = retrieve(expanded_query, top_k=fetch_k, doc_type_filter="app_note")
+        for c in app_chunks:
+            key = c["text"][:100]
+            if key not in seen:
+                seen.add(key)
+                chunks.append(c)
+
+        # If still not enough, search everything
+        if len(chunks) < 3:
+            extra = retrieve(expanded_query, top_k=fetch_k)
+            for c in extra:
+                key = c["text"][:100]
+                if key not in seen:
+                    seen.add(key)
+                    chunks.append(c)
+
+        # Trim to fetch_k before reranking
+        chunks = chunks[:fetch_k]
     else:
+        # No drive context — search by query type
+        doc_type = _classify_query_type(user_message)
         chunks = retrieve(expanded_query, top_k=fetch_k, doc_type_filter=doc_type)
 
     # Rerank
@@ -616,7 +644,7 @@ def _smart_route(user_message: str, history: list[dict] = None) -> tuple[str, li
     return context_text, chunks, drive_info
 
 
-def single_shot_chat_stream(user_message: str, history: list[dict] = None):
+def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive_context: dict = None):
     """
     Single-shot RAG: search in Python (0 Sonnet calls), then 1 Sonnet call for the answer.
     Falls back to agentic mode if Sonnet says it needs more info.
@@ -631,7 +659,7 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None):
     standalone_query = rewrite_followup(user_message, history)
 
     # Search entirely in Python — no LLM calls
-    context_text, chunks, drive_info = _smart_route(standalone_query, history)
+    context_text, chunks, drive_info = _smart_route(standalone_query, history, drive_context=drive_context)
     all_sources = list(chunks)
 
     if chunks:
@@ -782,7 +810,7 @@ def _tool_call_description(name: str, tool_input: dict) -> str:
     return f"Running {name}..."
 
 
-def chat_stream(user_message: str, history: list[dict] = None):
+def chat_stream(user_message: str, history: list[dict] = None, drive_context: dict = None):
     """
     Streaming version of chat(). Yields event dicts:
     - {"type": "status", "text": "..."} — progress updates during tool calls

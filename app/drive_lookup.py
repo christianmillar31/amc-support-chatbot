@@ -324,3 +324,23 @@ def detect_part_number(message: str) -> str | None:
             return match.group(1).upper()
 
     return None
+
+
+def get_all_drives() -> list[dict]:
+    """Return all unique drives from the CSV for the frontend autocomplete dropdown."""
+    _load_csv()
+    drives = []
+    seen = set()
+    for sku, drive in _DRIVE_DB.items():
+        if sku in seen:
+            continue
+        seen.add(sku)
+        drives.append({
+            "sku": sku,
+            "family": drive["family"],
+            "form_factor": drive["form_factor"],
+            "network": drive["network"],
+        })
+    # Sort by family then SKU
+    drives.sort(key=lambda d: (d["family"], d["sku"]))
+    return drives
