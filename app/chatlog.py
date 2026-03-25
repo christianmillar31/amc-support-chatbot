@@ -9,6 +9,7 @@ import os
 import tempfile
 import threading
 from datetime import datetime, timezone
+from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 
@@ -16,7 +17,9 @@ from app.config import BASE_DIR
 
 logger = logging.getLogger(__name__)
 
-CHATLOG_FILE = BASE_DIR / "chatlog.json"
+# Use /data for persistent storage on HF Spaces, fallback to BASE_DIR locally
+PERSISTENT_DIR = Path("/data") if Path("/data").exists() else BASE_DIR
+CHATLOG_FILE = PERSISTENT_DIR / "chatlog.json"
 
 # Email config — SMTP2GO REST API (HTTPS-based, works on HF Spaces)
 SMTP2GO_API_KEY = os.getenv("SMTP2GO_API_KEY", "")

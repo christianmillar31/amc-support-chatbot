@@ -3,12 +3,15 @@ import logging
 import os
 import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 
 from app.config import BASE_DIR
 
 logger = logging.getLogger(__name__)
 
-FEEDBACK_FILE = BASE_DIR / "feedback.json"
+# Use /data for persistent storage on HF Spaces, fallback to BASE_DIR locally
+PERSISTENT_DIR = Path("/data") if Path("/data").exists() else BASE_DIR
+FEEDBACK_FILE = PERSISTENT_DIR / "feedback.json"
 
 
 def log_feedback(
