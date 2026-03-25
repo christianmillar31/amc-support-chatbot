@@ -58,8 +58,11 @@ async function loadLog() {
     const res = await fetch('/api/chatlog');
     const data = await res.json();
     allEntries = (data.entries || []).reverse(); // newest first
+    const ups = allEntries.filter(e => e.rating === 'up').length;
+    const downs = allEntries.filter(e => e.rating === 'down').length;
+    const ratingText = (ups || downs) ? ` | ${ups} good, ${downs} bad` : '';
     document.getElementById('stats').textContent =
-      `${data.total} total conversations`;
+      `${data.total} conversations${ratingText}`;
     renderEntries(allEntries);
   } catch (e) {
     document.getElementById('entries').innerHTML =
@@ -83,10 +86,14 @@ function renderEntries(entries) {
     ).join('');
     const answerPreview = e.answer || 'No answer';
 
+    const ratingBadge = e.rating === 'up' ? '<span style="background:#22c55e;color:white;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">&#x1F44D; Good</span>'
+      : e.rating === 'down' ? '<span style="background:#ef4444;color:white;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">&#x1F44E; Bad</span>'
+      : '<span style="background:#94a3b8;color:white;padding:2px 8px;border-radius:12px;font-size:11px;">No rating</span>';
+
     return `
-      <div class="entry">
+      <div class="entry" style="${e.rating === 'down' ? 'border-left:3px solid #ef4444;' : e.rating === 'up' ? 'border-left:3px solid #22c55e;' : ''}">
         <div class="entry-header">
-          <span>${time}</span>
+          <span>${time} ${ratingBadge}</span>
           <span>Session: ${e.session_id?.substring(0, 8) || 'unknown'}...</span>
         </div>
         <div class="entry-question">${escapeHtml(e.question)}</div>

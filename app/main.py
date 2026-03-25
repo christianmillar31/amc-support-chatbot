@@ -16,7 +16,7 @@ from app.chat import chat, chat_stream, single_shot_chat_stream, RateLimitExceed
 from app.config import ENABLE_SINGLE_SHOT
 from app.retriever import reload as reload_index
 from app.feedback import log_feedback
-from app.chatlog import log_chat, get_chatlog
+from app.chatlog import log_chat, get_chatlog, update_rating
 from app.faq import match_faq
 from app.drive_lookup import get_all_drives, lookup_drive
 
@@ -211,6 +211,11 @@ async def feedback_endpoint(request: FeedbackRequest):
             rating=request.rating,
             comment=request.comment,
         )
+        # Also update the chatlog entry with the rating
+        try:
+            update_rating(request.session_id, request.question, request.rating)
+        except Exception:
+            pass  # Non-critical — don't fail the feedback save
         return {"status": "ok"}
     except Exception as e:
         logger.error("Feedback error: %s", e, exc_info=True)
