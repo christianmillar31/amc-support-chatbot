@@ -188,6 +188,65 @@ async def chat_stream_endpoint(request: ChatRequest):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
+@app.get("/debug/email")
+async def debug_email():
+    """Debug endpoint — tests SMTP configuration and sends a test email."""
+    import smtplib
+    from email.mime.text import MIMEText
+
+    smtp_host = os.getenv("SMTP_HOST", "")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER", "")
+    smtp_pass = os.getenv("SMTP_PASS", "")
+    notify_email = os.getenv("NOTIFY_EMAIL", "cmillar@a-m-c.com,christianmillar31@gmail.com")
+
+    # Step 1: Check env vars
+    config = {
+        "SMTP_HOST": smtp_host or "NOT SET",
+        "SMTP_PORT": smtp_port,
+        "SMTP_USER": smtp_user or "NOT SET",
+        "SMTP_PASS": ("*" * len(smtp_pass)) if smtp_pass else "NOT SET",
+        "SMTP_PASS_LENGTH": len(smtp_pass),
+        "NOTIFY_EMAIL": notify_email,
+    }
+
+    if not all([smtp_host, smtp_user, smtp_pass]):
+        return {"status": "FAIL", "error": "Missing env vars", "config": config}
+
+    # Step 2: Try SMTP connection
+    steps = []
+    try:
+        steps.append("Connecting to SMTP server...")
+        server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+        steps.append(f"Connected to {smtp_host}:{smtp_port}")
+
+        steps.append("Starting TLS...")
+        server.starttls()
+        steps.append("TLS OK")
+
+        steps.append("Logging in...")
+        server.login(smtp_user, smtp_pass)
+        steps.append("Login OK")
+
+        steps.append("Sending test email...")
+        msg = MIMEText("<h3>AMC Chatbot Email Test</h3><p>If you see this, email notifications are working.</p>", "html")
+        msg["Subject"] = "AMC Bot: Email Test"
+        msg["From"] = smtp_user
+        recipients = [e.strip() for e in notify_email.split(",")]
+        msg["To"] = ", ".join(recipients)
+        server.send_message(msg, to_addrs=recipients)
+        steps.append(f"Sent to {recipients}")
+
+        server.quit()
+        steps.append("SMTP connection closed")
+
+        return {"status": "OK", "steps": steps, "config": config}
+
+    except Exception as e:
+        steps.append(f"FAILED: {type(e).__name__}: {str(e)}")
+        return {"status": "FAIL", "steps": steps, "config": config, "error": str(e)}
+
+
 class FeedbackRequest(BaseModel):
     session_id: str
     question: str
