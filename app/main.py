@@ -143,8 +143,8 @@ async def chat_stream_endpoint(request: ChatRequest):
             # Log for dashboard
             try:
                 log_chat(session_id, request.message, answer, sources)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error("FAQ chat logging failed: %s", e, exc_info=True)
 
         return StreamingResponse(faq_event_generator(), media_type="text/event-stream")
 
@@ -288,6 +288,65 @@ async def debug_chatlog_sync():
     except Exception as e:
         info["error"] = f"{type(e).__name__}: {e}"
         return {"status": "FAIL", "info": info}
+
+
+@app.get("/debug/chatlog-write-test")
+async def debug_chatlog_write_test():
+    """Test that chatlog can actually write to disk."""
+    from app.chatlog import CHATLOG_FILE, _write_local, get_chatlog
+    import os as _os
+
+    info = {
+        "chatlog_path": str(CHATLOG_FILE),
+        "parent_exists": CHATLOG_FILE.parent.exists(),
+        "parent_writable": _os.access(str(CHATLOG_FILE.parent), _os.W_OK),
+    }
+
+    # Test 1: Can we write a file?
+    test_file = CHATLOG_FILE.parent / ".write_test"
+    try:
+        test_file.write_text("test")
+        test_file.unlink()
+        info["write_test"] = "PASS"
+    except Exception as e:
+        info["write_test"] = f"FAIL: {e}"
+        return {"status": "FAIL", "info": info}
+
+    # Test 2: Current entry count
+    try:
+        entries = get_chatlog()
+        info["current_entries"] = len(entries)
+    except Exception as e:
+        info["current_entries"] = f"ERROR: {e}"
+
+    # Test 3: Can we write and read back?
+    try:
+        test_entry = {
+            "timestamp": "write-test",
+            "session_id": "debug",
+            "question": "Write test",
+            "answer": "OK",
+            "rating": None,
+            "sources": [],
+        }
+        existing = get_chatlog()
+        existing.append(test_entry)
+        _write_local(existing)
+
+        # Read back
+        if CHATLOG_FILE.exists():
+            with open(CHATLOG_FILE, "r") as f:
+                readback = json.load(f)
+            info["write_readback"] = f"PASS ({len(readback)} entries)"
+            # Remove the test entry
+            readback = [e for e in readback if e.get("timestamp") != "write-test"]
+            _write_local(readback)
+        else:
+            info["write_readback"] = "FAIL: file doesn't exist after write"
+    except Exception as e:
+        info["write_readback"] = f"FAIL: {e}"
+
+    return {"status": "OK" if "PASS" in str(info.get("write_readback", "")) else "FAIL", "info": info}
 
 
 class FeedbackRequest(BaseModel):

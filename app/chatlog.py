@@ -15,7 +15,18 @@ from app.config import BASE_DIR
 
 logger = logging.getLogger(__name__)
 
-CHATLOG_FILE = BASE_DIR / "chatlog.json"
+# Use /tmp on Linux containers (always writable), fall back to BASE_DIR for local dev
+_CHATLOG_DIR = Path("/tmp") if (Path("/tmp").exists() and os.access("/tmp", os.W_OK)) else BASE_DIR
+CHATLOG_FILE = _CHATLOG_DIR / "chatlog.json"
+
+# Write test at import time — fail loudly if broken
+try:
+    _test_path = CHATLOG_FILE.parent / ".chatlog_write_test"
+    _test_path.write_text("ok")
+    _test_path.unlink()
+    logger.info("Chatlog write OK: %s", CHATLOG_FILE)
+except Exception as e:
+    logger.error("CHATLOG WRITE TEST FAILED at %s: %s", CHATLOG_FILE, e)
 
 # HF Hub sync config
 HF_TOKEN = os.getenv("HF_TOKEN", "")
@@ -142,7 +153,7 @@ def _write_local(entries: list) -> None:
             json.dump(entries, f, indent=2, ensure_ascii=False)
         os.replace(tmp_path, CHATLOG_FILE)
     except Exception as e:
-        logger.warning("Local chatlog write failed: %s", e)
+        logger.error("LOCAL CHATLOG WRITE FAILED at %s: %s", CHATLOG_FILE, e, exc_info=True)
         try:
             os.unlink(tmp_path)
         except Exception:
