@@ -148,10 +148,11 @@ async def chat_stream_endpoint(request: ChatRequest):
 
         return StreamingResponse(faq_event_generator(), media_type="text/event-stream")
 
+    # Shared state — the generator writes into these, background task reads them
+    stream_state = {"answer": "", "sources": [], "logged": False}
+
     async def event_generator():
         try:
-            full_answer = ""
-            all_sources = []
             # Resolve drive context if user pre-selected a drive
             drive_context = None
             if request.drive_sku:
@@ -163,28 +164,31 @@ async def chat_stream_endpoint(request: ChatRequest):
                 if event["type"] == "status":
                     yield f"event: status\ndata: {json.dumps(event)}\n\n"
                 elif event["type"] == "token":
-                    full_answer += event["text"]
+                    stream_state["answer"] += event["text"]
                     yield f"event: token\ndata: {json.dumps(event)}\n\n"
                 elif event["type"] == "done":
-                    all_sources = event.get("sources", [])
+                    stream_state["sources"] = event.get("sources", [])
                     yield f"event: done\ndata: {json.dumps(event)}\n\n"
 
-            # Update session history after streaming completes
+            # Update session history
             history.append({"role": "user", "content": request.message})
-            history.append({"role": "assistant", "content": full_answer})
+            history.append({"role": "assistant", "content": stream_state["answer"]})
             sessions[session_id] = history[-MAX_HISTORY:]
-
-            # Log chat for manager dashboard
-            try:
-                log_chat(session_id, request.message, full_answer, all_sources)
-            except Exception as e:
-                logger.warning("Chat logging failed: %s", e)
 
         except RateLimitExceeded:
             yield f"event: error\ndata: {json.dumps({'detail': 'The AI service is busy. Please wait a moment and try again.', 'retry_after': 30})}\n\n"
         except Exception as e:
             logger.error("Stream error: %s", e, exc_info=True)
             yield f"event: error\ndata: {json.dumps({'detail': 'An unexpected error occurred.'})}\n\n"
+        finally:
+            # ALWAYS log — even if client disconnects mid-stream
+            if stream_state["answer"] and not stream_state["logged"]:
+                stream_state["logged"] = True
+                try:
+                    log_chat(session_id, request.message, stream_state["answer"], stream_state["sources"])
+                    logger.info("Chat logged: %s (%d chars)", request.message[:50], len(stream_state["answer"]))
+                except Exception as e:
+                    logger.error("CHAT LOGGING FAILED: %s", e, exc_info=True)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
