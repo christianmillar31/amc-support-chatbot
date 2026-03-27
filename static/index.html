@@ -931,8 +931,9 @@
                                     }
                                     // Add feedback buttons
                                     msgBody.appendChild(createFeedbackRow(text, streamAnswer, streamSources));
-                                    // Detect troubleshooting topic and show interactive tree
-                                    const tsTopic = detectTroubleshootTopic(streamAnswer);
+                                    // Detect troubleshooting topic from USER's question (not AI answer)
+                                    // This prevents false triggers from answer text containing generic words
+                                    const tsTopic = detectTroubleshootTopic(text);
                                     if (tsTopic) {
                                         appendTroubleshootWidget(msgEl, tsTopic.id, tsTopic.tree);
                                     }
