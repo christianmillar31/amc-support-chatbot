@@ -6,6 +6,7 @@
     <title>AMC Support Assistant</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="/static/marked.min.js"></script>
+    <script src="/static/troubleshoot-trees.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -223,6 +224,27 @@
         .md tr:nth-child(even) { background: #fafbfc; }
         .md blockquote { border-left: 3px solid var(--amc-blue); padding-left: 14px; margin: 8px 0; color: #475569; }
         .md hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+        /* Troubleshooting widget */
+        .ts-widget { margin-top: 12px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .ts-header { background: #1e3a5f; color: white; padding: 10px 14px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .ts-body { padding: 14px; background: var(--surface); }
+        .ts-question { font-size: 14px; font-weight: 500; margin-bottom: 10px; color: var(--text); }
+        .ts-options { display: flex; flex-direction: column; gap: 6px; }
+        .ts-option { padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); cursor: pointer; font-size: 13px; color: var(--text); text-align: left; transition: all 0.15s; }
+        .ts-option:hover { border-color: var(--amc-blue); background: #eff6ff; color: var(--amc-blue); }
+        .ts-answer { font-size: 13px; line-height: 1.6; color: var(--text); }
+        .ts-answer strong, .ts-answer b { color: var(--text); }
+        .ts-source { margin-top: 8px; font-size: 11px; color: var(--text-muted); }
+        .ts-back { margin-top: 10px; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 14px; font-size: 12px; color: var(--text-secondary); cursor: pointer; }
+        .ts-back:hover { background: var(--bg); }
+        .ts-ask-ai { margin-top: 8px; background: var(--amc-blue); color: white; border: none; border-radius: var(--radius-sm); padding: 8px 16px; font-size: 13px; cursor: pointer; }
+        .ts-ask-ai:hover { background: #1d4ed8; }
+        .ts-breadcrumb { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+        @media (prefers-color-scheme: dark) {
+            .ts-option:hover { background: #1e3a5f; border-color: var(--amc-blue); color: #93c5fd; }
+            .ts-header { background: #0f2744; }
+        }
 
         /* Loading skeleton */
         .skeleton-line {
@@ -909,6 +931,11 @@
                                     }
                                     // Add feedback buttons
                                     msgBody.appendChild(createFeedbackRow(text, streamAnswer, streamSources));
+                                    // Detect troubleshooting topic and show interactive tree
+                                    const tsTopic = detectTroubleshootTopic(streamAnswer);
+                                    if (tsTopic) {
+                                        appendTroubleshootWidget(msgEl, tsTopic.id, tsTopic.tree);
+                                    }
                                 }
                             } else if (eventType === 'error') {
                                 clearInterval(timerInterval);
@@ -971,6 +998,133 @@
 
             currentAbort = null;
             resetInputState();
+        }
+
+        // =====================================================================
+        // Troubleshooting Decision Tree Widget
+        // =====================================================================
+
+        function detectTroubleshootTopic(answerText) {
+            if (typeof TROUBLESHOOT_TREES === 'undefined') return null;
+            const lower = answerText.toLowerCase();
+            for (const [treeId, tree] of Object.entries(TROUBLESHOOT_TREES)) {
+                if (tree.trigger_keywords.some(kw => lower.includes(kw))) {
+                    return { id: treeId, tree };
+                }
+            }
+            return null;
+        }
+
+        function appendTroubleshootWidget(msgEl, treeId, tree) {
+            const body = msgEl.querySelector('.msg-body');
+            if (!body) return;
+
+            const widget = document.createElement('div');
+            widget.className = 'ts-widget';
+            widget.id = 'ts-' + Date.now();
+
+            const header = document.createElement('div');
+            header.className = 'ts-header';
+            header.innerHTML = `<span>🔧</span> <span>Troubleshoot: ${tree.title}</span>`;
+            widget.appendChild(header);
+
+            const bodyDiv = document.createElement('div');
+            bodyDiv.className = 'ts-body';
+            widget.appendChild(bodyDiv);
+
+            body.appendChild(widget);
+
+            // Render the first question
+            renderTsNode(bodyDiv, tree, tree.root, []);
+        }
+
+        function renderTsNode(container, tree, nodeId, history) {
+            const node = tree.nodes[nodeId];
+            if (!node) return;
+
+            container.innerHTML = '';
+
+            // Breadcrumb trail
+            if (history.length > 0) {
+                const crumb = document.createElement('div');
+                crumb.className = 'ts-breadcrumb';
+                crumb.textContent = history.map(h => h.label).join(' → ');
+                container.appendChild(crumb);
+            }
+
+            if (node.answer) {
+                // Answer node — show the diagnosis
+                const ansDiv = document.createElement('div');
+                ansDiv.className = 'ts-answer md';
+                ansDiv.innerHTML = sanitizeHTML(marked.parse(node.answer));
+                container.appendChild(ansDiv);
+
+                if (node.source) {
+                    const src = document.createElement('div');
+                    src.className = 'ts-source';
+                    src.textContent = '📄 Source: ' + node.source;
+                    container.appendChild(src);
+                }
+
+                // "This didn't help" button
+                const askBtn = document.createElement('button');
+                askBtn.className = 'ts-ask-ai';
+                askBtn.textContent = '💬 This didn\'t help — ask the AI';
+                askBtn.onclick = () => {
+                    const context = history.map(h => h.label).join(', ');
+                    const prefill = `I followed the troubleshooting steps (${context}) but the issue persists. ${node.answer.substring(0, 100)}... What else can I try?`;
+                    messageInput.value = prefill;
+                    messageInput.focus();
+                    messageInput.scrollIntoView({ behavior: 'smooth' });
+                };
+                container.appendChild(askBtn);
+
+                // Back button
+                if (history.length > 0) {
+                    const backBtn = document.createElement('button');
+                    backBtn.className = 'ts-back';
+                    backBtn.textContent = '← Back';
+                    backBtn.onclick = () => {
+                        const prev = history.slice(0, -1);
+                        const prevNodeId = prev.length > 0 ? prev[prev.length - 1].next : tree.root;
+                        renderTsNode(container, tree, history.length > 1 ? history[history.length - 2].next : tree.root, prev.slice(0, -1));
+                    };
+                    container.appendChild(backBtn);
+                }
+            } else if (node.options) {
+                // Question node — show options
+                const q = document.createElement('div');
+                q.className = 'ts-question';
+                q.textContent = node.question;
+                container.appendChild(q);
+
+                const opts = document.createElement('div');
+                opts.className = 'ts-options';
+                node.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'ts-option';
+                    btn.textContent = opt.label;
+                    btn.onclick = () => {
+                        const newHistory = [...history, { label: opt.label, next: opt.next }];
+                        renderTsNode(container, tree, opt.next, newHistory);
+                    };
+                    opts.appendChild(btn);
+                });
+                container.appendChild(opts);
+
+                // Back button (except on root)
+                if (history.length > 0) {
+                    const backBtn = document.createElement('button');
+                    backBtn.className = 'ts-back';
+                    backBtn.textContent = '← Back';
+                    backBtn.onclick = () => {
+                        const prev = history.slice(0, -1);
+                        const prevNodeId = prev.length > 0 ? prev[prev.length - 1].next : tree.root;
+                        renderTsNode(container, tree, prevNodeId, prev);
+                    };
+                    container.appendChild(backBtn);
+                }
+            }
         }
     </script>
 </body>
