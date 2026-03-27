@@ -655,7 +655,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
     return context_text, chunks, drive_info
 
 
-def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive_context: dict = None):
+def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive_context: dict = None, uploaded_chunks: list = None):
     """
     Single-shot RAG: search in Python (0 Sonnet calls), then 1 Sonnet call for the answer.
     Falls back to agentic mode if Sonnet says it needs more info.
@@ -680,8 +680,20 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
     user_content = standalone_query
     if drive_info:
         user_content += f"\n\n[Drive Info]\n{drive_info}"
+
+    # Inject uploaded PDF content if present
+    if uploaded_chunks:
+        filename = uploaded_chunks[0].get("source", "uploaded document") if uploaded_chunks else "uploaded document"
+        upload_text = f"\n\n=== UPLOADED DOCUMENT: {filename} ===\n"
+        upload_text += "The user uploaded this document. Use its specs (voltage, current, feedback type, encoder resolution, motor parameters) to answer compatibility questions.\n\n"
+        for chunk in uploaded_chunks:
+            heading = chunk.get("heading", "")
+            heading_str = f" — {heading}" if heading else ""
+            upload_text += f"--- Page {chunk.get('page', '?')}{heading_str} ---\n{chunk['text']}\n\n"
+        user_content += upload_text
+
     if context_text:
-        user_content += f"\n\n[Search Results]\n{context_text}"
+        user_content += f"\n\n[AMC Manual Search Results]\n{context_text}"
     else:
         user_content += "\n\n[No search results found. Answer from general knowledge or suggest what to search.]"
 
@@ -821,7 +833,7 @@ def _tool_call_description(name: str, tool_input: dict) -> str:
     return f"Running {name}..."
 
 
-def chat_stream(user_message: str, history: list[dict] = None, drive_context: dict = None):
+def chat_stream(user_message: str, history: list[dict] = None, drive_context: dict = None, uploaded_chunks: list = None):
     """
     Streaming version of chat(). Yields event dicts:
     - {"type": "status", "text": "..."} — progress updates during tool calls

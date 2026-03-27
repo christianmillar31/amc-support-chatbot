@@ -349,7 +349,13 @@
                 <span style="font-size:11px;color:var(--text-secondary);"><span id="drive-family"></span> · <span id="drive-network"></span></span>
             </div>
         </div>
+        <!-- Uploaded file indicator -->
+        <div id="upload-pill" style="display:none;padding:0 16px 6px;"></div>
         <div class="input-wrapper">
+            <input type="file" id="file-input" accept=".pdf" style="display:none;" onchange="handleFileSelect(event)">
+            <button id="upload-btn" onclick="document.getElementById('file-input').click()" title="Upload motor/encoder datasheet (PDF)" style="background:none;border:none;cursor:pointer;padding:6px 8px;color:var(--text-secondary);flex-shrink:0;">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/></svg>
+            </button>
             <textarea id="message-input" rows="1" placeholder="Ask about AMC drives, protocols, hardware, software..."></textarea>
             <button id="send-btn" onclick="sendMessage()" aria-label="Send message">
                 <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
@@ -360,7 +366,7 @@
                 Stop
             </button>
         </div>
-        <div class="input-hint" id="input-hint">Press Enter to send &middot; Shift+Enter for new line</div>
+        <div class="input-hint" id="input-hint">Press Enter to send &middot; Shift+Enter for new line &middot; 📎 Upload motor/encoder PDF</div>
     </div>
 
     <script>
@@ -368,6 +374,68 @@
         const messageInput = document.getElementById('message-input');
         const sendBtn = document.getElementById('send-btn');
         let sessionId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+        let uploadedFile = null;  // Currently selected PDF file
+        let uploadProcessed = false;  // Whether the file has been uploaded to server
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.pdf')) {
+                alert('Only PDF files are accepted.');
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                alert('File too large. Maximum is 10 MB.');
+                return;
+            }
+            uploadedFile = file;
+            uploadProcessed = false;
+            const pill = document.getElementById('upload-pill');
+            pill.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#e0f2fe;color:#0369a1;border-radius:20px;font-size:12px;">
+                <span>📎 ${file.name}</span>
+                <button onclick="clearUpload()" style="background:none;border:none;color:#0369a1;cursor:pointer;font-size:14px;padding:0 2px;" title="Remove file">&times;</button>
+            </span>`;
+            pill.style.display = 'block';
+        }
+
+        function clearUpload() {
+            uploadedFile = null;
+            uploadProcessed = false;
+            document.getElementById('file-input').value = '';
+            document.getElementById('upload-pill').style.display = 'none';
+            // Also clear from server session
+            fetch('/chat/upload/' + sessionId, {method: 'DELETE'}).catch(() => {});
+        }
+
+        async function uploadPdfToServer() {
+            if (!uploadedFile || uploadProcessed) return true;
+            const formData = new FormData();
+            formData.append('file', uploadedFile);
+            formData.append('session_id', sessionId);
+            try {
+                const resp = await fetch('/chat/upload?session_id=' + encodeURIComponent(sessionId), {
+                    method: 'POST',
+                    body: formData,
+                });
+                if (!resp.ok) {
+                    const err = await resp.json();
+                    alert('Upload failed: ' + (err.detail || 'Unknown error'));
+                    return false;
+                }
+                const result = await resp.json();
+                uploadProcessed = true;
+                // Update pill with page count
+                const pill = document.getElementById('upload-pill');
+                pill.innerHTML = `<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:#dcfce7;color:#166534;border-radius:20px;font-size:12px;">
+                    <span>📎 ${result.filename} (${result.pages} pages, ${result.chunks} sections)</span>
+                    <button onclick="clearUpload()" style="background:none;border:none;color:#166534;cursor:pointer;font-size:14px;padding:0 2px;" title="Remove file">&times;</button>
+                </span>`;
+                return true;
+            } catch (e) {
+                alert('Upload failed: ' + e.message);
+                return false;
+            }
+        }
 
         marked.setOptions({ breaks: true, gfm: true });
 
@@ -679,6 +747,12 @@
         async function sendMessage(retryText, retryCount = 0) {
             const text = retryText || messageInput.value.trim();
             if (!text) return;
+
+            // Upload PDF if one is selected (before sending message)
+            if (uploadedFile && !uploadProcessed) {
+                const uploadOk = await uploadPdfToServer();
+                if (!uploadOk) return;
+            }
 
             // Hide keyboard hint after first message
             const hint = document.getElementById('input-hint');

@@ -4,15 +4,15 @@ import os
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 import pydantic
 from pydantic import BaseModel
 from cachetools import TTLCache
 
-from app.config import BASE_DIR, SESSION_TTL_SECONDS, MAX_SESSIONS, INGEST_API_KEY
-from app.ingest import build_index, is_indexed
+from app.config import BASE_DIR, SESSION_TTL_SECONDS, MAX_SESSIONS, INGEST_API_KEY, UPLOAD_MAX_PAGES, UPLOAD_MAX_SIZE_MB
+from app.ingest import build_index, is_indexed, extract_text_with_headings, smart_chunk_text, _extract_tables_as_markdown
 from app.chat import chat, chat_stream, single_shot_chat_stream, RateLimitExceeded
 from app.config import ENABLE_SINGLE_SHOT
 from app.retriever import reload as reload_index
@@ -158,9 +158,14 @@ async def chat_stream_endpoint(request: ChatRequest):
             if request.drive_sku:
                 drive_context = lookup_drive(request.drive_sku)
 
+            # Check for uploaded PDF in session
+            upload_chunks = None
+            if session_id in uploaded_docs:
+                upload_chunks = uploaded_docs[session_id]["chunks"]
+
             # Use single-shot (1 Sonnet call) by default, fall back to agentic if disabled
             stream_fn = single_shot_chat_stream if ENABLE_SINGLE_SHOT else chat_stream
-            for event in stream_fn(request.message, history=history, drive_context=drive_context):
+            for event in stream_fn(request.message, history=history, drive_context=drive_context, uploaded_chunks=upload_chunks):
                 if event["type"] == "status":
                     yield f"event: status\ndata: {json.dumps(event)}\n\n"
                 elif event["type"] == "token":
@@ -191,6 +196,139 @@ async def chat_stream_endpoint(request: ChatRequest):
                     logger.error("CHAT LOGGING FAILED: %s", e, exc_info=True)
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# ---------------------------------------------------------------------------
+# PDF Upload — motor/encoder datasheets for compatibility checking
+# ---------------------------------------------------------------------------
+
+# Per-session uploaded document storage
+uploaded_docs: dict = {}  # session_id → {"filename": str, "chunks": list, "pages": int}
+
+
+@app.post("/chat/upload")
+async def upload_pdf(
+    file: UploadFile = File(...),
+    session_id: str = "default",
+):
+    """Upload a PDF (motor/encoder datasheet) for compatibility checking."""
+    import tempfile
+    import fitz
+
+    # Validate file type
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
+
+    # Read file into memory and check size
+    content = await file.read()
+    size_mb = len(content) / (1024 * 1024)
+    if size_mb > UPLOAD_MAX_SIZE_MB:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File too large ({size_mb:.1f} MB). Maximum is {UPLOAD_MAX_SIZE_MB} MB.",
+        )
+
+    # Write to temp file for PyMuPDF
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
+    try:
+        with os.fdopen(tmp_fd, "wb") as f:
+            f.write(content)
+
+        # Check page count
+        doc = fitz.open(tmp_path)
+        num_pages = len(doc)
+        doc.close()
+
+        if num_pages > UPLOAD_MAX_PAGES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"PDF has {num_pages} pages. Maximum is {UPLOAD_MAX_PAGES} pages.",
+            )
+
+        # Extract text using existing pipeline
+        from pathlib import Path
+        pages = extract_text_with_headings(Path(tmp_path))
+
+        # Also extract tables
+        doc = fitz.open(tmp_path)
+        table_chunks = []
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            tables = _extract_tables_as_markdown(page)
+            for table_text in tables:
+                page_heading = ""
+                for p in pages:
+                    if p["page"] == page_num + 1:
+                        page_heading = p.get("heading", "")
+                        break
+                table_chunks.append({
+                    "text": f"[TABLE from uploaded PDF]\n{table_text}",
+                    "source": file.filename,
+                    "page": page_num + 1,
+                    "heading": page_heading,
+                })
+        doc.close()
+
+        # Chunk the extracted text
+        all_chunks = []
+        for page_data in pages:
+            heading = page_data.get("heading", "")
+            chunks = smart_chunk_text(
+                page_data["text"],
+                heading=heading,
+                source=file.filename,
+            )
+            for chunk in chunks:
+                all_chunks.append({
+                    "text": chunk,
+                    "source": file.filename,
+                    "page": page_data["page"],
+                    "heading": heading,
+                })
+
+        # Add table chunks
+        all_chunks.extend(table_chunks)
+
+        if not all_chunks:
+            raise HTTPException(
+                status_code=400,
+                detail="Could not extract any text from this PDF. It may be image-only or corrupted.",
+            )
+
+        # Store in session
+        uploaded_docs[session_id] = {
+            "filename": file.filename,
+            "chunks": all_chunks,
+            "pages": num_pages,
+        }
+
+        # Preview: first 300 chars of extracted text
+        preview = all_chunks[0]["text"][:300] if all_chunks else ""
+
+        logger.info("PDF uploaded: %s (%d pages, %d chunks) for session %s",
+                     file.filename, num_pages, len(all_chunks), session_id)
+
+        return {
+            "status": "ok",
+            "filename": file.filename,
+            "pages": num_pages,
+            "chunks": len(all_chunks),
+            "preview": preview,
+        }
+
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+
+
+@app.delete("/chat/upload/{session_id}")
+async def clear_upload(session_id: str):
+    """Remove uploaded PDF from session."""
+    if session_id in uploaded_docs:
+        del uploaded_docs[session_id]
+    return {"status": "ok"}
 
 
 @app.get("/debug/email")

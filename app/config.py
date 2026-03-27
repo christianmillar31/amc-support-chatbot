@@ -35,6 +35,10 @@ API_TIMEOUT = 120.0  # seconds per API call
 SESSION_TTL_SECONDS = 1800  # 30 minutes
 MAX_SESSIONS = 100
 
+# PDF Upload
+UPLOAD_MAX_PAGES = 20
+UPLOAD_MAX_SIZE_MB = 10
+
 # Re-ranking
 ENABLE_RERANKING = True
 RERANK_CANDIDATES = 15  # fetch this many from BM25/hybrid retrieval
