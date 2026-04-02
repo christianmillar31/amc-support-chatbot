@@ -4,29 +4,47 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AMC Support Chatbot — Chat Log</title>
+<!-- NEOBRUTALISM chatlog styles (commented out)
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #1e293b; }
-  .header { background: #1e3a5f; color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
-  .header h1 { font-size: 20px; font-weight: 600; }
-  .header .stats { font-size: 14px; opacity: 0.8; }
-  .header a { color: #93c5fd; text-decoration: none; font-size: 14px; }
-  .controls { padding: 16px 24px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .controls input { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; width: 300px; }
-  .controls button { padding: 8px 16px; background: #1e3a5f; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
-  .controls button:hover { background: #2563eb; }
-  .controls .count { margin-left: auto; color: #64748b; font-size: 14px; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #F5F3EE; color: #1C1C1C; }
+  .header { background: #B91C1C; color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 2.5px solid #1C1C1C; }
+  .header h1 { font-size: 20px; font-weight: 900; } .header .stats { font-size: 14px; opacity: 0.9; font-weight: 500; }
+  .header a { color: #1C1C1C; text-decoration: none; font-size: 14px; font-weight: 700; background: white; padding: 6px 14px; border: 2.5px solid #1C1C1C; border-radius: 6px; box-shadow: 2px 2px 0px #1C1C1C; }
+  .controls { padding: 16px 24px; background: #FBFBF9; border-bottom: 2.5px solid #1C1C1C; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .controls input { padding: 8px 12px; border: 2.5px solid #1C1C1C; border-radius: 6px; font-size: 14px; width: 300px; box-shadow: 2px 2px 0px #1C1C1C; }
+  .controls button { padding: 8px 16px; background: #1C1C1C; color: white; border: 2.5px solid #1C1C1C; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 800; box-shadow: 2px 2px 0px #1C1C1C; }
+  .entry { background: #FBFBF9; border: 2.5px solid #1C1C1C; border-radius: 8px; padding: 16px; box-shadow: 4px 4px 0px #1C1C1C; }
+  .source-tag { border: 1.5px solid #1C1C1C; }
+</style>
+-->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: #030712; color: #fff; }
+  .header { background: rgba(0,0,0,0.4); backdrop-filter: blur(12px); color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .header h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 400; }
+  .header .stats { font-size: 14px; color: #71717a; }
+  .header a { color: white; text-decoration: none; font-size: 14px; font-weight: 500; background: rgba(255,255,255,0.05); padding: 6px 14px; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; transition: all 0.2s; }
+  .header a:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+  .controls { padding: 16px 24px; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .controls input { padding: 8px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; font-size: 14px; width: 300px; background: rgba(255,255,255,0.05); color: white; }
+  .controls input:focus { outline: none; border-color: #B91C1C; box-shadow: 0 0 0 3px rgba(185,28,28,0.15); }
+  .controls button { padding: 8px 16px; background: white; color: black; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.15s; }
+  .controls button:hover { background: #e4e4e7; }
+  .controls .count { margin-left: auto; color: #71717a; font-size: 14px; }
   .entries { padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; }
-  .entry { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
-  .entry-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: #64748b; }
-  .entry-question { font-weight: 600; font-size: 15px; margin-bottom: 8px; color: #1e3a5f; }
-  .entry-answer { font-size: 14px; color: #334155; line-height: 1.5; max-height: 200px; overflow: hidden; position: relative; }
+  .entry { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; }
+  .entry-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: #71717a; }
+  .entry-question { font-weight: 600; font-size: 15px; margin-bottom: 8px; color: white; }
+  .entry-answer { font-size: 14px; color: #a1a1aa; line-height: 1.5; max-height: 200px; overflow: hidden; position: relative; }
   .entry-answer.expanded { max-height: none; }
-  .entry-answer:not(.expanded)::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, white); }
-  .toggle-btn { background: none; border: none; color: #2563eb; cursor: pointer; font-size: 13px; margin-top: 4px; padding: 0; }
+  .entry-answer:not(.expanded)::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, #030712); }
+  .toggle-btn { background: none; border: none; color: #B91C1C; cursor: pointer; font-size: 13px; margin-top: 4px; padding: 0; }
+  .toggle-btn:hover { text-decoration: underline; color: #DC2626; }
   .sources { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
-  .source-tag { font-size: 11px; background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; }
-  .empty { text-align: center; padding: 60px; color: #94a3b8; }
+  .source-tag { font-size: 11px; background: rgba(255,255,255,0.05); color: #a1a1aa; padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
+  .empty { text-align: center; padding: 60px; color: #71717a; }
   @media (max-width: 640px) { .controls input { width: 100%; } }
 </style>
 </head>
@@ -86,12 +104,12 @@ function renderEntries(entries) {
     ).join('');
     const answerPreview = e.answer || 'No answer';
 
-    const ratingBadge = e.rating === 'up' ? '<span style="background:#22c55e;color:white;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">&#x1F44D; Good</span>'
-      : e.rating === 'down' ? '<span style="background:#ef4444;color:white;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">&#x1F44E; Bad</span>'
-      : '<span style="background:#94a3b8;color:white;padding:2px 8px;border-radius:12px;font-size:11px;">No rating</span>';
+    const ratingBadge = e.rating === 'up' ? '<span style="background:rgba(22,163,74,0.15);color:#4ade80;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;border:1px solid rgba(22,163,74,0.3);">&#x1F44D; Good</span>'
+      : e.rating === 'down' ? '<span style="background:rgba(220,38,38,0.15);color:#f87171;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;border:1px solid rgba(220,38,38,0.3);">&#x1F44E; Bad</span>'
+      : '<span style="background:rgba(255,255,255,0.05);color:#71717a;padding:2px 8px;border-radius:12px;font-size:11px;border:1px solid rgba(255,255,255,0.08);">No rating</span>';
 
     return `
-      <div class="entry" style="${e.rating === 'down' ? 'border-left:3px solid #ef4444;' : e.rating === 'up' ? 'border-left:3px solid #22c55e;' : ''}">
+      <div class="entry" style="${e.rating === 'down' ? 'border-left:3px solid rgba(220,38,38,0.5);' : e.rating === 'up' ? 'border-left:3px solid rgba(22,163,74,0.5);' : ''}">
         <div class="entry-header">
           <span>${time} ${ratingBadge}</span>
           <span>Session: ${e.session_id?.substring(0, 8) || 'unknown'}...</span>
