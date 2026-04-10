@@ -104,6 +104,7 @@ ABSOLUTE RULES — VIOLATION OF THESE IS A CRITICAL FAILURE:
 11. NEVER invent document names, page numbers, section names, register addresses, or technical specifications. Every single fact, number, and citation in your answer MUST come from the search results provided to you. If the search results don't contain the information, say "I could not find this specific information in the indexed manuals. Please contact AMC technical support or check a-m-c.com/downloads."
 12. NEVER fabricate tables of specifications, feature comparisons, or product listings unless every value comes directly from search results. If asked to list drives with certain features, ONLY list drives whose datasheets appeared in your search results with those exact specs confirmed.
 13. When uncertain, say "I don't have enough information in the indexed manuals to answer this confidently" rather than guessing. Then suggest: (a) which specific manual or section might contain the answer, (b) contacting AMC tech support, or (c) checking a-m-c.com. Engineers rely on this information for real hardware decisions — wrong specs can damage equipment or cause safety issues.
+14. PART_NUMBER_NOT_FOUND PROTOCOL: If detect_drive_manual returns an error with "error": "PART_NUMBER_NOT_FOUND", you MUST STOP immediately and respond EXACTLY like this: "I couldn't find '[part number]' in the AMC product database. Can you verify the spelling, or search for it at https://www.a-m-c.com/products/servo-drives?" Then end your response. DO NOT: describe specs, infer family/protocol, suggest similar drives, call find_replacement_drive with a modified part number, mention what the drive "might be", recommend replacements, or explain what AxCent/DigiFlex/FlexPro drives generally do. The part number does not exist — period. Wait for the user to confirm the correct spelling before doing anything else. This rule is INVIOLABLE.
 
 OFF-TOPIC / NON-TECHNICAL MESSAGES:
 - If the user sends greetings ("hi", "hello"), respond briefly and ask how you can help with AMC drives.
@@ -164,10 +165,12 @@ TOOLS = [
     {
         "name": "detect_drive_manual",
         "description": (
-            "Look up an AMC drive part number in the product database and return its drive family, "
-            "form factor, network communication type, and the exact comm manual and HW install manual filenames. "
+            "Look up an AMC drive part number in the 644-drive product database. "
+            "Returns drive family, form factor, network, and manual filenames if the part number exists. "
             "Call this whenever the user mentions a part number like FE060-25-EM, DPRALTE-020B080, or AZBH10A4. "
-            "This uses a complete database of 120+ drives — it will give you definitive routing."
+            "IMPORTANT: If the part number is not found, returns error=PART_NUMBER_NOT_FOUND. "
+            "When this happens, you MUST NOT invent, guess, correct, or describe the drive. "
+            "You MUST ask the user to verify the part number and STOP — do not call other tools to compensate."
         ),
         "input_schema": {
             "type": "object",
@@ -468,42 +471,30 @@ def handle_detect_drive_manual(part_number: str) -> tuple[str, list[dict]]:
 
         return json.dumps(info, indent=2), []
 
-    # Fallback: try regex-based detection for part numbers not in CSV
-    pn_upper = part_number.strip().upper()
-    family = None
-    if re.match(r'(FE|FM|FD|FMP|FX)', pn_upper):
-        family = "FlexPro"
-    elif re.match(r'(DV|DP|DZ|DX)', pn_upper):
-        family = "DigiFlex Performance"
-    elif re.match(r'AZ', pn_upper):
-        family = "AxCent"
-
-    protocol = None
-    if re.search(r'[-.]IPM\b', pn_upper):
-        protocol = "Ethernet/IP"
-    elif re.search(r'[-.]EM\b', pn_upper):
-        protocol = "EtherCAT"
-    elif re.search(r'[-.]RM\b', pn_upper):
-        protocol = "Serial"
-    elif re.search(r'[-.]CM\b', pn_upper):
-        protocol = "CANopen"
-    elif "EAN" in pn_upper:
-        protocol = "EtherCAT"
-    elif re.search(r'\bDVC', pn_upper) or re.search(r'\bCAN\b', pn_upper):
-        protocol = "CANopen"
-    elif re.search(r'[-.]RA\b', pn_upper):
-        protocol = "ambiguous - could be Serial (RS485) or Modbus RTU"
-
-    result = {
+    # Part number NOT found in CSV. Return a HARD error — no regex fallback,
+    # no null fields, no room for the assistant to guess.
+    error_result = {
+        "error": "PART_NUMBER_NOT_FOUND",
         "part_number": part_number,
-        "drive_family": family,
-        "protocol": protocol,
-        "comm_manual": None,
-        "hw_manual": None,
-        "note": "Part number not found in product database. Using regex-based detection (less reliable).",
+        "message": f"'{part_number}' is not in the AMC product database of 644 drives.",
+        "instructions_for_assistant": (
+            "CRITICAL: DO NOT invent, guess, correct, or infer a drive variant from this part number. "
+            "DO NOT describe its specs, family, protocol, form factor, or replacement. "
+            "DO NOT call find_replacement_drive or any other lookup tool with a modified version. "
+            "You MUST respond to the user with: "
+            f"\"I couldn't find '{part_number}' in the AMC product database. Can you verify the spelling, "
+            "or search for it at https://www.a-m-c.com/products/servo-drives?\" "
+            "Then STOP. Wait for the user to confirm the correct part number before proceeding."
+        ),
+        "valid_sku_patterns": {
+            "FlexPro": "FE/FM/FD/FMP/FX + voltage + current + protocol (e.g. FE060-25-EM)",
+            "DigiFlex": "DP/DV/DZ/DX + model code (e.g. DPRALTE-020B080)",
+            "AxCent": "AZ + model (e.g. AZBH10A4, AZBH25A20-10)",
+            "Classic/Analog": "B/BE/BDC + current + voltage (e.g. B30A40, BE25A20)",
+        },
     }
 
-    return json.dumps(result, indent=2), []
+    return json.dumps(error_result, indent=2), []
 
 
 def handle_find_replacement(part_number: str) -> tuple[str, list[dict]]:

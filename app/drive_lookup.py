@@ -298,19 +298,19 @@ def lookup_drive(part_number: str) -> dict | None:
     """
     Look up a drive by part number / SKU.
     Returns full info dict or None if not found.
+
+    Only exact matches are allowed. Fuzzy substring matching was removed
+    because it allowed fabricated SKUs like "AB25A20-10" to falsely match
+    the real drive "25A20" (since "25A20" is a substring of "AB25A20-10").
+    If the user has a typo, they must fix it — we won't guess.
     """
     _load_csv()
     pn = part_number.strip().upper()
 
-    # Exact match first
+    # Exact match only
     if pn in _DRIVE_DB:
         drive = _DRIVE_DB[pn]
         return _build_result(drive)
-
-    # Fuzzy match: try finding the SKU that contains the input or vice versa
-    for sku, drive in _DRIVE_DB.items():
-        if pn in sku or sku in pn:
-            return _build_result(drive)
 
     return None
 
@@ -459,11 +459,9 @@ def lookup_replacement(part_number: str) -> dict | None:
             if entry["discontinued"] == base:
                 return _format_retrofit_result(entry)
 
-    # Try substring match
-    for entry in _RETROFIT_DB:
-        if entry["discontinued"] in pn or pn in entry["discontinued"]:
-            return _format_retrofit_result(entry)
-
+    # No match. Do NOT do fuzzy substring matching — that was allowing
+    # fabricated SKUs like "ABH25A20-10" to match "25A20" and return a bogus result.
+    # Only exact matches (and stripped revision letters) are allowed.
     return None
 
 
