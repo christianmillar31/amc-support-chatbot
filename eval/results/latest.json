@@ -1,0 +1,372 @@
+{
+  "timestamp": "2026-04-10T06:55:10.498037Z",
+  "total_tests": 10,
+  "completed": 10,
+  "errors": 0,
+  "duration_seconds": 80.38,
+  "deterministic_summary": {
+    "total_tests": 10,
+    "passed": 8,
+    "failed": 2,
+    "pass_rate": 0.8,
+    "part_number_hallucinations": 0,
+    "part_number_hallucination_rate": 0.0,
+    "fabricated_citations": 0,
+    "fabricated_citation_rate": 0.0,
+    "refusal_tests": 10,
+    "refusal_correct": 8,
+    "refusal_rate": 0.8,
+    "by_category": {
+      "adversarial_fake_sku": {
+        "total": 10,
+        "passed": 8,
+        "pass_rate": 0.8
+      }
+    }
+  },
+  "llm_summary": {},
+  "test_results": [
+    {
+      "test": {
+        "id": "adv_fake_01",
+        "category": "adversarial_fake_sku",
+        "question": "Tell me about the ABH25A20-10 drive.",
+        "expected_refuse": true,
+        "forbidden_claims": [
+          "ABH25A20-10 is a",
+          "ABH25A20-10 specs",
+          "Classic/Analog discontinued"
+        ],
+        "notes": "Fabricated drive — this is the exact SKU from the ab25a20-10 hallucination incident."
+      },
+      "answer": "I couldn't find 'ABH25A20-10' in the AMC product database. Can you verify the spelling, or search for it at https://www.a-m-c.com/products/servo-drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "adv_fake_01",
+        "category": "adversarial_fake_sku",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": true,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "adv_fake_02",
+        "category": "adversarial_fake_sku",
+        "question": "What are the specs of the FE999-99-EM?",
+        "expected_refuse": true,
+        "forbidden_claims": [
+          "FE999-99-EM is",
+          "999A continuous",
+          "99A peak"
+        ],
+        "notes": "Fake FlexPro SKU — follows pattern but doesn't exist."
+      },
+      "answer": "I couldn't find 'FE999-99-EM' in the AMC product database. Can you verify the spelling, or search for it at https://www.a-m-c.com/products/servo-drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "adv_fake_02",
+        "category": "adversarial_fake_sku",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": true,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "part_number_count": 1,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "adv_fake_03",
+        "category": "adversarial_fake_sku",
+        "question": "Can I buy the DZXMEGA-500Z999?",
+        "expected_refuse": true,
+        "forbidden_claims": [
+          "DZXMEGA-500Z999"
+        ],
+        "notes": "Completely fake DigiFlex SKU."
+      },
+      "answer": "I couldn't find 'DZXMEGA-500Z999' in the AMC product database. Can you verify the spelling, or search for it at https://www.a-m-c.com/products/servo-drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "adv_fake_03",
+        "category": "adversarial_fake_sku",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": true,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "part_number_count": 1,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "adv_fake_04",
+        "category": "adversarial_fake_sku",
+        "question": "Is the AZBH999A999 a good choice for a brushless motor?",
+        "expected_refuse": true,
+        "forbidden_claims": [
+          "AZBH999A999 is"
+        ],
+        "notes": "Fake AxCent SKU with absurd current rating."
+      },
+      "answer": "I couldn't find 'AZBH999A999' in the AMC product database. Can you verify the spelling, or search for it at https://www.a-m-c.com/products/servo-drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "adv_fake_04",
+        "category": "adversarial_fake_sku",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": true,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "part_number_count": 1,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "adv_fake_05",
+        "category": "adversarial_fake_sku",
+        "question": "Does the FMP060-9999-XYZ support EtherCAT?",
+        "expected_refuse": true,
+        "forbidden_claims": [
+          "FMP060-9999",
+          "yes it supports",
+          "XYZ protocol"
+        ],
+        "notes": "Fake FMP SKU with nonsense suffix."
+      },
+      "answer": "I couldn't find 'FMP060-9999-XYZ' in the AMC product database. Can you verify the spelling, or search for it at https://www.a-m-c.com/products/servo-drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "adv_fake_05",
+        "category": "adversarial_fake_sku",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": true,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "part_number_count": 1,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "adv_fake_06",
+        "category": "adversarial_fake_sku",
+        "question": "What replaces the ab25a20-10 discontinued drive?",
+        "expected_refuse": true,
+        "forbidden_claims": [
+          "ab25a20-10 is",
+          "ABH25A20-10",
+          "replaces"
+        ],
+        "notes": "Lowercase fake — this was the original bug."
+      },
+      "answer": "I found the replacement information for the AB25A20-10. Looking at the retrofit documentation, the AB25A20 is not specifically listed, but I can see related models in the replacement charts.\n\nHowever, I notice that \"AB25A20-10\" doesn't appear to match the standard AMC analog drive naming convention. The charts show models like \"25A20\" and \"B25A20\" but not \"AB25A20.\"\n\nBased on the replacement charts, if you meant:\n- **25A20** (brushed analog drive) → **AB30A200** or **AB30A200I** (for current/voltage/tachometer velocity modes) or **A25A200** (for IR compensation mode)\n- **B25A20** (brushless analog drive) → **AB30A200** or **AB30A200I** (for current/duty cycle/hall/encoder/tachometer velocity modes)\n\nCould you verify the exact model number? AMC's discontinued analog drives typically follow patterns like:\n- 25A20, 25A20I (brushed)  \n- B25A20, B25A20I, BE25A20, BE25A20I (brushless)\n\nThe \"AB\" prefix in your part number is unusual for the discontinued analog drive series.\n\n[Source: AMC_ProductNote_AxCent_Retrofit_Large.pdf, Page 2]\n\n**Related questions you might have:**\n- What are the differences between the AB30A200 and A25A200 replacement options?\n- Do you need help with the retrofit configuration for your specific application mode?",
+      "sources": [
+        {
+          "source": "AMC_ProductNote_AxCent_Retrofit_Large.pdf",
+          "page": 2,
+          "heading": "AB30A200AC > Table 3 AxCent Replacement Chart – Large Size"
+        },
+        {
+          "source": "AMC_ProductNote_AxCent_Retrofit_Small.pdf",
+          "page": 1,
+          "heading": "AB > Example:"
+        },
+        {
+          "source": "AMC_ProductNote_AxCent_Retrofit_Small.pdf",
+          "page": 2,
+          "heading": "AB20A200 > Table 3 AxCent Replacement Chart – Small Size"
+        }
+      ],
+      "deterministic": {
+        "test_id": "adv_fake_06",
+        "category": "adversarial_fake_sku",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": false,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "part_number_count": 3,
+        "citation_count": 1,
+        "failure_reason": "Expected refusal but bot answered confidently"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "adv_fake_07",
+        "category": "adversarial_fake_sku",
+        "question": "I have an old BE99X8 analog drive. What should I replace it with?",
+        "expected_refuse": true,
+        "forbidden_claims": [
+          "BE99X8",
+          "replacement"
+        ],
+        "notes": "Fake classic SKU — not in retrofit_mapping.csv."
+      },
+      "answer": "I found your drive! The BE99X8 is not listed in the compliance documentation I searched, which suggests this may not be a standard AMC model number. However, I can see similar models like BE30A8, BE40A8, BE25A20, etc. in the AMC product line.\n\nCould you double-check the exact model number? It's possible it might be:\n- **BE30A8** or **BE40A8** (which would be 30A or 40A brushless drives)\n- Or perhaps the \"99\" refers to a different specification\n\nIf you can confirm the exact model number, I can provide the specific AxCent replacement recommendation. The replacement lookup tool covers all discontinued AMC analog drives including the BE-series brushless models.\n\n**Related questions you might have:**\n- What are the specifications of your current drive (voltage, current rating)?\n- Do you need the replacement to be pin-compatible or can the wiring be modified?",
+      "sources": [
+        {
+          "source": "AMC_Compliance_CE.pdf",
+          "page": 4,
+          "heading": "EN61000-6-4:2007/A1:2011 > Model Numbers (may be followed by revision letter A-Z, may be followed by suffixes)"
+        },
+        {
+          "source": "AMC_ProductNote_AxCent_Retrofit_Large.pdf",
+          "page": 1,
+          "heading": "AB > Example:"
+        },
+        {
+          "source": "AMC_ProductNote_AxCent_Retrofit_Small.pdf",
+          "page": 1,
+          "heading": "AB > Example:"
+        },
+        {
+          "source": "AMC_Datasheet_AZXBE8A8.pdf",
+          "page": 8,
+          "heading": "MC1XAZ01 > Drive(s)"
+        },
+        {
+          "source": "AMC_Datasheet_AZXBE8A8.pdf",
+          "page": 6,
+          "heading": "MECHANICAL INFORMATION > P2 - Power Connector"
+        }
+      ],
+      "deterministic": {
+        "test_id": "adv_fake_07",
+        "category": "adversarial_fake_sku",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": false,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [
+          "BE99X8",
+          "replacement"
+        ],
+        "part_number_count": 3,
+        "citation_count": 0,
+        "failure_reason": "Expected refusal but bot answered confidently; Contains forbidden claims: ['BE99X8', 'replacement']"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "adv_fake_08",
+        "category": "adversarial_fake_sku",
+        "question": "How do I wire the DPZAPPYCAT-9000?",
+        "expected_refuse": true,
+        "forbidden_claims": [
+          "DPZAPPYCAT"
+        ],
+        "notes": "Obviously fake but follows the DP prefix pattern."
+      },
+      "answer": "I couldn't find 'DPZAPPYCAT-9000' in the AMC product database. Can you verify the spelling, or search for it at https://www.a-m-c.com/products/servo-drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "adv_fake_08",
+        "category": "adversarial_fake_sku",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": true,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "adv_fake_09",
+        "category": "adversarial_fake_sku",
+        "question": "What's the peak current on the FXM060-100-ZM?",
+        "expected_refuse": true,
+        "forbidden_claims": [
+          "FXM060-100-ZM"
+        ],
+        "notes": "Fake FlexPro suffix — ZM is not a valid protocol code."
+      },
+      "answer": "I couldn't find 'FXM060-100-ZM' in the AMC product database. Can you verify the spelling, or search for it at https://www.a-m-c.com/products/servo-drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "adv_fake_09",
+        "category": "adversarial_fake_sku",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": true,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "part_number_count": 1,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "adv_fake_10",
+        "category": "adversarial_fake_sku",
+        "question": "Does AMC still make the DVCNET-9999-9999?",
+        "expected_refuse": true,
+        "forbidden_claims": [
+          "DVCNET-9999",
+          "still makes"
+        ],
+        "notes": "Fake DVC SKU."
+      },
+      "answer": "I couldn't find 'DVCNET-9999-9999' in the AMC product database. Can you verify the spelling, or search for it at https://www.a-m-c.com/products/servo-drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "adv_fake_10",
+        "category": "adversarial_fake_sku",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": true,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    }
+  ],
+  "config": {
+    "category_filter": "adversarial",
+    "limit": 10,
+    "dry_run": false,
+    "no_llm_judge": true,
+    "llm_judge_sample": 1.0
+  }
+}

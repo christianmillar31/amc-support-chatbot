@@ -565,6 +565,45 @@ async def chatlog_api():
     return {"entries": entries, "total": len(entries)}
 
 
+@app.get("/eval")
+async def eval_page():
+    """Serve the eval dashboard."""
+    return FileResponse(BASE_DIR / "static" / "eval.html")
+
+
+@app.get("/api/eval/latest")
+async def eval_latest_api():
+    """Return the latest eval results JSON."""
+    import json as _json
+    path = BASE_DIR / "eval" / "results" / "latest.json"
+    if not path.exists():
+        return {"error": "No eval runs yet", "hint": "Run `python eval/runners/run_eval.py` to generate data"}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return _json.load(f)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/eval/history")
+async def eval_history_api():
+    """Return the eval run history (one line per run)."""
+    import json as _json
+    path = BASE_DIR / "eval" / "results" / "history.jsonl"
+    if not path.exists():
+        return {"runs": []}
+    runs = []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    runs.append(_json.loads(line))
+    except Exception as e:
+        return {"error": str(e), "runs": runs}
+    return {"runs": runs}
+
+
 @app.post("/ingest")
 async def ingest_endpoint(request: Request):
     """Re-ingest all PDFs (admin use)."""

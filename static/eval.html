@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AMC Bot — Eval Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html { overflow-x: hidden; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #030712;
+    color: #FFFFFF;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: radial-gradient(circle at center, #ffffff 1px, transparent 1px);
+    background-size: 32px 32px; opacity: 0.04;
+  }
+
+  .page { position: relative; z-index: 1; }
+
+  .header {
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 20px 32px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 28px;
+    font-weight: 400;
+    color: white;
+    text-shadow: 0 0 40px rgba(255,255,255,0.4), 0 0 10px rgba(255,255,255,0.2);
+  }
+  .header .stats { font-size: 14px; color: #a1a1aa; margin-top: 4px; }
+  .nav {
+    display: flex; gap: 16px; align-items: center;
+  }
+  .nav a {
+    color: #a1a1aa; text-decoration: none; font-size: 14px; font-weight: 500;
+    padding: 8px 16px; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px; transition: all 0.15s;
+  }
+  .nav a:hover { background: rgba(255,255,255,0.05); color: white; border-color: rgba(255,255,255,0.3); }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 32px; }
+
+  h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 22px; font-weight: 400; margin: 32px 0 16px;
+    color: white;
+  }
+
+  /* Metric cards grid */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.2s;
+  }
+  .card:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); }
+  .card .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #71717a;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+  }
+  .card .value {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 36px;
+    font-weight: 400;
+    color: white;
+    margin-bottom: 4px;
+  }
+  .card .target { font-size: 12px; color: #a1a1aa; font-weight: 500; }
+  .card.pass .value { color: #4ade80; }
+  .card.fail .value { color: #f87171; }
+  .card.warn .value { color: #fbbf24; }
+
+  /* Category breakdown */
+  .category-table {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 12px 20px; text-align: left; font-size: 14px; }
+  th { color: #71717a; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08); text-transform: uppercase; font-size: 11px; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace; }
+  td { border-bottom: 1px solid rgba(255,255,255,0.04); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .pass-rate-bar {
+    display: inline-block;
+    width: 100px;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .pass-rate-fill { height: 100%; background: #4ade80; transition: width 0.3s; }
+
+  /* Failures list */
+  .failure {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-left: 3px solid #f87171;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 12px;
+  }
+  .failure .id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #f87171;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .failure .question {
+    font-size: 16px;
+    font-weight: 500;
+    color: white;
+    margin: 8px 0;
+  }
+  .failure .answer {
+    font-size: 13px;
+    color: #a1a1aa;
+    background: rgba(0,0,0,0.3);
+    padding: 12px;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-family: 'JetBrains Mono', monospace;
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .failure .reason {
+    font-size: 12px;
+    color: #fbbf24;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .loading { text-align: center; color: #71717a; padding: 60px; font-style: italic; }
+  .error { color: #f87171; background: rgba(239,68,68,0.1); padding: 16px; border-radius: 12px; border: 1px solid rgba(239,68,68,0.2); }
+
+  .timestamp {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #71717a;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <h1>Eval Dashboard</h1>
+      <div class="stats" id="stats">Loading...</div>
+    </div>
+    <div class="nav">
+      <a href="/">Chatbot</a>
+      <a href="/chatlog">Chat Log</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="content" class="loading">Loading eval results...</div>
+  </div>
+</div>
+
+<script>
+const TARGETS = {
+  pass_rate: { value: 0.75, op: 'ge', label: 'Overall Pass Rate' },
+  part_number_hallucination_rate: { value: 0.01, op: 'le', label: 'SKU Hallucinations' },
+  fabricated_citation_rate: { value: 0.01, op: 'le', label: 'Fabricated Citations' },
+  refusal_rate: { value: 0.80, op: 'ge', label: 'Adversarial Refusal' },
+  faithfulness_avg: { value: 0.85, op: 'ge', label: 'Faithfulness (LLM judge)' },
+  answer_relevance_avg: { value: 0.80, op: 'ge', label: 'Answer Relevance (LLM judge)' },
+};
+
+function pct(val) { return (val * 100).toFixed(1) + '%'; }
+function fmtNumber(val) { return val.toFixed(3); }
+
+function metricStatus(value, target) {
+  if (value === null || value === undefined) return 'unknown';
+  if (target.op === 'ge') return value >= target.value ? 'pass' : 'fail';
+  if (target.op === 'le') return value <= target.value ? 'pass' : 'fail';
+  return 'unknown';
+}
+
+function metricCard(label, value, displayValue, target) {
+  const status = target ? metricStatus(value, target) : '';
+  const targetText = target
+    ? `target: ${target.op === 'ge' ? '≥' : '≤'} ${target.op === 'ge' ? pct(target.value) : pct(target.value)}`
+    : '';
+  return `
+    <div class="card ${status}">
+      <div class="label">${label}</div>
+      <div class="value">${displayValue}</div>
+      <div class="target">${targetText}</div>
+    </div>
+  `;
+}
+
+function renderResults(data) {
+  const container = document.getElementById('content');
+  if (data.error) {
+    container.innerHTML = `<div class="error">${data.error}${data.hint ? '<br><br>' + data.hint : ''}</div>`;
+    return;
+  }
+
+  const det = data.deterministic_summary || {};
+  const llm = data.llm_summary || {};
+
+  // Header stats
+  document.getElementById('stats').innerHTML = `
+    <span class="timestamp">${new Date(data.timestamp).toLocaleString()}</span> ·
+    ${data.completed}/${data.total_tests} tests ·
+    ${data.duration_seconds}s
+  `;
+
+  const cards = [];
+
+  // Overall metrics
+  cards.push(metricCard(
+    'Overall Pass Rate',
+    det.pass_rate,
+    pct(det.pass_rate || 0),
+    TARGETS.pass_rate,
+  ));
+  cards.push(metricCard(
+    'SKU Hallucinations',
+    det.part_number_hallucination_rate,
+    `${det.part_number_hallucinations || 0} (${pct(det.part_number_hallucination_rate || 0)})`,
+    TARGETS.part_number_hallucination_rate,
+  ));
+  cards.push(metricCard(
+    'Fabricated Citations',
+    det.fabricated_citation_rate,
+    `${det.fabricated_citations || 0} (${pct(det.fabricated_citation_rate || 0)})`,
+    TARGETS.fabricated_citation_rate,
+  ));
+  if (det.refusal_rate !== undefined && det.refusal_rate !== null) {
+    cards.push(metricCard(
+      'Adversarial Refusal',
+      det.refusal_rate,
+      `${det.refusal_correct}/${det.refusal_tests} (${pct(det.refusal_rate)})`,
+      TARGETS.refusal_rate,
+    ));
+  }
+  if (llm.faithfulness_avg !== undefined) {
+    cards.push(metricCard('Faithfulness', llm.faithfulness_avg, fmtNumber(llm.faithfulness_avg), TARGETS.faithfulness_avg));
+    cards.push(metricCard('Answer Relevance', llm.answer_relevance_avg, fmtNumber(llm.answer_relevance_avg), TARGETS.answer_relevance_avg));
+    cards.push(metricCard('Context Recall', llm.context_recall_avg, fmtNumber(llm.context_recall_avg || 0), null));
+    cards.push(metricCard('Context Precision', llm.context_precision_avg, fmtNumber(llm.context_precision_avg || 0), null));
+  }
+  cards.push(metricCard('Cost (LLM judge)', 0, `$${(llm.total_cost_usd || 0).toFixed(4)}`, null));
+
+  // By category table
+  const byCategory = det.by_category || {};
+  const catRows = Object.entries(byCategory).map(([cat, stats]) => {
+    const rate = (stats.pass_rate * 100).toFixed(1);
+    return `
+      <tr>
+        <td><code style="font-family:'JetBrains Mono',monospace;color:#fca5a5">${cat}</code></td>
+        <td>${stats.passed} / ${stats.total}</td>
+        <td>
+          <span class="pass-rate-bar"><span class="pass-rate-fill" style="width:${rate}%"></span></span>
+          ${rate}%
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Failures
+  const failures = (data.test_results || []).filter(r => !r.deterministic.passed).slice(0, 20);
+  const failureHtml = failures.map(r => `
+    <div class="failure">
+      <div class="id">${r.test.id} — ${r.test.category}</div>
+      <div class="question">${escapeHtml(r.test.question)}</div>
+      <div class="answer">${escapeHtml(r.answer.slice(0, 500))}</div>
+      <div class="reason">✗ ${escapeHtml(r.deterministic.failure_reason || 'unknown')}</div>
+    </div>
+  `).join('');
+
+  container.innerHTML = `
+    <h2>Metrics</h2>
+    <div class="metrics-grid">${cards.join('')}</div>
+
+    <h2>Pass Rate by Category</h2>
+    <div class="category-table">
+      <table>
+        <thead>
+          <tr><th>Category</th><th>Passed / Total</th><th>Rate</th></tr>
+        </thead>
+        <tbody>${catRows || '<tr><td colspan="3" style="color:#71717a;padding:20px">No category data</td></tr>'}</tbody>
+      </table>
+    </div>
+
+    ${failures.length ? `
+      <h2>Top Failures (${failures.length} shown, ${(data.test_results || []).filter(r => !r.deterministic.passed).length} total)</h2>
+      ${failureHtml}
+    ` : '<h2>All tests passed ✓</h2>'}
+  `;
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const d = document.createElement('div');
+  d.textContent = text;
+  return d.innerHTML;
+}
+
+fetch('/api/eval/latest')
+  .then(r => r.json())
+  .then(renderResults)
+  .catch(e => {
+    document.getElementById('content').innerHTML = `<div class="error">Failed to load: ${e.message}</div>`;
+  });
+</script>
+</body>
+</html>

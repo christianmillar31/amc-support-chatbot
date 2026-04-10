@@ -1,0 +1,45 @@
+name: Eval Regression Gate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'eval/**'
+      - 'faq_index.csv'
+      - 'CM Servo Info.csv'
+      - 'retrofit_mapping.csv'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'eval/**'
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run deterministic regression
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python eval/runners/run_regression.py --no-llm
+        timeout-minutes: 10
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: eval/results/

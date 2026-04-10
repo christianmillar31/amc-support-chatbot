@@ -362,14 +362,23 @@ def detect_part_number(message: str) -> str | None:
     """
     Detect an AMC drive part number in a user message.
     Returns the detected part number string or None.
+
+    Uses word-boundary matching so that fake SKUs like 'AB25A20-10' do NOT
+    fuzzy-match real SKUs like '25A20' embedded within them. This is the
+    same class of bug fixed in lookup_drive() and lookup_replacement().
     """
     _load_csv()
     msg_upper = message.upper()
 
-    # Try to match known SKUs in the message
+    # Try to match known SKUs in the message with WORD BOUNDARIES
     # Sort by length descending so longer (more specific) matches win
     for sku in sorted(_DRIVE_DB.keys(), key=len, reverse=True):
-        if sku in msg_upper and len(sku) >= 4:  # minimum 4 chars to avoid false matches
+        if len(sku) < 4:
+            continue
+        # Word-boundary match: SKU must be preceded/followed by non-alphanumeric
+        # (or start/end of string). This prevents 'B25A20' matching inside 'AB25A20-10'.
+        pattern = r"(?:^|[^A-Z0-9])" + re.escape(sku) + r"(?:[^A-Z0-9]|$)"
+        if re.search(pattern, msg_upper):
             return sku
 
     # Fallback: regex patterns for AMC part numbers

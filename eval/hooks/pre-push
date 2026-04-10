@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# AMC Bot Eval Regression Gate
+#
+# Install: cp eval/hooks/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+#
+# Runs a small regression eval on every push. If any metric drops below its
+# target threshold, the push is blocked.
+#
+# Bypass with: git push --no-verify (NOT recommended — only for emergencies)
+#
+# Skip entirely by setting: SKIP_EVAL_GATE=1 git push
+
+set -e
+
+if [ -n "$SKIP_EVAL_GATE" ]; then
+    echo "[eval-gate] SKIP_EVAL_GATE set — skipping regression check"
+    exit 0
+fi
+
+# Only run if there are Python/CSV/HTML changes (not for README-only pushes)
+CHANGED=$(git diff --name-only @{u}.. 2>/dev/null | grep -E '\.(py|csv|html|json)$' || true)
+if [ -z "$CHANGED" ]; then
+    echo "[eval-gate] No code changes — skipping"
+    exit 0
+fi
+
+echo "[eval-gate] Running regression eval (deterministic only, ~60 tests)..."
+echo
+
+cd "$(git rev-parse --show-toplevel)"
+
+# Deterministic-only mode is free and fast (<3 min)
+python eval/runners/run_regression.py --no-llm
+
+rc=$?
+if [ $rc -ne 0 ]; then
+    echo
+    echo "[eval-gate] FAIL — regression detected, push blocked"
+    echo "[eval-gate] Review failures in eval/results/latest.json"
+    echo "[eval-gate] Bypass (NOT RECOMMENDED): git push --no-verify"
+    exit 1
+fi
+
+echo
+echo "[eval-gate] PASS — all targets met"
+exit 0
