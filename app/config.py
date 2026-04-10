@@ -18,12 +18,11 @@ ENABLE_QUERY_EXPANSION = True
 
 # Chunking
 CHUNK_SIZE = 1500  # characters — larger chunks keep more context together
-CHUNK_OVERLAP = 200  # more overlap prevents losing info at boundaries
+CHUNK_OVERLAP = 400  # increased from 200 — reduces info loss at chunk boundaries, especially spec tables
 
 # Retrieval
-TOP_K = 6  # fewer chunks = less tokens sent to Claude
-DEDUP_THRESHOLD = 0.70  # cosine similarity threshold for deduplication
-MIN_RELEVANCE_SCORE = 0.10  # raised to filter noise — only send quality results
+TOP_K = 10  # increased from 6 — more context chunks for Claude to reason over
+MIN_RELEVANCE_SCORE = 0.005  # threshold for RRF fusion scores (range ~0.01-0.03 for good results)
 MAX_TOOL_ROUNDS = 4  # limit search rounds to control token spend
 ENABLE_SINGLE_SHOT = True  # search in Python first, send to Sonnet once (saves ~60% tokens)
 
@@ -41,12 +40,14 @@ UPLOAD_MAX_SIZE_MB = 10
 
 # Re-ranking
 ENABLE_RERANKING = True
-RERANK_CANDIDATES = 15  # fetch this many from BM25/hybrid retrieval
-RERANK_TOP_K = 6  # keep this many after cross-encoder re-ranking
+RERANK_CANDIDATES = 25  # increased from 15 — larger pool for cross-encoder to filter
+RERANK_TOP_K = 10  # increased from 6 — match new TOP_K
+MIN_RERANK_SCORE = 0.15  # post-reranking confidence threshold — filter low-confidence results
 
 # Models
-EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"  # semantic embeddings (good accuracy, ~440MB vs 1.3GB for large)
-RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L-12-v2"  # cross-encoder reranker (replaces LLM reranking)
+EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"  # upgraded from bge-base — ~5-10% accuracy gain, 1024 dims
+RERANK_MODEL = "BAAI/bge-reranker-base"  # upgraded from ms-marco-MiniLM — 109M params, better technical content
+EMBEDDING_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "  # BGE asymmetric search prefix (queries only, not docs)
 
 # Shared Anthropic client (singleton)
 import anthropic as _anthropic  # noqa: E402

@@ -323,6 +323,14 @@ def build_index():
     except Exception as e:
         print(f"Warning: Semantic embedding failed: {e}.")
 
+    # Validate that index files were written successfully
+    chunks_path = INDEX_DIR / "chunks.json"
+    bm25_path = INDEX_DIR / "bm25.pkl"
+    if not chunks_path.exists() or chunks_path.stat().st_size == 0:
+        raise RuntimeError("Index build failed: chunks.json is missing or empty")
+    if not bm25_path.exists() or bm25_path.stat().st_size == 0:
+        raise RuntimeError("Index build failed: bm25.pkl is missing or empty")
+
     print(f"Ingestion complete. {len(all_chunks)} chunks indexed.")
     return len(all_chunks)
 

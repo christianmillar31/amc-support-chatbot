@@ -1,10 +1,11 @@
+import hashlib
 import json
 import logging
 import pickle
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-from app.config import INDEX_DIR, TOP_K, DEDUP_THRESHOLD, MIN_RELEVANCE_SCORE, EMBEDDING_MODEL
+from app.config import INDEX_DIR, TOP_K, MIN_RELEVANCE_SCORE, EMBEDDING_MODEL, EMBEDDING_QUERY_PREFIX
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ def _load():
             _embeddings = np.load(embeddings_path)
             from sentence_transformers import SentenceTransformer
             _embed_model = SentenceTransformer(EMBEDDING_MODEL)
-            logger.info("Hybrid retrieval enabled (BM25 + semantic embeddings).")
+            logger.info("Hybrid retrieval enabled (BM25 + semantic embeddings, dims=%d).", _embeddings.shape[1])
         except Exception as e:
             logger.warning("Could not load semantic embeddings: %s. Using BM25 only.", e)
             _embeddings = None
@@ -66,6 +67,20 @@ def reload():
     _metadatas = None
     _embeddings = None
     _embed_model = None
+
+
+def get_indexed_sources() -> set[str]:
+    """Return the set of all source filenames in the loaded index."""
+    _load()
+    if not _metadatas:
+        return set()
+    return {m["source"] for m in _metadatas}
+
+
+def get_chunk_count() -> int:
+    """Return the number of chunks in the loaded index."""
+    _load()
+    return len(_chunks) if _chunks else 0
 
 
 def _reciprocal_rank_fusion(ranked_lists: list[list[int]], k: int = 60) -> list[tuple[int, float]]:
@@ -96,32 +111,58 @@ def _tfidf_rank(query: str, candidate_count: int) -> tuple[list[int], np.ndarray
     return top_indices, scores
 
 
-def retrieve(query: str, top_k: int = TOP_K, source_filter: str = None, doc_type_filter: str = None) -> list[dict]:
+def _semantic_rank(query: str, candidate_count: int) -> list[int]:
+    """Get semantic rankings using embedding similarity.
+    Applies BGE query prefix for asymmetric search."""
+    prefixed_query = EMBEDDING_QUERY_PREFIX + query
+    query_embedding = _embed_model.encode([prefixed_query])
+    semantic_sims = cosine_similarity(query_embedding, _embeddings).flatten()
+    return semantic_sims.argsort()[::-1][:candidate_count].tolist()
+
+
+def retrieve(query: str, top_k: int = TOP_K, source_filter: str = None,
+             doc_type_filter: str = None, expanded_query: str = None) -> list[dict]:
     """
     Retrieve the most relevant manual chunks for a query.
-    Uses hybrid retrieval (BM25 + semantic embeddings with RRF) when available,
-    falls back gracefully to BM25-only or TF-IDF-only.
+
+    Uses 3-way hybrid retrieval when expanded_query is provided:
+      1. BM25 on original query (precise keyword matching)
+      2. Semantic on original query (precise intent)
+      3. Semantic on expanded query (broader recall)
+    All merged with Reciprocal Rank Fusion.
+
+    Falls back gracefully to 2-way or BM25-only if embeddings unavailable.
     """
     _load()
 
     candidate_count = top_k * 8
 
-    # --- Sparse ranking (BM25 preferred, TF-IDF fallback) ---
+    # --- Sparse ranking: BM25 on ORIGINAL query only (expansion dilutes BM25) ---
     if _bm25 is not None:
         sparse_ranked, sparse_scores = _bm25_rank(query, candidate_count)
     else:
         sparse_ranked, sparse_scores = _tfidf_rank(query, candidate_count)
 
     # --- Semantic ranking (if available) ---
+    rrf_scores: dict[int, float] = {}  # Track fused scores for hybrid mode
+    use_hybrid = False
+
     if _embeddings is not None and _embed_model is not None:
         try:
-            query_embedding = _embed_model.encode([query])
-            semantic_sims = cosine_similarity(query_embedding, _embeddings).flatten()
-            semantic_ranked = semantic_sims.argsort()[::-1][:candidate_count].tolist()
+            # Semantic on original query
+            semantic_ranked_orig = _semantic_rank(query, candidate_count)
+            ranked_lists = [sparse_ranked, semantic_ranked_orig]
 
-            # Merge with Reciprocal Rank Fusion
-            fused = _reciprocal_rank_fusion([sparse_ranked, semantic_ranked])
+            # Semantic on expanded query (3-way RRF) — broader recall without BM25 dilution
+            if expanded_query and expanded_query != query:
+                semantic_ranked_exp = _semantic_rank(expanded_query, candidate_count)
+                ranked_lists.append(semantic_ranked_exp)
+
+            # Merge all ranked lists with RRF
+            fused = _reciprocal_rank_fusion(ranked_lists)
+            rrf_scores = {idx: score for idx, score in fused}
             candidate_indices = [idx for idx, _ in fused[:candidate_count]]
+            use_hybrid = True
         except Exception as e:
             logger.warning("Semantic retrieval failed, using sparse only: %s", e)
             candidate_indices = sparse_ranked
@@ -130,13 +171,14 @@ def retrieve(query: str, top_k: int = TOP_K, source_filter: str = None, doc_type
 
     # --- Filter, dedup, and build results ---
     results = []
-    selected_texts: list[str] = []  # For text-based dedup when TF-IDF matrix unavailable
+    seen_hashes: set[str] = set()
 
     for idx in candidate_indices:
         if len(results) >= top_k:
             break
 
-        score = float(sparse_scores[idx])
+        # Use RRF fusion score when hybrid mode is active, raw BM25 otherwise
+        score = rrf_scores.get(idx, float(sparse_scores[idx])) if use_hybrid else float(sparse_scores[idx])
 
         # Skip near-zero relevance (but always keep at least 1 result)
         if score < MIN_RELEVANCE_SCORE and results:
@@ -152,27 +194,18 @@ def retrieve(query: str, top_k: int = TOP_K, source_filter: str = None, doc_type
             if _metadatas[idx].get("doc_type", "") != doc_type_filter:
                 continue
 
-        # Deduplication
+        # Deduplication (hash-based on full text)
         chunk_text = _chunks[idx]
-        if _tfidf_matrix is not None:
-            # Vector-based dedup using TF-IDF vectors (most accurate)
-            if selected_texts:
-                # Use text overlap as a simpler dedup check
-                chunk_start = chunk_text[:200]
-                if any(chunk_start == t[:200] for t in selected_texts):
-                    continue
-        else:
-            # Text prefix dedup when no TF-IDF matrix
-            chunk_start = chunk_text[:200]
-            if any(chunk_start == t[:200] for t in selected_texts):
-                continue
-
-        selected_texts.append(chunk_text)
+        chunk_hash = hashlib.md5(chunk_text.strip().encode()).hexdigest()
+        if chunk_hash in seen_hashes:
+            continue
+        seen_hashes.add(chunk_hash)
         results.append({
             "text": chunk_text,
             "source": _metadatas[idx]["source"],
             "page": _metadatas[idx]["page"],
             "heading": _metadatas[idx].get("heading", ""),
+            "doc_type": _metadatas[idx].get("doc_type", ""),
             "score": score,
         })
 

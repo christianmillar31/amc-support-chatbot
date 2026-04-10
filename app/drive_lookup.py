@@ -397,6 +397,111 @@ def detect_part_number(message: str) -> str | None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# Retrofit / replacement mapping (discontinued → AxCent)
+# ---------------------------------------------------------------------------
+
+_RETROFIT_DB: list[dict] = []
+
+
+def _load_retrofit_csv():
+    """Load retrofit_mapping.csv into memory once."""
+    global _RETROFIT_DB
+    if _RETROFIT_DB:
+        return
+
+    csv_path = BASE_DIR / "retrofit_mapping.csv"
+    if not csv_path.exists():
+        print(f"WARNING: Retrofit mapping not found at {csv_path}")
+        return
+
+    with open(csv_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            _RETROFIT_DB.append({
+                "discontinued": row["discontinued_model"].strip().upper(),
+                "size": row["size"].strip(),
+                "motor_type": row["motor_type"].strip(),
+                "replacement_brushless": row["replacement_brushless"].strip(),
+                "replacement_brushed_only": row["replacement_brushed_only"].strip(),
+                "notes": row["notes"].strip(),
+            })
+
+    print(f"Loaded {len(_RETROFIT_DB)} retrofit mappings.")
+
+
+def lookup_replacement(part_number: str) -> dict | None:
+    """
+    Look up the AxCent replacement for a discontinued analog drive.
+
+    Returns a dict with replacement info, or None if no mapping exists.
+    The part_number is matched against the base model (revision letters
+    and ordering suffixes like -INV, -QD, -QDI are stripped).
+    """
+    _load_retrofit_csv()
+    pn = part_number.strip().upper()
+
+    # Strip revision letter (single letter at end before any dash suffix)
+    # e.g. "12A8J-INV" → base "12A8", or "30A8K" → "30A8"
+    # First remove ordering suffixes
+    for suffix in ["-INV", "-QD", "-QDI", "-ANP"]:
+        pn = pn.replace(suffix, "")
+
+    # Try exact match first
+    for entry in _RETROFIT_DB:
+        if entry["discontinued"] == pn:
+            return _format_retrofit_result(entry)
+
+    # Try stripping trailing revision letter (single alpha char)
+    if len(pn) > 3 and pn[-1].isalpha() and pn[-2].isdigit():
+        base = pn[:-1]
+        for entry in _RETROFIT_DB:
+            if entry["discontinued"] == base:
+                return _format_retrofit_result(entry)
+
+    # Try substring match
+    for entry in _RETROFIT_DB:
+        if entry["discontinued"] in pn or pn in entry["discontinued"]:
+            return _format_retrofit_result(entry)
+
+    return None
+
+
+def _format_retrofit_result(entry: dict) -> dict:
+    """Format a retrofit mapping entry into a user-friendly result."""
+    replacements = []
+    if entry["replacement_brushless"]:
+        if entry["motor_type"].startswith("Brushed"):
+            replacements.append({
+                "model": entry["replacement_brushless"],
+                "modes": "Current, Voltage (brushless/brushed capable)",
+            })
+        elif entry["motor_type"].startswith("Brushless"):
+            replacements.append({
+                "model": entry["replacement_brushless"],
+                "modes": "Current, Duty Cycle, Encoder Velocity" if "BE" in entry["discontinued"] or "BX" in entry["discontinued"] else "Current, Duty Cycle",
+            })
+    if entry["replacement_brushed_only"]:
+        replacements.append({
+            "model": entry["replacement_brushed_only"],
+            "modes": "IR Compensation, Tachometer Velocity (brushed only)",
+        })
+
+    return {
+        "discontinued_model": entry["discontinued"],
+        "size": entry["size"],
+        "motor_type": entry["motor_type"],
+        "replacements": replacements,
+        "notes": entry["notes"] if entry["notes"] else None,
+    }
+
+
+def get_all_replacements() -> list[dict]:
+    """Return all retrofit mappings for reference."""
+    _load_retrofit_csv()
+    return [_format_retrofit_result(e) for e in _RETROFIT_DB]
+
+
 def _friendly_network(network: str) -> str:
     """Convert raw CSV network values to user-friendly display labels."""
     if not network:

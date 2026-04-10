@@ -15,7 +15,7 @@ from app.config import BASE_DIR, SESSION_TTL_SECONDS, MAX_SESSIONS, INGEST_API_K
 from app.ingest import build_index, is_indexed, extract_text_with_headings, smart_chunk_text, _extract_tables_as_markdown
 from app.chat import chat, chat_stream, single_shot_chat_stream, RateLimitExceeded
 from app.config import ENABLE_SINGLE_SHOT
-from app.retriever import reload as reload_index
+from app.retriever import reload as reload_index, get_chunk_count
 from app.feedback import log_feedback
 from app.chatlog import log_chat, get_chatlog, update_rating
 from app.faq import match_faq
@@ -37,7 +37,34 @@ async def lifespan(app: FastAPI):
         build_index()
     else:
         print("Index already exists. Skipping ingestion.", flush=True)
-    print("Startup complete. Ready to serve requests.", flush=True)
+
+    # --- Pre-warm all models so first query is fast ---
+    print("Pre-warming models...", flush=True)
+    try:
+        # 1. Load search index (BM25 + embeddings) into memory
+        from app.retriever import retrieve
+        _ = retrieve("warmup query", top_k=1)
+        print("  ✓ Search index loaded (BM25 + semantic embeddings)", flush=True)
+    except Exception as e:
+        print(f"  ⚠ Search index warmup: {e}", flush=True)
+
+    try:
+        # 2. Load cross-encoder reranker into memory
+        from app.reranker import rerank
+        rerank("warmup", [{"text": "warmup", "source": "x", "page": 1, "heading": "", "score": 1.0}], top_k=1)
+        print("  ✓ Cross-encoder reranker loaded", flush=True)
+    except Exception as e:
+        print(f"  ⚠ Reranker warmup: {e}", flush=True)
+
+    try:
+        # 3. Load FAQ embeddings into memory
+        from app.faq import match_faq as _faq_warmup
+        _faq_warmup("warmup query")
+        print("  ✓ FAQ embeddings loaded", flush=True)
+    except Exception as e:
+        print(f"  ⚠ FAQ warmup: {e}", flush=True)
+
+    print("All models pre-warmed. Ready to serve requests.", flush=True)
     yield
 
 
@@ -119,34 +146,34 @@ async def chat_stream_endpoint(request: ChatRequest):
     session_id = request.session_id or "default"
     history = sessions.get(session_id, [])
 
-    # --- FAQ instant-match: answer in <1 second with zero API tokens ---
-    faq_result = match_faq(request.message)
-    if faq_result:
-        async def faq_event_generator():
-            heading = faq_result.get("section", "")
-            heading_str = f", Section: {heading}" if heading else ""
-            answer = faq_result["answer"]
-            source = faq_result["source"]
-            page = faq_result["page"]
-
-            yield f"event: status\ndata: {json.dumps({'type': 'status', 'text': 'Found in FAQ database...'})}\n\n"
-            yield f"event: token\ndata: {json.dumps({'type': 'token', 'text': answer})}\n\n"
-
-            sources = [{"source": source, "page": int(page) if page.isdigit() else 0, "heading": heading}]
-            yield f"event: done\ndata: {json.dumps({'type': 'done', 'sources': sources})}\n\n"
-
-            # Update session history
-            history.append({"role": "user", "content": request.message})
-            history.append({"role": "assistant", "content": answer})
-            sessions[session_id] = history[-MAX_HISTORY:]
-
-            # Log for dashboard
-            try:
-                log_chat(session_id, request.message, answer, sources)
-            except Exception as e:
-                logger.error("FAQ chat logging failed: %s", e, exc_info=True)
-
-        return StreamingResponse(faq_event_generator(), media_type="text/event-stream")
+    # --- FAQ instant-match: DISABLED — full RAG pipeline gives better answers on localhost ---
+    # faq_result = match_faq(request.message)
+    # if faq_result:
+    #     async def faq_event_generator():
+    #         heading = faq_result.get("section", "")
+    #         heading_str = f", Section: {heading}" if heading else ""
+    #         answer = faq_result["answer"]
+    #         source = faq_result["source"]
+    #         page = faq_result["page"]
+    #
+    #         yield f"event: status\ndata: {json.dumps({'type': 'status', 'text': 'Found in FAQ database...'})}\n\n"
+    #         yield f"event: token\ndata: {json.dumps({'type': 'token', 'text': answer})}\n\n"
+    #
+    #         sources = [{"source": source, "page": int(page) if page.isdigit() else 0, "heading": heading}]
+    #         yield f"event: done\ndata: {json.dumps({'type': 'done', 'sources': sources})}\n\n"
+    #
+    #         # Update session history
+    #         history.append({"role": "user", "content": request.message})
+    #         history.append({"role": "assistant", "content": answer})
+    #         sessions[session_id] = history[-MAX_HISTORY:]
+    #
+    #         # Log for dashboard
+    #         try:
+    #             log_chat(session_id, request.message, answer, sources)
+    #         except Exception as e:
+    #             logger.error("FAQ chat logging failed: %s", e, exc_info=True)
+    #
+    #     return StreamingResponse(faq_event_generator(), media_type="text/event-stream")
 
     # Shared state — the generator writes into these, background task reads them
     stream_state = {"answer": "", "sources": [], "logged": False}
@@ -546,7 +573,11 @@ async def ingest_endpoint(request: Request):
     try:
         count = build_index()
         reload_index()
-        return {"status": "ok", "chunks_indexed": count}
+        # Verify the new index loaded successfully
+        loaded_count = get_chunk_count()
+        if loaded_count == 0:
+            raise RuntimeError("Index reload produced 0 chunks")
+        return {"status": "ok", "chunks_indexed": count, "loaded_chunks": loaded_count}
     except Exception as e:
         logger.error("Ingest error: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Ingestion failed. Check server logs.")

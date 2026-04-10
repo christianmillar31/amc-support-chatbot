@@ -1,20 +1,67 @@
 from __future__ import annotations
+import csv
 import json
 import logging
 import re
 import anthropic
+import numpy as np
 from app.config import (
     CLAUDE_MODEL, QUERY_EXPANSION_MODEL, ENABLE_QUERY_EXPANSION,
-    MAX_TOOL_ROUNDS,
+    MAX_TOOL_ROUNDS, BASE_DIR, EMBEDDING_MODEL, EMBEDDING_QUERY_PREFIX,
     ENABLE_RERANKING, RERANK_CANDIDATES, RERANK_TOP_K, TOP_K,
     get_anthropic_client, ENABLE_SINGLE_SHOT,
 )
-from app.retriever import retrieve
+from app.retriever import retrieve, get_indexed_sources
 from app.ingest import get_all_pdfs
-from app.drive_lookup import lookup_drive, search_drives, detect_part_number
+from app.drive_lookup import lookup_drive, search_drives, detect_part_number, lookup_replacement
 from app.reranker import rerank
 
 logger = logging.getLogger(__name__)
+
+
+def _load_glossary() -> str:
+    """Load glossary.csv and return a condensed string for the system prompt.
+    Truncates definitions to 80 chars to keep token count under ~4K tokens."""
+    glossary_path = BASE_DIR / "glossary.csv"
+    if not glossary_path.exists():
+        return ""
+    lines = []
+    with open(glossary_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            term = row.get("term", "").strip()
+            definition = row.get("definition", "").strip()
+            if term and definition:
+                short_def = definition[:80].rstrip() + ("..." if len(definition) > 80 else "")
+                lines.append(f"- {term}: {short_def}")
+    if not lines:
+        return ""
+    return "\n\nGLOSSARY — AMC terms/acronyms:\n" + "\n".join(lines)
+
+
+_GLOSSARY_TEXT = _load_glossary()
+
+_upload_embed_model = None
+
+
+def _rank_uploaded_chunks(query: str, chunks: list[dict], top_k: int = 6) -> list[dict]:
+    """Rank uploaded PDF chunks by semantic similarity to the query, return top-k."""
+    if len(chunks) <= top_k:
+        return chunks
+    global _upload_embed_model
+    try:
+        if _upload_embed_model is None:
+            from sentence_transformers import SentenceTransformer
+            _upload_embed_model = SentenceTransformer(EMBEDDING_MODEL)
+        texts = [c["text"] for c in chunks]
+        q_emb = _upload_embed_model.encode([EMBEDDING_QUERY_PREFIX + query], normalize_embeddings=True)
+        c_emb = _upload_embed_model.encode(texts, normalize_embeddings=True)
+        scores = np.dot(c_emb, q_emb.T).flatten()
+        top_indices = scores.argsort()[::-1][:top_k].tolist()
+        return [chunks[i] for i in top_indices]
+    except Exception as e:
+        logger.warning("Upload chunk ranking failed, using first %d: %s", top_k, e)
+        return chunks[:top_k]
 
 
 class RateLimitExceeded(Exception):
@@ -23,30 +70,46 @@ class RateLimitExceeded(Exception):
 
 SYSTEM_PROMPT = """You are AMC's technical support assistant. Be direct, concise, and technical. Users are experienced engineers.
 
-TOOLS: search_manuals (search 372 PDFs), detect_drive_manual (part number → manual routing), list_available_manuals.
+TOOLS: search_manuals (search 372 PDFs), detect_drive_manual (part number → manual routing), find_replacement_drive (discontinued → AxCent replacement), list_available_manuals.
 
 DOC TYPES: comm (protocols/registers), hw (wiring/connectors/pinouts), sw/sw_ref (ACE/DriveWare/ClickMove), app_note (procedures/tuning), datasheet (specs per drive), product_note (retrofits).
 
 STRATEGY:
 1. Part number mentioned → call detect_drive_manual first, then search the identified manuals.
-2. Use doc_type filter to narrow searches. Use manual_filter when you know the exact manual.
-3. One focused search usually suffices. Only do a second search if the first had low relevance (<0.15) or missed key info.
-4. For specs (current, voltage, dimensions) → search datasheets. For procedures → search app_notes.
+2. If user asks about replacing/upgrading a discontinued analog drive → call find_replacement_drive.
+3. Use doc_type filter to narrow searches. Use manual_filter when you know the exact manual.
+4. One focused search usually suffices. Only do a second search if the first had low relevance (<0.15) or missed key info.
+5. For specs (current, voltage, dimensions) → search datasheets. For procedures → search app_notes.
 
 ANSWER RULES:
-1. Be CONCISE. Give the direct answer with exact values, steps, or parameters. No filler.
+1. Be CONCISE. Give the direct answer with exact values, steps, or parameters. No filler. Aim for 3-8 sentences for simple questions, longer only for multi-step procedures.
 2. Cite sources: [Source: filename, Page X]. Include section heading if available.
-3. Quote exact register addresses, hex values, pin numbers, and parameter settings from results.
+3. Quote exact register addresses, hex values, pin numbers, and parameter settings from results. ALWAYS include units with numeric values (A, V, W, ms, RPM, mm, in, etc.).
 4. Use numbered steps for procedures, tables for specs/pinouts, bullets for lists.
 5. If info is incomplete, state what's missing and which manual section to check.
 6. Max 2 search rounds per question. Don't over-search.
-7. Format answers for readability: use markdown headers (##), line breaks between sections, and keep paragraphs short.
+7. Format answers for readability: use markdown headers (##), line breaks between sections, and keep paragraphs short (2-3 sentences max per paragraph).
+8. If search results from different manuals contain conflicting information, cite both sources and note the discrepancy. Prefer: (1) drive-specific datasheet over general manual, (2) newer document revision over older, (3) more specific manual (e.g., comm manual) over general HW manual.
+9. Chunks marked [UPLOADED DOCUMENT] are user-provided (e.g., motor datasheets), not official AMC sources. Use their specs but clearly note the data came from the user's uploaded document.
+
+FOLLOW-UP GUIDANCE:
+- At the end of your answer, suggest 1-2 natural follow-up questions the user might want to ask next, formatted as:
+  **Related questions you might have:**
+  - [follow-up question 1]
+  - [follow-up question 2]
+- Only include follow-ups that are genuinely useful and related to what was just asked. Skip this section if the answer is self-contained and no follow-up would be helpful.
 
 ABSOLUTE RULES — VIOLATION OF THESE IS A CRITICAL FAILURE:
-8. NEVER invent drive model numbers, SKUs, or part numbers. AMC drive SKUs follow SPECIFIC patterns: FlexPro = FE/FM/FD/FMP/FX + voltage code + current + protocol (e.g., FE060-25-EM). DigiFlex = DP/DZ/DX + model code (e.g., DPRALTE-020B080). AxCent = AZ + model (e.g., AZBH10A4). If you cannot find a specific drive model in search results, DO NOT make one up. Say "Search the AMC product selector at a-m-c.com/products/servo-drives for drives matching your requirements."
-9. NEVER invent document names, page numbers, section names, register addresses, or technical specifications. Every single fact, number, and citation in your answer MUST come from the search results provided to you. If the search results don't contain the information, say "I could not find this specific information in the indexed manuals. Please contact AMC technical support or check a-m-c.com/downloads."
-10. NEVER fabricate tables of specifications, feature comparisons, or product listings unless every value comes directly from search results. If asked to list drives with certain features, ONLY list drives whose datasheets appeared in your search results with those exact specs confirmed.
-11. When uncertain, say "I'm not sure" rather than guessing. Engineers rely on this information for real hardware decisions — wrong specs can damage equipment or cause safety issues.
+10. NEVER invent drive model numbers, SKUs, or part numbers. AMC drive SKUs follow SPECIFIC patterns: FlexPro = FE/FM/FD/FMP/FX + voltage code + current + protocol (e.g., FE060-25-EM). DigiFlex = DP/DZ/DX + model code (e.g., DPRALTE-020B080). AxCent = AZ + model (e.g., AZBH10A4). If you cannot find a specific drive model in search results, DO NOT make one up. Say "Search the AMC product selector at a-m-c.com/products/servo-drives for drives matching your requirements."
+11. NEVER invent document names, page numbers, section names, register addresses, or technical specifications. Every single fact, number, and citation in your answer MUST come from the search results provided to you. If the search results don't contain the information, say "I could not find this specific information in the indexed manuals. Please contact AMC technical support or check a-m-c.com/downloads."
+12. NEVER fabricate tables of specifications, feature comparisons, or product listings unless every value comes directly from search results. If asked to list drives with certain features, ONLY list drives whose datasheets appeared in your search results with those exact specs confirmed.
+13. When uncertain, say "I don't have enough information in the indexed manuals to answer this confidently" rather than guessing. Then suggest: (a) which specific manual or section might contain the answer, (b) contacting AMC tech support, or (c) checking a-m-c.com. Engineers rely on this information for real hardware decisions — wrong specs can damage equipment or cause safety issues.
+
+OFF-TOPIC / NON-TECHNICAL MESSAGES:
+- If the user sends greetings ("hi", "hello"), respond briefly and ask how you can help with AMC drives.
+- If the user sends abuse, complaints, or non-technical messages ("you are useless", "this sucks"), respond calmly and professionally: acknowledge their frustration, then redirect — e.g., "I'm sorry to hear that. Let me know what specific AMC drive question I can help with and I'll do my best to find the answer."
+- Do NOT call any search tools for off-topic messages. Just respond directly.
+- If asked about non-AMC topics (weather, coding, etc.), politely explain you only assist with AMC servo drive questions.
 
 KEY NOTES:
 - "EM" = EtherCAT, "IPM" = Ethernet/IP — NEVER confuse these.
@@ -61,7 +124,7 @@ CRITICAL — DRIVE CLASSIFICATION:
 - "Analog drives" refers ONLY to the Classic/Analog family (B-series, like B30A40, 100A40, 120A10). These are a completely separate product line.
 - AxCent drives also accept analog/PWM command input but they are DIGITAL drives, not "analog drives."
 - NEVER describe a FlexPro, DigiFlex, or AxCent drive as an "analog drive." Say "accepts ±10V analog command input" instead.
-- DPQ drives (e.g., DPQNNIE) are SynqNet protocol drives."""
+- DPQ drives (e.g., DPQNNIE) are SynqNet protocol drives.""" + _GLOSSARY_TEXT
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +175,27 @@ TOOLS = [
                 "part_number": {
                     "type": "string",
                     "description": "AMC drive part number / SKU (e.g., 'FE060-25-EM', 'DPRALTE-020B080', 'AZBH10A4')",
+                },
+            },
+            "required": ["part_number"],
+        },
+    },
+    {
+        "name": "find_replacement_drive",
+        "description": (
+            "Look up the AxCent replacement for a discontinued analog drive model. "
+            "Use this when a user asks what replaces an older AMC analog drive like 12A8, 30A8, B15A8, BE25A20, etc. "
+            "Covers all discontinued Brushed (12A8, 25A8, 20A14, 20A20, 30A8, 50A8, 25A20, 50A20, 16A20AC, 30A20AC) "
+            "and Brushless (B12A6, B15A8, BE12A6, BE15A8, BX15A20, B30A8, BE30A8, B40A8, BE40A8, B25A20, BE25A20, B40A20, BE40A20) "
+            "analog drive families. Returns the AxCent model(s) that replace each discontinued drive, "
+            "including mode-specific replacements."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "part_number": {
+                    "type": "string",
+                    "description": "Discontinued analog drive model number (e.g., '12A8', 'B15A8', 'BE25A20', '30A8I'). Revision letters and suffixes like -INV, -QD are automatically stripped.",
                 },
             },
             "required": ["part_number"],
@@ -273,21 +357,24 @@ def rewrite_followup(user_message: str, history: list[dict]) -> str:
         return user_message
 
 
-def build_context(chunks: list[dict], max_chunk_chars: int = 1000) -> str:
+def build_context(chunks: list[dict], max_chunk_chars: int = 1400) -> str:
     """Format retrieved chunks into a context block for tool results.
-    Caps each chunk to max_chunk_chars to control token usage."""
+    Caps each chunk to max_chunk_chars to control token usage.
+    Increased from 1000 to 1400 to preserve spec tables and complete procedures."""
     if not chunks:
         return "No results found for this search query."
     context_parts = []
     for i, chunk in enumerate(chunks, 1):
         heading = chunk.get("heading", "")
         heading_str = f", Section: {heading}" if heading else ""
+        doc_type = chunk.get("doc_type", "")
+        doc_type_str = f" [{doc_type}]" if doc_type else ""
         score = chunk.get("score", 0)
         text = chunk['text'][:max_chunk_chars]
         if len(chunk['text']) > max_chunk_chars:
             text += "..."
         context_parts.append(
-            f"--- [{i}] {chunk['source']}, p.{chunk['page']}{heading_str} (rel:{score:.2f}) ---\n"
+            f"--- [{i}] {chunk['source']}, p.{chunk['page']}{heading_str}{doc_type_str} (rel:{score:.2f}) ---\n"
             f"{text}\n"
         )
     return "\n".join(context_parts)
@@ -306,11 +393,11 @@ def handle_search_manuals(query: str, manual_filter: str | None = None, doc_type
     supplemented = False
 
     if manual_filter:
-        chunks = retrieve(expanded_query, top_k=fetch_k, source_filter=manual_filter)
+        chunks = retrieve(query, top_k=fetch_k, source_filter=manual_filter, expanded_query=expanded_query)
         # Supplement with unfiltered results if too few matches
         if len(chunks) < 3:
             supplemented = True
-            extra = retrieve(expanded_query, top_k=fetch_k, doc_type_filter=doc_type_filter)
+            extra = retrieve(query, top_k=fetch_k, doc_type_filter=doc_type_filter, expanded_query=expanded_query)
             seen_texts = {c["text"][:100] for c in chunks}
             for c in extra:
                 if c["text"][:100] not in seen_texts:
@@ -318,7 +405,7 @@ def handle_search_manuals(query: str, manual_filter: str | None = None, doc_type
                     if len(chunks) >= fetch_k:
                         break
     else:
-        chunks = retrieve(expanded_query, top_k=fetch_k, doc_type_filter=doc_type_filter)
+        chunks = retrieve(query, top_k=fetch_k, doc_type_filter=doc_type_filter, expanded_query=expanded_query)
 
     candidates_before_rerank = len(chunks)
 
@@ -419,6 +506,31 @@ def handle_detect_drive_manual(part_number: str) -> tuple[str, list[dict]]:
     return json.dumps(result, indent=2), []
 
 
+def handle_find_replacement(part_number: str) -> tuple[str, list[dict]]:
+    """Look up the AxCent replacement for a discontinued analog drive."""
+    result = lookup_replacement(part_number)
+
+    if result:
+        info = {
+            "discontinued_model": result["discontinued_model"],
+            "size": result["size"],
+            "motor_type": result["motor_type"],
+            "replacements": result["replacements"],
+        }
+        if result["notes"]:
+            info["notes"] = result["notes"]
+        info["reference_documents"] = [
+            "AMC_ProductNote_AxCent_Retrofit_Small.pdf (small size models)",
+            "AMC_ProductNote_AxCent_Retrofit_Large.pdf (large size models)",
+        ]
+        return json.dumps(info, indent=2), []
+
+    return json.dumps({
+        "error": f"No retrofit mapping found for '{part_number}'.",
+        "note": "This drive may not be a discontinued analog model, or may not have an AxCent replacement. Try searching the manuals for more information.",
+    }, indent=2), []
+
+
 def handle_list_available_manuals() -> tuple[str, list[dict]]:
     """List all indexed manuals with protocol labels."""
     pdfs = get_all_pdfs()
@@ -517,6 +629,10 @@ def dispatch_tool(tool_name: str, tool_input: dict, expansion_cache: dict | None
             return handle_detect_drive_manual(
                 part_number=tool_input["part_number"],
             )
+        elif tool_name == "find_replacement_drive":
+            return handle_find_replacement(
+                part_number=tool_input["part_number"],
+            )
         elif tool_name == "list_available_manuals":
             return handle_list_available_manuals()
         else:
@@ -574,7 +690,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
     if history:
         recent = history[-4:]
         conv_context = "\n".join(
-            f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:200]}"
+            f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:400]}"
             for m in recent
         )
 
@@ -612,15 +728,19 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
 
         priority_manuals = []
         datasheet_name = f"AMC_Datasheet_{result['sku']}.pdf"
-        priority_manuals.append(datasheet_name)
+        indexed_sources = get_indexed_sources()
+        if datasheet_name in indexed_sources:
+            priority_manuals.append(datasheet_name)
+        else:
+            logger.warning("Datasheet not found in index: %s", datasheet_name)
         if result.get("hw_manual"):
             priority_manuals.append(result["hw_manual"])
         if result.get("comm_manual"):
             priority_manuals.append(result["comm_manual"])
 
-        # Search each priority manual
+        # Search each priority manual (3-way RRF: BM25 original + semantic original + semantic expanded)
         for manual in priority_manuals:
-            manual_chunks = retrieve(expanded_query, top_k=fetch_k, source_filter=manual)
+            manual_chunks = retrieve(user_message, top_k=fetch_k, source_filter=manual, expanded_query=expanded_query)
             for c in manual_chunks:
                 key = c["text"][:100]
                 if key not in seen:
@@ -628,7 +748,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
                     chunks.append(c)
 
         # Always search app notes as supplement (procedures, tuning, troubleshooting)
-        app_chunks = retrieve(expanded_query, top_k=fetch_k, doc_type_filter="app_note")
+        app_chunks = retrieve(user_message, top_k=fetch_k, doc_type_filter="app_note", expanded_query=expanded_query)
         for c in app_chunks:
             key = c["text"][:100]
             if key not in seen:
@@ -637,7 +757,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
 
         # If still not enough, search everything
         if len(chunks) < 3:
-            extra = retrieve(expanded_query, top_k=fetch_k)
+            extra = retrieve(user_message, top_k=fetch_k, expanded_query=expanded_query)
             for c in extra:
                 key = c["text"][:100]
                 if key not in seen:
@@ -649,7 +769,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
     else:
         # No drive context — search by query type
         doc_type = _classify_query_type(user_message)
-        chunks = retrieve(expanded_query, top_k=fetch_k, doc_type_filter=doc_type)
+        chunks = retrieve(user_message, top_k=fetch_k, doc_type_filter=doc_type, expanded_query=expanded_query)
 
     # Rerank
     if ENABLE_RERANKING and len(chunks) > RERANK_TOP_K:
@@ -677,23 +797,40 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
     context_text, chunks, drive_info = _smart_route(standalone_query, history, drive_context=drive_context)
     all_sources = list(chunks)
 
+    # Quality gate: if results are weak, fall back to agentic multi-round search
     if chunks:
+        avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
+        if avg_score < 0.01 or len(chunks) < 2:
+            logger.info("Single-shot quality gate triggered (avg_score=%.3f, chunks=%d) — falling back to agentic mode", avg_score, len(chunks))
+            yield {"type": "status", "text": "Results uncertain, searching deeper..."}
+            for event in chat_stream(user_message, history, drive_context, uploaded_chunks):
+                yield event
+            return
         yield {"type": "status", "text": f"Found {len(chunks)} results, generating answer..."}
+    elif not uploaded_chunks:
+        # No chunks at all and no uploaded docs — fall back to agentic
+        logger.info("Single-shot found 0 results — falling back to agentic mode")
+        yield {"type": "status", "text": "No direct results, searching deeper..."}
+        for event in chat_stream(user_message, history, drive_context, uploaded_chunks):
+            yield event
+        return
 
     # Build a single prompt with all context
     user_content = standalone_query
     if drive_info:
         user_content += f"\n\n[Drive Info]\n{drive_info}"
 
-    # Inject uploaded PDF content if present
+    # Inject uploaded PDF content — ranked by semantic relevance to the query
     if uploaded_chunks:
         filename = uploaded_chunks[0].get("source", "uploaded document") if uploaded_chunks else "uploaded document"
+        # Rank uploaded chunks by relevance instead of injecting all
+        ranked_upload = _rank_uploaded_chunks(standalone_query, uploaded_chunks, top_k=6)
         upload_text = f"\n\n=== UPLOADED DOCUMENT: {filename} ===\n"
         upload_text += "The user uploaded this document. Use its specs (voltage, current, feedback type, encoder resolution, motor parameters) to answer compatibility questions.\n\n"
-        for chunk in uploaded_chunks:
+        for chunk in ranked_upload:
             heading = chunk.get("heading", "")
             heading_str = f" — {heading}" if heading else ""
-            upload_text += f"--- Page {chunk.get('page', '?')}{heading_str} ---\n{chunk['text']}\n\n"
+            upload_text += f"--- [UPLOADED DOCUMENT] {filename}, Page {chunk.get('page', '?')}{heading_str} ---\n{chunk['text']}\n\n"
         user_content += upload_text
 
     if context_text:
@@ -758,7 +895,7 @@ def chat(user_message: str, history: list[dict] = None) -> dict:
     if history:
         recent = history[-4:]
         conv_context = "\n".join(
-            f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:200]}"
+            f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:400]}"
             for m in recent
         )
 
@@ -832,6 +969,9 @@ def _tool_call_description(name: str, tool_input: dict) -> str:
     elif name == "detect_drive_manual":
         pn = tool_input.get("part_number", "")
         return f"Looking up drive {pn}..."
+    elif name == "find_replacement_drive":
+        pn = tool_input.get("part_number", "")
+        return f"Finding replacement for {pn}..."
     elif name == "list_available_manuals":
         return "Listing available manuals..."
     return f"Running {name}..."
@@ -863,7 +1003,7 @@ def chat_stream(user_message: str, history: list[dict] = None, drive_context: di
     if history:
         recent = history[-4:]
         conv_context = "\n".join(
-            f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:200]}"
+            f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:400]}"
             for m in recent
         )
 

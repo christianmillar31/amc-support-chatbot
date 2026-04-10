@@ -1,5 +1,5 @@
 import logging
-from app.config import RERANK_MODEL
+from app.config import RERANK_MODEL, MIN_RERANK_SCORE
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +26,12 @@ def rerank(query: str, chunks: list[dict], top_k: int = 6) -> list[dict]:
     Cross-encoders examine full query-document pairs simultaneously,
     achieving higher accuracy than bi-encoders or LLM-based scoring.
 
+    Always runs the cross-encoder regardless of pool size — even <=top_k
+    chunks benefit from reranking by true relevance rather than retrieval order.
+
     Falls back to original order if the model is unavailable.
     """
-    if not chunks or len(chunks) <= top_k:
+    if not chunks:
         return chunks
 
     _load_model()
@@ -46,7 +49,17 @@ def rerank(query: str, chunks: list[dict], top_k: int = 6) -> list[dict]:
         # Pair scores with chunks, sort descending
         scored = sorted(zip(scores, chunks), key=lambda x: x[0], reverse=True)
 
-        return [chunk for _, chunk in scored[:top_k]]
+        # Attach normalized cross-encoder scores (0-1) so Claude sees true relevance
+        # Filter out low-confidence results but always keep at least 1
+        max_score = float(max(scores)) if float(max(scores)) > 0 else 1.0
+        result = []
+        for s, chunk in scored[:top_k]:
+            norm_score = float(s / max_score)
+            if norm_score < MIN_RERANK_SCORE and result:
+                continue  # Skip low-confidence, but keep at least 1
+            chunk["score"] = norm_score
+            result.append(chunk)
+        return result
 
     except Exception as e:
         logger.warning("Cross-encoder reranking failed, using retrieval order: %s", e)

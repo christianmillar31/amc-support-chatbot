@@ -10,12 +10,12 @@ import logging
 import numpy as np
 from pathlib import Path
 
-from app.config import BASE_DIR, EMBEDDING_MODEL
+from app.config import BASE_DIR, EMBEDDING_MODEL, EMBEDDING_QUERY_PREFIX
 
 logger = logging.getLogger(__name__)
 
 FAQ_FILE = BASE_DIR / "faq_index.csv"
-FAQ_SIMILARITY_THRESHOLD = 0.82  # Must be very confident to skip Claude
+FAQ_SIMILARITY_THRESHOLD = 0.78  # Lowered from 0.82 to catch more near-matches
 
 _faq_entries = None
 _faq_embeddings = None
@@ -76,8 +76,8 @@ def match_faq(user_question: str, threshold: float = FAQ_SIMILARITY_THRESHOLD) -
         return None
 
     try:
-        # Encode user question
-        q_embedding = _embed_model.encode([user_question], normalize_embeddings=True)
+        # Encode user question (with BGE query prefix for asymmetric search)
+        q_embedding = _embed_model.encode([EMBEDDING_QUERY_PREFIX + user_question], normalize_embeddings=True)
 
         # Compute cosine similarity (embeddings are already normalized)
         similarities = np.dot(_faq_embeddings, q_embedding.T).flatten()
