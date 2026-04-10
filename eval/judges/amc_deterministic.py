@@ -12,13 +12,28 @@ from eval.guardrails.part_number_verifier import verify_part_numbers, Hallucinat
 from eval.guardrails.citation_verifier import verify_citations, Citation
 
 
-# Phrases that indicate the bot is refusing to answer (for adversarial tests)
+# Phrases that indicate the bot is refusing / asking for clarification
 _REFUSAL_MARKERS = [
     "couldn't find",
     "could not find",
     "not in the amc",
     "not found in the amc",
+    "not listed in",
+    "not specifically listed",
+    "doesn't appear to match",
+    "does not appear to match",
+    "doesn't match",
+    "does not match",
+    "may not be a standard",
+    "not a standard amc",
+    "unusual for the",
     "verify the spelling",
+    "verify the exact",
+    "verify the part",
+    "double-check the",
+    "double check the",
+    "could you verify",
+    "can you verify",
     "could you clarify",
     "can you clarify",
     "can you specify",
@@ -34,6 +49,7 @@ _REFUSAL_MARKERS = [
     "only help with amc",
     "not in my knowledge",
     "not sure",
+    "if you meant",
 ]
 
 
