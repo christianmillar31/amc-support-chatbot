@@ -1,0 +1,2223 @@
+{
+  "timestamp": "2026-04-10T21:12:32.943608Z",
+  "total_tests": 30,
+  "completed": 30,
+  "errors": 0,
+  "duration_seconds": 1382.14,
+  "deterministic_summary": {
+    "total_tests": 30,
+    "valid_tests": 24,
+    "api_errors": 6,
+    "passed": 22,
+    "failed": 2,
+    "pass_rate": 0.9167,
+    "part_number_hallucinations": 0,
+    "part_number_hallucination_rate": 0.0,
+    "fabricated_citations": 0,
+    "fabricated_citation_rate": 0.0,
+    "refusal_tests": 0,
+    "refusal_correct": 0,
+    "refusal_rate": null,
+    "by_category": {
+      "faq": {
+        "total": 24,
+        "passed": 22,
+        "pass_rate": 0.9167
+      }
+    }
+  },
+  "llm_summary": {},
+  "test_results": [
+    {
+      "test": {
+        "id": "faq_0",
+        "category": "faq",
+        "question": "How do I set up EtherCAT communication on a FlexPro drive?",
+        "expected_source": "AMC_CommManual_FP_EtherCAT.pdf",
+        "expected_page": "11",
+        "expected_section": "Communication Manual / Introduction",
+        "expected_answer_contains": "FlexPro EtherCAT communication manual covers protocol",
+        "full_expected_answer": "The FlexPro EtherCAT communication manual covers the protocol setup including ESI file installation, state machine transitions, and object dictionary configuration for FE-series drives. Key addresses: 1000, 6010. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## Setting up EtherCAT Communication on FlexPro Drives\n\nSetting up EtherCAT communication on FlexPro drives involves both hardware connections and software configuration:\n\n### Hardware Requirements\n- **Cables**: Standard 100BASE-TX Ethernet cables\n- **Network card**: Standard Ethernet adapter running EtherCAT host software\n- **Connectors**: RJ-45 connectors with integrated magnetics and LEDs recommended\n\n### Physical Connection Steps\n\n1. **EtherCAT Network Topology**: Connect drives in a daisy-chain configuration using the EtherCAT IN and OUT ports on each drive.\n\n2. **Required Pin Connections** (for PCB-mount FlexPro drives):\n   - TX- IN (P1-41) and TX+ IN (P1-43) for incoming data\n   - TX- OUT (P1-42) and TX+ OUT (P1-44) for outgoing data  \n   - RX- IN (P1-45) and RX+ IN (P1-47) for receive lines\n   - RX- OUT (P1-46) and RX+ OUT (P1-48) for transmit lines\n   - +3V BIAS IN/OUT (P1-49/50) for bias voltage\n   - LINK/ACT IN/OUT (P1-51/52) for LED indicators\n   - STATUS (P1-53) for status LED\n\n3. **LED Indicators**: Connect status LEDs for network diagnostics:\n   - Green LEDs for LINK/ACT IN and OUT\n   - Green LED for STATUS  \n   - Red LED for ERROR indication\n\n### Software Configuration\n\n1. **Initial Setup via USB**: \n   - Connect drive to PC using USB cable for initial configuration\n   - Use ACE (AMC Configuration Environment) software\n   - Enter motor and feedback parameters\n\n2. **EtherCAT Address Configuration**:\n   - EtherCAT host automatically assigns addresses based on proximity\n   - Optional: Set station alias for fixed addressing using hardware switches\n   - Use ADDR signals (P0_0...7) on I2C expander with hexadecimal switches if needed\n\n3. **PDO Configuration**:\n   - Configure Process Data Objects (PDOs) while drive is in pre-operational state\n   - Map desired objects to RPDO (receive) and TPDO (transmit) \n   - Up to 16 objects per PDO, maximum 256 bits total\n   - Transition to operational state to begin PDO communication\n\n4. **State Machine Operation**:\n   -",
+      "sources": [
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 44,
+          "heading": "MNCMECFP-04 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 17,
+          "heading": "MNCMECRF-06 > Bits 7 – 0"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 43,
+          "heading": "MNCMECRF-06 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 17,
+          "heading": "MNCMECFP-04 > Bits 7 – 0"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 39,
+          "heading": "MNCMECRF-06 > 1.10 Hardware Requirements"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 39,
+          "heading": "MNCMECFP-04 > 1.10 Hardware Requirements"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 41,
+          "heading": "MNCMECFP-04 > Description"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 41,
+          "heading": "MNCMECRF-06 > Description"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 11,
+          "heading": "Communication Manual > 1.1.2 Differences between this manual and ETG.1000 & ETG.6010"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 5,
+          "heading": "1 Communication Manual"
+        },
+        {
+          "source": "AMC_HWManual_FlexPro_PCB.pdf",
+          "page": 52,
+          "heading": "INTERFACE PCB"
+        },
+        {
+          "source": "AMC_HWManual_FlexPro_PCB.pdf",
+          "page": 51,
+          "heading": "STO 2 > OUT"
+        },
+        {
+          "source": "AMC_HWManual_FlexPro_PCB.pdf",
+          "page": 61,
+          "heading": "Operation and Features > Commutate the Motor: For Three Phase (Brushless) motors, commutation is necessary"
+        },
+        {
+          "source": "AMC_HWManual_FlexPro_PCB.pdf",
+          "page": 50,
+          "heading": "STO 2 > OUT"
+        },
+        {
+          "source": "AMC_HWManual_FlexPro_PCB.pdf",
+          "page": 57,
+          "heading": "PCAL6416A I2C > FIGURE 3.25 Recommended Addressing Switches Circuitry"
+        },
+        {
+          "source": "AMC_HWManual_FlexPro_PCB.pdf",
+          "page": 15,
+          "heading": "2.3.3 RS485/232"
+        },
+        {
+          "source": "AMC_HWManual_FlexPro_PCB.pdf",
+          "page": 8,
+          "heading": "B > Index I"
+        },
+        {
+          "source": "AMC_HWManual_FlexPro_PCB.pdf",
+          "page": 24,
+          "heading": "2.3.3 RS485/232 > Description"
+        },
+        {
+          "source": "AMC_HWManual_FlexPro_PCB.pdf",
+          "page": 2,
+          "heading": "Preface > •"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_0",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_1",
+        "category": "faq",
+        "question": "What is the difference between SDO and PDO messages in EtherCAT?",
+        "expected_source": "AMC_CommManual_FP_EtherCAT.pdf",
+        "expected_page": "15",
+        "expected_section": "Communication Manual / SDO vs. PDO Messages",
+        "expected_answer_contains": "(Service Data Object) messages used non-cyclic",
+        "full_expected_answer": "SDO (Service Data Object) messages are used for non-cyclic parameter read/write access, while PDO (Process Data Object) messages provide real-time cyclic data exchange for control and monitoring. Key addresses: 2065, 60C2, 1A00, 1600. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "The key differences between SDO and PDO messages in EtherCAT are:\n\n## **Communication Type**\n- **SDO (Service Data Object)**: Confirmed messaging with outgoing message from host to node and a reply message from node to host\n- **PDO (Process Data Object)**: Unconfirmed messages with no reply, allowing faster data transfer\n\n## **Primary Usage**\n- **SDO**: Used for non-time-critical communication, configuration, and setup before drive operation. Can access nearly every object in the object dictionary\n- **PDO**: Used for cyclic, time-critical data exchange during run-time operation (e.g., position commands, status feedback)\n\n## **Data Transfer Characteristics**\n- **SDO**: No limitation on number of bytes that can be transferred\n- **PDO**: Can transfer up to 16 objects per PDO in EtherCAT (8 bytes max in CANopen)\n\n## **Configuration Requirements**\n- **SDO**: Can be used anytime after initialization without prior configuration\n- **PDO**: Must be configured and mapped prior to use. Once configured, PDOs are transmitted every EtherCAT cycle\n\n## **State Machine Requirements**\n- **SDO**: Available anytime after initialization\n- **PDO**: Only transmitted while EtherCAT state machine is in operational state (limited transactions during safe operational state)\n\n## **PDO Types**\n- **TPDO (Transmit PDO)**: Sends data from slave (drive) to host\n- **RPDO (Receive PDO)**: Receives data from host to slave (drive)\n\n[Source: AMC_CommManual_EtherCAT.pdf, Page 15-16; AMC_CommManual_FP_EtherCAT.pdf, Page 15-16]\n\n**Related questions you might have:**\n- How do I configure PDO mapping for specific objects in EtherCAT?\n- What objects are typically mapped to PDOs for motion control?",
+      "sources": [
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 30,
+          "heading": "COB-ID > Description"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 30,
+          "heading": "COB-ID > Description"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 15,
+          "heading": "MNCMECRF-06 > 1.5.1 SDO Messages"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 15,
+          "heading": "MNCMECFP-04 > 1.5.1 SDO Messages"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 40,
+          "heading": "COB- > PDO Configuration   Configuration of a particular PDO is accomplished by setting the"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 16,
+          "heading": "MNCMECRF-06 > Receive Process Data Object (RPDO)   The host uses the RPDO to write data to objects in"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 12,
+          "heading": "MNCMPLRF-02 > Description"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 16,
+          "heading": "MNCMECFP-04 > Receive Process Data Object (RPDO)   The host uses the RPDO to write data to objects in"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 40,
+          "heading": "COB- > PDO Configuration   Configuration of a particular PDO is accomplished by setting the"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 36,
+          "heading": "COB-ID > Byte 8"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_1",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_2",
+        "category": "faq",
+        "question": "How do I configure PDO mapping on a FlexPro EtherCAT drive?",
+        "expected_source": "AMC_CommManual_FP_EtherCAT.pdf",
+        "expected_page": "16",
+        "expected_section": "Communication Manual / SDO vs. PDO Messages",
+        "expected_answer_contains": "RPDOs used host write data drive",
+        "full_expected_answer": "RPDOs are used by the host to write data to drive objects, and TPDOs are used to read data. PDO mapping is configured through objects 1600h-1603h (RPDO) and 1A00h-1A03h (TPDO). Key addresses: 6040, 1600, 2001, 1A00. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## PDO Mapping Configuration on FlexPro EtherCAT Drives\n\nPDO mapping on FlexPro EtherCAT drives is configured by writing mapping parameters to specific object dictionary entries. Here's the procedure:\n\n### Configuration Requirements\n- **EtherCAT State**: PDO mapping objects must be configured while the EtherCAT state machine is in **pre-operational state**\n- **Limits**: Each PDO (RPDO/TPDO) supports up to 16 objects with maximum total size of 256 bits (16 words)\n- **Object Locations**: RPDO mapping at 1600h, TPDO mapping at 1A00h\n\n### Mapping Parameter Format\nEach mapping entry contains three components in a 32-bit value:\n- **Bits 31-16**: Object Index\n- **Bits 15-8**: Sub-index  \n- **Bits 7-0**: Object Length in hex (e.g., 20h = 32 bits, 10h = 16 bits)\n\n### Configuration Steps\n\n**1. Set Number of Objects**\n- Write to 1600.00h (RPDO) or 1A00.00h (TPDO) the total number of objects to map (0-16)\n\n**2. Configure Individual Mappings**\n- Write mapping parameters to 1600.01h through 1600.10h (RPDO slots 1-16)\n- Write mapping parameters to 1A00.01h through 1A00.10h (TPDO slots 1-16)\n- Set unused slots to 0\n\n**3. Activate Mapping**\n- Transition EtherCAT state machine to operational state to begin PDO communication\n\n### Default Mappings\n\n**RPDO (1600h) - Commands to Drive:**\n1. Control Word (6040.00h) - 1 word\n2. Target Position (607A.00h) - 2 words  \n3. Target Velocity (60FF.00h) - 2 words\n4. Target Current (6071.00h) - 1 word\n5. User Bits (2001.03h) - 1 word\n\n**TPDO (1A00h) - Status from Drive:**\n1. Status Word (6041.00h) - 1 word\n2. Actual Position (6064.00h) - 2 words\n3. Actual Velocity (606C.00h) - 2 words  \n4. Actual Current (6077.00h) - 1 word\n5. Digital Inputs (2023.01h) - 1 word\n\n### Alternative Configuration Methods\n\n**Using Setup Software:**\n1. Navigate to Network → RPDO/TPDO window\n2. Drag desired objects from left panel to assignments panel  \n3. Store project to drive and power cycle\n\n**Using EtherCAT Master:**\n- Directly write to PDO mapping objects 1600h and 1",
+      "sources": [
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 17,
+          "heading": "MNCMECRF-06 > Bits 7 – 0"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 17,
+          "heading": "MNCMECFP-04 > Bits 7 – 0"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 252,
+          "heading": "Appendix B > Type"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 246,
+          "heading": "Appendix B > Type"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 46,
+          "heading": "MNCMECFP-04 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 248,
+          "heading": "MNCMECRF-06 > \"AMC_DPE_xxx_x.xml\". Make a backup copy of this file before continuing."
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 254,
+          "heading": "MNCMECFP-04 > \"AMC_FP_xx.xx.xx.xx.xml\". Make a backup copy of this file before continuing."
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 47,
+          "heading": "MNCMECFP-04 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 253,
+          "heading": "MNCMECFP-04 > Type"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 48,
+          "heading": "MNCMECFP-04 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 49,
+          "heading": "MNCMECFP-04 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 51,
+          "heading": "MNCMECFP-04 > Description:"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_2",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_3",
+        "category": "faq",
+        "question": "What are the default TxPDO and RxPDO assignments for FlexPro EtherCAT?",
+        "expected_source": "AMC_CommManual_FP_EtherCAT.pdf",
+        "expected_page": "18",
+        "expected_section": "Communication Manual / SDO vs. PDO Messages",
+        "expected_answer_contains": "Default TxPDOs include Status Word, Actual",
+        "full_expected_answer": "Default TxPDOs include Status Word, Actual Position, Actual Velocity, and Actual Torque. Default RxPDOs include Control Word, Target Position, Target Velocity, and Target Torque. Key addresses: 6040, 1600, 2001, 1A00. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "[ERROR] RateLimitExceeded: The AI service is busy. Please wait a moment and try again.",
+      "sources": [],
+      "deterministic": {
+        "test_id": "faq_3",
+        "category": "faq",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "is_api_error": true,
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": "API_ERROR (not counted against quality metrics)"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_4",
+        "category": "faq",
+        "question": "What is the EtherCAT state machine and how does it work?",
+        "expected_source": "AMC_CommManual_FP_EtherCAT.pdf",
+        "expected_page": "13",
+        "expected_section": "Communication Manual / EtherCAT State Machine",
+        "expected_answer_contains": "EtherCAT state machine four states: Init,",
+        "full_expected_answer": "The EtherCAT state machine has four states: Init, Pre-Operational, Safe-Operational, and Operational. Transitions between states are controlled by the EtherCAT master. Key addresses: 1000h, 0x0000, 0x0FFF. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "[ERROR] RateLimitExceeded: The AI service is busy. Please wait a moment and try again.",
+      "sources": [],
+      "deterministic": {
+        "test_id": "faq_4",
+        "category": "faq",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "is_api_error": true,
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": "API_ERROR (not counted against quality metrics)"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_5",
+        "category": "faq",
+        "question": "How do I configure the Sync Manager watchdog on an EtherCAT drive?",
+        "expected_source": "AMC_CommManual_FP_EtherCAT.pdf",
+        "expected_page": "14",
+        "expected_section": "Communication Manual / Watchdog",
+        "expected_answer_contains": "Sync Manager watchdog monitors communication watchdog",
+        "full_expected_answer": "The Sync Manager watchdog monitors PDO communication and the PDO watchdog monitors cyclic data timing. If communication is lost, the drive enters a safe state based on the watchdog configuration. Key addresses: 2065, 60C2. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "Based on the search results, I can provide you with the information on configuring the Sync Manager watchdog on EtherCAT drives:\n\n## Sync Manager Watchdog Configuration\n\nThe Sync Manager (SM) watchdog monitors RPDO rates while the drive is in Cyclic Synchronous mode and the EtherCAT state machine is in the Operational state.\n\n### Configuration Steps:\n\n1. **Watchdog Timer Setup**: The watchdog time is configured using your EtherCAT host software (master controller software), not directly on the drive.\n\n2. **Error Behavior Configuration**: Configure how the drive responds to watchdog timeouts by:\n   - Using your drive setup software (ACE), OR\n   - Writing directly to object **2065.21h** (Event Action Parameters)\n\n### Operation Details:\n\n**Monitoring Function**: The watchdog monitors cyclic RPDO information. If RPDOs are missed, the watchdog timer initiates.\n\n**Fault Trigger**: When no new PDOs are received within the configured watchdog time, the drive will report a **Comm Channel Error**.\n\n**Error Recovery**: The error becomes inactive when:\n- RPDOs resume normal operation, OR  \n- EtherCAT state transitions away from Operational state\n\n### Important Limitations:\n\n**Response Time**: While the SyncManager watchdog time can be configured to any time value, **total watchdog response times below 15ms cannot be guaranteed**.\n\n**Active Conditions**: The watchdog only operates when:\n- Drive is in Cyclic Synchronous mode\n- EtherCAT state machine is in Operational state\n\n[Source: AMC_CommManual_FP_EtherCAT.pdf, Page 14; AMC_CommManual_EtherCAT.pdf, Page 14]\n\n**Related questions you might have:**\n- How do I configure the PDO watchdog timeout values?\n- What are the different Event Action Parameter options for object 2065.21h?",
+      "sources": [
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 14,
+          "heading": "MNCMECFP-04 > 1.4.2 PDO Watchdog"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 14,
+          "heading": "MNCMECRF-06 > 1.4.2 PDO Watchdog"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 43,
+          "heading": "MNCMECRF-06 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 44,
+          "heading": "MNCMECFP-04 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 7,
+          "heading": "2 Object Dictionary > /"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 7,
+          "heading": "2 Object Dictionary > /"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 253,
+          "heading": "Index > Numerics"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 39,
+          "heading": "MNCMECRF-06 > 1.10 Hardware Requirements"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 257,
+          "heading": "Index > T"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 5,
+          "heading": "1 Communication Manual"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 254,
+          "heading": "Index > W"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 8,
+          "heading": "2 Object Dictionary > /"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_5",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_6",
+        "category": "faq",
+        "question": "What ESI file do I need for a FlexPro EtherCAT drive?",
+        "expected_source": "AMC_CommManual_FP_EtherCAT.pdf",
+        "expected_page": "11",
+        "expected_section": "Communication Manual / Introduction",
+        "expected_answer_contains": "(EtherCAT Slave Information) file named AMC_FP_xx.xx.xx.xx.xml.",
+        "full_expected_answer": "The ESI (EtherCAT Slave Information) XML file is named AMC_FP_xx.xx.xx.xx.xml. Always make a backup copy before updating. The file is needed by the EtherCAT master for device configuration. Key addresses: 1000, 6010. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "[ERROR] RateLimitExceeded: The AI service is busy. Please wait a moment and try again.",
+      "sources": [],
+      "deterministic": {
+        "test_id": "faq_6",
+        "category": "faq",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "is_api_error": true,
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": "API_ERROR (not counted against quality metrics)"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_7",
+        "category": "faq",
+        "question": "What homing methods are available on FlexPro EtherCAT drives?",
+        "expected_source": "AMC_CommManual_FP_EtherCAT.pdf",
+        "expected_page": "25",
+        "expected_section": "Communication Manual / Homing",
+        "expected_answer_contains": "Homing configured through objects 607Ch (Home",
+        "full_expected_answer": "Homing is configured through objects 607Ch (Home Offset), 6099h (Homing Speeds), 609Ah (Homing Acceleration), and 6098h (Homing Method). Multiple methods using limit switches and index pulses are supported. Key addresses: 205B, 6041h. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "[ERROR] RateLimitExceeded: The AI service is busy. Please wait a moment and try again.",
+      "sources": [],
+      "deterministic": {
+        "test_id": "faq_7",
+        "category": "faq",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "is_api_error": true,
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": "API_ERROR (not counted against quality metrics)"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_8",
+        "category": "faq",
+        "question": "How do homing methods 11 to 14 work with the negative limit switch?",
+        "expected_source": "AMC_CommManual_FP_EtherCAT.pdf",
+        "expected_page": "30",
+        "expected_section": "Communication Manual / Homing",
+        "expected_answer_contains": "Methods negative limit switch instead positive",
+        "full_expected_answer": "Methods 11 to 14 use a negative limit switch instead of a positive limit switch. The initial direction of travel is reversed (left instead of right) compared to methods using the positive limit switch. Key addresses: 6060h, 2039. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## Homing Methods 11-14 with Negative Limit Switch\n\nHoming methods 11-14 use the **negative limit switch** instead of the positive limit switch used in methods 7-10. The key difference is the **initial direction**:\n\n- **Initial direction**: Left (negative) instead of right (positive) when the starting point is outside the active home switch region\n- **Behavior**: Otherwise identical to methods 7-10 respectively\n\n### Method Correspondences:\n- **Method 11** = Method 7 using negative limit switch\n- **Method 12** = Method 8 using negative limit switch  \n- **Method 13** = Method 9 using negative limit switch\n- **Method 14** = Method 10 using negative limit switch\n\n### Operation Sequence:\n1. If starting outside the home switch region, motor moves **left (negative direction)** to reach the negative limit switch\n2. Once the negative limit switch is activated, the motor changes direction\n3. The motor then follows the same pattern as the corresponding method 7-10, but relative to the negative limit switch position\n4. Homing completes when the specified condition is met (varies by specific method 11-14)\n\nThe diagrams show the motor will move in different patterns depending on the starting position relative to the home switch and negative limit switch, with the final home position determined by the index pulse location according to each method's specific algorithm.\n\n[Source: AMC_CommManual_EtherCAT.pdf, Page 30; AMC_CommManual_CANopen.pdf, Page 61]\n\n**Related questions you might have:**\n- What are the specific differences between methods 11, 12, 13, and 14?\n- How do methods 7-10 work with the positive limit switch for comparison?",
+      "sources": [
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 61,
+          "heading": "FIGURE 1.12 > Positive Limit Switch"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 60,
+          "heading": "FIGURE 1.12 > Positive Limit Switch"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 32,
+          "heading": "FIGURE 1.12 > Positive Limit Switch"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 30,
+          "heading": "FIGURE 1.8 > Positive Limit Switch"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 30,
+          "heading": "FIGURE 1.8 > Positive Limit Switch"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 225,
+          "heading": "FIGURE A.6 > Positive Limit Switch"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 208,
+          "heading": "FIGURE A.6 > Positive Limit Switch"
+        },
+        {
+          "source": "AMC_CommManual_Ethernet_DP.pdf",
+          "page": 199,
+          "heading": "FIGURE A.6 > Positive Limit Switch"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 27,
+          "heading": "MNCMECRF-06 > Positive Limit Switch"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 205,
+          "heading": "Appendix A > Negative Limit Switch"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_8",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_9",
+        "category": "faq",
+        "question": "How do I change the mode of operation on an EtherCAT drive?",
+        "expected_source": "AMC_CommManual_FP_EtherCAT.pdf",
+        "expected_page": "35",
+        "expected_section": "Object Dictionary / Modes of Operation",
+        "expected_answer_contains": "object 6060h (Modes Operation) send mode",
+        "full_expected_answer": "Use object 6060h (Modes Of Operation) to send a mode change request and read object 6061h (Modes Of Operation Display) to confirm the active mode. Supported modes include Profile Position, Profile Velocity, Cyclic Synchronous, and Homing. Key addresses: 6086h, 6061h, 6060h, 203Ch. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "To change the mode of operation on an EtherCAT drive, you use **object 6060h (Modes of Operation)**. Here's the process:\n\n## Writing the Mode Value\n\nWrite the desired mode value to object 6060h using your EtherCAT master:\n\n**Available Mode Values:**\n- **1** = Profile Position Mode\n- **3** = Profile Velocity Mode  \n- **4** = Profile Torque Mode (current mode)\n- **6** = Homing Mode\n- **8** = Cyclic Synchronous Position Mode\n- **9** = Cyclic Synchronous Velocity Mode\n- **10** = Cyclic Synchronous Current Mode\n\n## Important Timing Considerations\n\nThe mode change may not happen immediately. Object 6060h indicates the **requested** mode, but the actual mode change depends on the drive's current state. If the drive is in \"Operation Enabled\" state, the mode change may be delayed until conditions allow it.\n\n## Verify the Mode Change\n\nUse **object 6061h (Modes of Operation Display)** to read the **actual** current mode of operation. This read-only object shows what mode the drive is actually running in, which may differ from your request in 6060h if the change hasn't completed yet.\n\n## Prerequisites\n\nBefore changing modes, ensure:\n- Feedback wiring and project parameters are configured properly for both the current mode and target mode\n- The drive is in an appropriate state (typically Switch On Disabled or Switched On states are safest for mode changes)\n\n[Source: AMC_CommManual_EtherCAT.pdf, Pages 194, 22, 26]\n\n**Related questions you might have:**\n- What's the difference between Profile modes and Cyclic Synchronous modes?\n- How do I check the current drive state using the StatusWord before changing modes?",
+      "sources": [
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 194,
+          "heading": "MNCMECRF-06 > Operation Mode"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 38,
+          "heading": "MNCMECRF-06 > Description"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 195,
+          "heading": "MNCMECFP-04 > Operation Mode"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 36,
+          "heading": "FIGURE 1.12 > Description"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 36,
+          "heading": "FIGURE 1.12 > Description"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 32,
+          "heading": "MNCMECRF-06 > Modes of Operation"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 35,
+          "heading": "TABLE 1.21 > Description"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 32,
+          "heading": "MNCMECFP-04 > Modes of Operation"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 35,
+          "heading": "TABLE 1.21 > Description"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 24,
+          "heading": "MNCMECRF-06 > StatusWord"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_9",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_10",
+        "category": "faq",
+        "question": "How do I set up CANopen communication on a FlexPro drive?",
+        "expected_source": "AMC_CommManual_FP_CANopen.pdf",
+        "expected_page": "20",
+        "expected_section": "Communication Manual / CANopen Messages",
+        "expected_answer_contains": "FlexPro CANopen comm manual covers state",
+        "full_expected_answer": "The FlexPro CANopen comm manual covers NMT state machine, SDO/PDO messaging, heartbeat monitoring, and the full object dictionary for FlexPro CANopen (FD-series) drives. Key addresses: 100Ch, 2315h. For the full guide, download \"AMC_CommManual_FP_CANopen.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "[ERROR] RateLimitExceeded: The AI service is busy. Please wait a moment and try again.",
+      "sources": [],
+      "deterministic": {
+        "test_id": "faq_10",
+        "category": "faq",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "is_api_error": true,
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": "API_ERROR (not counted against quality metrics)"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_11",
+        "category": "faq",
+        "question": "What should the CAN bus load be kept below for reliable operation?",
+        "expected_source": "AMC_CommManual_FP_CANopen.pdf",
+        "expected_page": "20",
+        "expected_section": "Communication Manual / CANopen Messages",
+        "expected_answer_contains": "best keep network idle least time",
+        "full_expected_answer": "It is best to keep the network idle for at least 50% of the time (50% bus load). Bus load depends on the number of nodes, baud rate, and PDO cycle time. Key addresses: 100Ch, 2315h. For the full guide, download \"AMC_CommManual_FP_CANopen.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "[ERROR] RateLimitExceeded: The AI service is busy. Please wait a moment and try again.",
+      "sources": [],
+      "deterministic": {
+        "test_id": "faq_11",
+        "category": "faq",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": null,
+        "forbidden_claims_found": [],
+        "is_api_error": true,
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": "API_ERROR (not counted against quality metrics)"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_12",
+        "category": "faq",
+        "question": "How do I configure PDO mapping on a CANopen drive?",
+        "expected_source": "AMC_CommManual_FP_CANopen.pdf",
+        "expected_page": "40",
+        "expected_section": "Communication Manual / SDO vs. PDO Messages",
+        "expected_answer_contains": "configuration accomplished setting communication parameter (COB-ID,",
+        "full_expected_answer": "PDO configuration is accomplished by setting the communication parameter (COB-ID, transmission type) and mapping parameter (object indices and sub-indices mapped to the PDO). Key addresses: 208D, 1400h, 20E6. For the full guide, download \"AMC_CommManual_FP_CANopen.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "Based on the search results, I have comprehensive information about PDO mapping configuration on CANopen drives. Let me provide a detailed answer covering the key concepts and procedures.\n\n## PDO Mapping Configuration on CANopen Drives\n\nPDO mapping configuration involves setting up both Communication Parameter Objects and Mapping Parameter Objects to define which data is transmitted/received and how it's structured.\n\n### Key Objects for PDO Configuration\n\n**Communication Parameter Objects:**\n- RPDO (Receive): 1400h-15FFh range\n- TPDO (Transmit): 1800h-19FFh range\n\n**Mapping Parameter Objects:**\n- RPDO: 1600h-17FFh range  \n- TPDO: 1A00h-1BFFh range\n\n### Mapping Parameter Object Format\n\nEach mapping parameter is a 32-bit Unsigned32 value structured as:\n\n| Bits 31-16 | Bits 15-8 | Bits 7-0 |\n|------------|-----------|----------|\n| Index | Sub-Index | Object Length |\n\n**Components:**\n- **Index**: Object dictionary index to map (0 = no object mapped)\n- **Sub-index**: Sub-index of the mapped object (0 if object has no sub-indices)  \n- **Object Length**: Bit length in hex (e.g., 20h = 32 bits, 10h = 16 bits, 08h = 8 bits)\n\n### Configuration Procedure\n\n1. **Disable the PDO** by setting bit 31 of the Communication Parameter COB-ID to 1\n2. **Configure Communication Parameters:**\n   - Set COB-ID (object 14XXh.01h for RPDO, 18XXh.01h for TPDO)\n   - Set Transmission Type (object 14XXh.02h for RPDO, 18XXh.02h for TPDO)\n3. **Configure Mapping Parameters:**\n   - Set the number of mapped objects in sub-index 00h\n   - Configure each mapping entry (sub-indices 01h-08h) with the 32-bit format above\n4. **Enable the PDO** by clearing bit 31 of the Communication Parameter COB-ID\n\n### Example: Configuring RPDO1 for ControlWord\n\n```\n1. Disable PDO: Write 0x80000200 to 1400h.01h (sets disable bit + COB-ID 200h)\n2. Set mapping count: Write 1 to 1600h.00h (one object mapped)  \n3. Map ControlWord: Write 0x60400010 to 1600h.01h (6040h index, 00h sub-index, 10h = 16 bits)\n4. Enable PDO: Write 0x0",
+      "sources": [
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 104,
+          "heading": "Object Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 97,
+          "heading": "Object Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 98,
+          "heading": "Object Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 40,
+          "heading": "COB- > PDO Configuration   Configuration of a particular PDO is accomplished by setting the"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 94,
+          "heading": "Object Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 105,
+          "heading": "MNCMCNFP-08 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 102,
+          "heading": "MNCMCNFP-08 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 40,
+          "heading": "COB- > PDO Configuration   Configuration of a particular PDO is accomplished by setting the"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 100,
+          "heading": "Object Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 111,
+          "heading": "Object Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 109,
+          "heading": "MNCMCNFP-08 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 107,
+          "heading": "MNCMCNFP-08 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 110,
+          "heading": "MNCMCNFP-08 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 95,
+          "heading": "Object Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 42,
+          "heading": "COB- > Data Length"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 108,
+          "heading": "Object Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 17,
+          "heading": "MNCMECRF-06 > Bits 7 – 0"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 17,
+          "heading": "MNCMECFP-04 > Bits 7 – 0"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 13,
+          "heading": "MNCMPLRF-02 > Bits 7 – 0"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 107,
+          "heading": "Object Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 109,
+          "heading": "Object Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 99,
+          "heading": "Object Dictionary > Description:"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_12",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_13",
+        "category": "faq",
+        "question": "What NMT states does a CANopen drive support?",
+        "expected_source": "AMC_CommManual_FP_CANopen.pdf",
+        "expected_page": "25",
+        "expected_section": "Communication Manual / NMT States",
+        "expected_answer_contains": "drive supports Bootup, Stopped, Operational, Pre-operational",
+        "full_expected_answer": "The drive supports Bootup, Stopped, Operational, and Pre-operational NMT states. State 0 is Bootup, state 4 is Stopped, state 5 is Operational, and state 127 is Pre-operational. Key addresses: 5535, 1016h, 1017h. For the full guide, download \"AMC_CommManual_FP_CANopen.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## NMT States Supported by CANopen Drives\n\nAMC CANopen drives support **4 main NMT communication states** as defined by the DS301 CANopen standard:\n\n### 1. **Boot-Up State**\n- Initial state upon power-up during drive initialization\n- Drive cycles through Reset Node and Reset Communication states\n- Upon successful initialization, drive sends a Boot-Up message and transitions to Pre-Operational\n\n### 2. **Pre-Operational State** \n- Default state after successful boot-up\n- **Only NMT and SDO messages are allowed** - PDO communication is disabled\n- Used for drive setup and configuration before enabling motion\n- Host typically keeps nodes in this state during configuration\n\n### 3. **Operational State**\n- **All message types are enabled**, including PDO messages\n- Required state for real-time motion control and process data exchange\n- Drive must be in this state for normal servo operation\n\n### 4. **Stopped State**\n- **Only NMT messages are allowed** - all other communication is disabled\n- Node Guarding/Life Guarding monitoring remains active\n- Used to temporarily suspend communication while maintaining basic network presence\n\n## State Transitions\n\nThe NMT master controls state transitions using these commands:\n- **Start Remote Node** (01h): Pre-Operational → Operational\n- **Stop Remote Node** (02h): Any state → Stopped  \n- **Pre-Operational** (80h): Any state → Pre-Operational\n- **Reset Node** (81h): Complete reset (same as power cycle)\n- **Reset Communication** (82h): Reset communication only, motion control retained\n\n[Source: AMC_CommManual_CANopen.pdf, Pages 21-22; AMC_CommManual_FP_CANopen.pdf, Pages 20-22]\n\n**Related questions you might have:**\n- How do I transition a CANopen drive between NMT states?\n- What is the difference between Reset Node and Reset Communication commands?",
+      "sources": [
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 21,
+          "heading": "COB-ID > Description"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 20,
+          "heading": "COB-ID > Machine"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 21,
+          "heading": "COB-ID > Description"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 22,
+          "heading": "COB- > Description"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 9,
+          "heading": "Serial Communication Protocol > 1.1.1 State Machine Overview"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 22,
+          "heading": "COB-ID > Byte 8"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_13",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_14",
+        "category": "faq",
+        "question": "What CAN hardware do I need to communicate with AMC drives?",
+        "expected_source": "AMC_CommManual_FP_CANopen.pdf",
+        "expected_page": "10",
+        "expected_section": "Communication Manual / CAN Card",
+        "expected_answer_contains": "interface card USB-to-CAN adapter required. manual",
+        "full_expected_answer": "A CAN interface card or USB-to-CAN adapter is required. The manual covers CAN card setup and API access for communicating with the CANopen object dictionary. Key addresses: 2100h, 1000h, 2200h, 100Ch. For the full guide, download \"AMC_CommManual_FP_CANopen.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## CAN Hardware Requirements for AMC Drives\n\nTo communicate with AMC CANopen drives, you need the following hardware components:\n\n### CAN Interface Controller\nAMC CANopen drives communicate with **any CAN compatible hardware**. Common PC-based CAN controllers include:\n- **Parallel-to-CAN**\n- **USB-to-CAN** \n- **Serial-to-CAN**\n- **PCI-to-CAN**\n\nThe CAN controller must be installed with its appropriate software and API (application programmer interface) from the manufacturer.\n\n### Connector Components\nAMC drives use a **low-density, male, 9-pin D-SUB connector**. Required parts (available from Tyco Electronics):\n- **D-SUB plug**: Main body (Part: 205204-4)\n- **Shell Kit**: Outer shell with shielding and strain relief (Part: 748677-1)  \n- **Pins**: Loose (Part: 5-66507-7) or Strip (Part: 3-66507-0)\n\n### Cable Requirements\n- **Shielded cable** with **shielded twisted pairs**\n- Each twisted pair should have **one drain wire terminated on one end only**\n- **DO NOT terminate shields on both ends** - this creates ground loops and noise\n\n### CAN Bus Pinout (9-pin D-SUB)\n| Pin | Signal | Description | I/O |\n|-----|--------|-------------|-----|\n| 1 | -- | Not Connected | N/A |\n| 2 | CAN_L | CAN_L bus line (dominant low) | Input |\n| 3 | CAN_GND | CAN bus ground | GND |\n| 4 | -- | Not Connected | N/A |\n| 5 | CAN_SHIELD | CAN shield | Shield |\n| 6 | -- | Not Connected | N/A |\n| 7 | CAN_H | CAN_H bus line (dominant high) | Input |\n| 8 | CAN_TERM | Termination (connect to CAN_H for 120Ω termination) | GND |\n| 9 | CAN_V+ | Optional external supply (7.5-24 VDC) | Input |\n\n### Network Configuration Requirements\n- **Unique node address** for each drive (1-127)\n- **Same baud rate** across all network nodes\n- **120Ω termination resistors** at both ends of the network\n- External power may be required on pin 9 if CAN interface is isolated\n\n[Source: AMC_CommManual_CANopen.pdf, Pages 82-84; AMC_CommManual_FP_CANopen.pdf, Pages 82-84]\n\n**Related questions you might have:**\n- What baud rates ",
+      "sources": [
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 82,
+          "heading": "09 00 00 00 > 1.11.1 CAN Card"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 82,
+          "heading": "09 00 00 00 > 1.11.1 CAN Card"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 83,
+          "heading": "TABLE 1.77 > Part Number"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 83,
+          "heading": "TABLE 1.77 > Part Number"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 84,
+          "heading": "NAME > I/O"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 84,
+          "heading": "NAME > I/O"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 9,
+          "heading": "1 Communication Manual > /"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 323,
+          "heading": "Index > C"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_14",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_15",
+        "category": "faq",
+        "question": "How do I set the CANopen node ID and baud rate in ACE?",
+        "expected_source": "AMC_SW_Manual_ACE.pdf",
+        "expected_page": "60",
+        "expected_section": "Configuring the Drive / Network",
+        "expected_answer_contains": "Network configuration page, CANopen Address (Node",
+        "full_expected_answer": "In the Network configuration page, set the CANopen Address (Node ID, range 1-127) and Baud Rate (CAN bus speed in kbit/s). Interface Access Control can also be configured. Key addresses: 6060. For the full guide, download \"AMC_SW_Manual_ACE.pdf\" from a-m-c.com > Support > Downloads > Software Downloads.",
+        "expected_refuse": false
+      },
+      "answer": "To set the CANopen node ID and baud rate in ACE:\n\n## Setting CANopen Node ID and Baud Rate\n\n1. Connect to your drive using USB (required for changing network settings)\n\n2. Navigate to **Network > Settings** in the System Browser\n\n3. In the Network Settings window, configure the CANopen parameters:\n   - **Address**: Set the CANopen Node ID (valid range: 1-127)\n   - **Baud Rate**: Select the CAN bus speed in kbit/s\n\n## Important Notes\n\n- **Network Settings fields can only be changed when connected over USB**\n- The settings in the Network Settings window are stored in the drive, not necessarily the same as the connection settings used to connect to ACE\n- Changes will be applied upon drive reset\n\n## Additional CANopen Settings Available\n\n- **Initial Mode of Operation (6060)**: Sets the default mode after communication reset or power cycle\n- **Cyclic Mode Period**: Defines the interpolation cycle time in ms (should match your host update rate)\n- **Guard Time** and **Life Time Factor**: Configure node monitoring timeouts\n\nThe drive must be reset after changing these settings for them to take effect.\n\n[Source: AMC_SW_Manual_ACE.pdf, Page 60]\n\n**Related questions you might have:**\n- How do I configure CANopen PDO mappings in ACE?\n- What are the recommended guard time settings for CANopen networks?",
+      "sources": [
+        {
+          "source": "AMC_SW_Manual_ACE.pdf",
+          "page": 60,
+          "heading": "Configuring the Drive > Description"
+        },
+        {
+          "source": "AMC_SW_Manual_DriveWare.pdf",
+          "page": 55,
+          "heading": "Configuring the Drive > Description"
+        },
+        {
+          "source": "AMC_SW_Manual_ACE.pdf",
+          "page": 25,
+          "heading": "RS485 > Help"
+        },
+        {
+          "source": "AMC_SW_Manual_ACE.pdf",
+          "page": 63,
+          "heading": "Configuring the Drive > 3.12.2 Gain Sets"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_15",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_16",
+        "category": "faq",
+        "question": "How do I configure the CANopen node ID and baud rate in DriveWare?",
+        "expected_source": "AMC_SW_Manual_DriveWare.pdf",
+        "expected_page": "55",
+        "expected_section": "Configuring the Drive / Network",
+        "expected_answer_contains": "Network settings, CANopen Address (Node 1-127)",
+        "full_expected_answer": "In the Network settings, set the CANopen Address (Node ID, 1-127) and Baud Rate. Interface Access Control settings are also available for read-only vs. read-write access. Key addresses: 6060. For the full guide, download \"AMC_SW_Manual_DriveWare.pdf\" from a-m-c.com > Support > Downloads > Software Downloads.",
+        "expected_refuse": false
+      },
+      "answer": "## CANopen Node ID and Baud Rate Configuration in DriveWare\n\nTo configure the CANopen node ID and baud rate in DriveWare:\n\n### 1. Access Network Settings\n- Navigate to **Network > Settings** window in DriveWare\n- **Important**: Network settings can only be changed when connected over the serial interface (RS232 or USB, depending on your drive model)\n\n### 2. CANopen Configuration Parameters\n\nFor drives with CANopen interface, you'll see these configurable settings:\n\n- **Address**: Sets the CANopen Node ID (valid range: 1-127)\n- **Baud Rate**: Selects the CAN bus speed in kbit/s\n\n### 3. Additional CANopen Settings\nThe Network Settings window also allows configuration of:\n- **Initial Mode of Operation (6060)**: Specifies the initial mode after communication reset or power cycle\n- **Cyclic Mode Period**: Defines the cyclic interpolation cycle time (ms)\n- **Guard Time** and **Life Time Factor**: Determine the \"Lifetime\" for NMT slave monitoring\n\n### 4. Drive Operation Mode\nIn the **[Drive Name] > Settings** window, configure:\n- **Network Mode**: Use when the drive will be controlled over the CANopen network\n- **Stand-Alone Mode**: Use when the drive will not be connected to a network\n\n**Note**: Changes to network settings are applied upon drive reset.\n\n[Source: AMC_SW_Manual_DriveWare.pdf, Pages 55-56]\n\n**Related questions you might have:**\n- How do I set up CANopen PDO mappings in DriveWare?\n- What are the recommended Guard Time and Life Time Factor values for my application?",
+      "sources": [
+        {
+          "source": "AMC_SW_Manual_DriveWare.pdf",
+          "page": 55,
+          "heading": "Configuring the Drive > Description"
+        },
+        {
+          "source": "AMC_SW_Manual_ACE.pdf",
+          "page": 60,
+          "heading": "Configuring the Drive > Description"
+        },
+        {
+          "source": "AMC_SW_Manual_DriveWare.pdf",
+          "page": 23,
+          "heading": "RS485 > Help"
+        },
+        {
+          "source": "AMC_SW_Manual_ACE.pdf",
+          "page": 25,
+          "heading": "RS485 > Help"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_16",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_17",
+        "category": "faq",
+        "question": "How do I set up Modbus RTU communication with a DigiFlex drive?",
+        "expected_source": "AMC_CommManual_Modbus.pdf",
+        "expected_page": "7",
+        "expected_section": "Modbus Communication Protocol / Modbus Command Format",
+        "expected_answer_contains": "Modbus uses function codes reading/writing coils",
+        "full_expected_answer": "Modbus uses function codes for reading/writing coils and registers. The protocol uses an address byte, function code, data bytes, and CRC for message framing. Key addresses: 0308, 0286, 0288, 0268. For the full guide, download \"AMC_CommManual_Modbus.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "Based on my search of the AMC manuals, here's how to set up Modbus RTU communication with a DigiFlex drive:\n\n## Initial Setup Requirements\n\nFor DigiFlex drives with serial communication (RA suffix models), you'll need to configure both the RS-485 hardware and Modbus protocol settings.\n\n## Configuration Parameters\n\n### 1. RS-485 Communication Settings\nConfigure these parameters using DriveWare or direct register access:\n\n**Baud Rate (Register 05.03h):**\n- Set value 0-7 corresponding to desired baud rate\n- Recommended: 115200 baud (value = 4)\n- Available rates: 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600 baud\n\n**Drive Address (Register 05.02h):**\n- Set RS-485 drive address (0-63)\n- Each drive on the network needs a unique address\n\n**Network Address (Register 06.00h):**\n- Set network address for drives with additional network interface\n- Range: 0 to 32767\n\n### 2. Enable Modbus Protocol\n**Modbus Enable/Disable (Register 05.04h):**\n- Set to 0 to enable Modbus communication\n- Set to 1 to disable Modbus communication\n\n## Supported Modbus Function Codes\n\nThe DigiFlex drives support these standard Modbus RTU function codes:\n\n- **01**: Read Coil Status (discrete outputs)\n- **02**: Read Input Status (discrete inputs) \n- **03**: Read Holding Registers (configuration/control data)\n- **04**: Read Input Registers (status/feedback data)\n- **05**: Force Single Coil (write single discrete output)\n- **06**: Preset Single Register (write single register)\n- **08**: Diagnostics (serial communication diagnostics)\n- **15**: Force Multiple Coils (write multiple discrete outputs)\n- **16**: Preset Multiple Registers (write multiple registers)\n\n## Register Addressing\n\nModbus registers are mapped as follows:\n- **Holding Registers**: 40001-40xxx (configuration and control)\n- **Input Registers**: 30001-30xxx (status and feedback)\n- **Discrete Inputs**: 10001-10xxx (status bits)\n- **Coils**: 00001-00xxx (control bits)\n\n## Hardware Wiring\n\nFor RS-485 communication:\n- Use twisted pair ",
+      "sources": [
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 31,
+          "heading": "Command Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 7,
+          "heading": "Modbus Communication Protocol > CRC"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 12,
+          "heading": "TABLE 1.11 > Dec"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 30,
+          "heading": "Command Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_Ethernet_DP.pdf",
+          "page": 22,
+          "heading": "Command Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 82,
+          "heading": "09 00 00 00 > 1.11.1 CAN Card"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 82,
+          "heading": "09 00 00 00 > 1.11.1 CAN Card"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 93,
+          "heading": "Object Dictionary > Baud Rate (bits/s)"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 4,
+          "heading": "2 Register Definitions"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 8,
+          "heading": "TABLE 1.4 > Read Coil Status Query"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 10,
+          "heading": "TABLE 1.8 > Force Single Coil Response"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 23,
+          "heading": "Register Definitions > Data Type"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 29,
+          "heading": "Register Definitions > Data Type"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 26,
+          "heading": "Register Definitions > Data Type"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 9,
+          "heading": "TABLE 1.6 > Read Holding Registers Response"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_17",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_18",
+        "category": "faq",
+        "question": "What Modbus function codes are supported by AMC drives?",
+        "expected_source": "AMC_CommManual_Modbus.pdf",
+        "expected_page": "8",
+        "expected_section": "Modbus Communication Protocol / Modbus Command Format",
+        "expected_answer_contains": "Supported function codes include (Read Coil",
+        "full_expected_answer": "Supported function codes include 01 (Read Coil Status), 02 (Read Input Status), 03 (Read Holding Registers), 05 (Force Single Coil), and 15 (Force Multiple Coils). Key addresses: FF00, 0000. For the full guide, download \"AMC_CommManual_Modbus.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "AMC drives support the following **Modbus function codes**:\n\n## Standard Modbus Function Codes\n\n| Function Code | Type | Description |\n|---------------|------|-------------|\n| **01** | Read Coil Status | Requests status of discrete coils |\n| **02** | Read Input Status | Requests status of discrete inputs |\n| **03** | Read Holding Registers | Requests content of holding registers |\n| **04** | Read Input Registers | Requests content of input registers |\n| **05** | Force Single Coil | Writes to a discrete coil |\n| **06** | Preset Single Register | Writes to a single holding register |\n| **08** | Diagnostics (Serial only) | See diagnostic sub-functions below |\n| **15** | Force Multiple Coils | Writes to multiple coils |\n| **16** | Preset Multiple Registers | Writes to multiple holding registers |\n\n## Diagnostic Sub-Function Codes (Function Code 08)\n\n| Sub-Function | Name | Hex | Dec |\n|--------------|------|-----|-----|\n| **00** | Return Query Data | 00 | 0 |\n| **0A** | Clear Diagnostic Counters and Registers | 0A | 10 |\n| **0C** | Return Bus Communication Error Count (CRC) | 0C | 12 |\n| **0D** | Return Bus Exception Error Count | 0D | 13 |\n| **0E** | Return Server Message Count | 0E | 14 |\n\n## Additional Notes\n\n- **Serial addresses**: AMC drives support addresses 1-63 (address 0 is reserved)\n- **Modbus TCP**: Supported over standard port 502 with same command format as RTU but without CRC fields\n- **Exception codes**: Standard Modbus exception codes are supported for error handling\n\n[Source: AMC_CommManual_Modbus.pdf, Pages 8, 12]\n\n**Related questions you might have:**\n- What Modbus register addresses are available for reading drive status?\n- How do I configure Modbus communication parameters on my specific AMC drive?",
+      "sources": [
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 8,
+          "heading": "TABLE 1.4 > Read Coil Status Query"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 7,
+          "heading": "Modbus Communication Protocol > CRC"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 4,
+          "heading": "2 Register Definitions"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 12,
+          "heading": "TABLE 1.11 > Dec"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 9,
+          "heading": "TABLE 1.6 > Read Holding Registers Response"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 10,
+          "heading": "TABLE 1.8 > Force Single Coil Response"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 11,
+          "heading": "TABLE 1.10 > Force Multiple Coils Response"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_18",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_19",
+        "category": "faq",
+        "question": "How do I initiate an index or sequence over Modbus?",
+        "expected_source": "AMC_CommManual_Modbus.pdf",
+        "expected_page": "20",
+        "expected_section": "Register Definitions / Motion Engine",
+        "expected_answer_contains": "Register 4003 (hex FA2) used initiate",
+        "full_expected_answer": "Register 4003 (hex FA2) is used to initiate Index/Sequence commands. Write the index or sequence number to trigger the desired motion profile. Key addresses: 4001, 4024, 4000. For the full guide, download \"AMC_CommManual_Modbus.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## How to Initiate an Index or Sequence over Modbus\n\nTo initiate an index or sequence over Modbus, use the dedicated \"Initiate Index/Sequence\" registers:\n\n### Register Addresses\n- **Modbus Address 4001** (Hex FA0): Initiate Index/Sequence 0  \n- **Modbus Address 4002** (Hex FA1): Initiate Index/Sequence 1\n- **Modbus Address 4003** (Hex FA2): Initiate Index/Sequence 2\n- **...continuing through...**\n- **Modbus Address 4016** (Hex FAF): Initiate Index/Sequence 15\n\n### How to Use These Registers\nThese registers function as **meta coils** that require specific handling:\n\n1. **Write ON (1)** to the appropriate register to initiate the index/sequence\n2. The register will automatically **read back OFF (0)** after the command is processed\n3. **If the parameter is OFF when you write**, the command will be ignored\n\n### Operation Mode Dependency\nThe behavior depends on your drive's current mode:\n- **Indexing Mode**: Runs the selected index number\n- **Sequencing Mode**: Runs the selected sequence number\n\n### Example\nTo start Index/Sequence 5:\n- Write value **1** to Modbus register **4006** (hex FA5)\n- The drive will execute Index 5 (if in Indexing mode) or Sequence 5 (if in Sequencing mode)\n- The register will read back as **0** once the command is processed\n\n[Source: AMC_CommManual_Modbus.pdf, Pages 19-21]\n\n**Related questions you might have:**\n- How do I switch between Indexing and Sequencing modes over Modbus?\n- How can I check the status of a running index or sequence via Modbus?",
+      "sources": [
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 20,
+          "heading": "Register Definitions > Comments:"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 19,
+          "heading": "Register Definitions > Comments:"
+        },
+        {
+          "source": "AMC_CommManual_Modbus.pdf",
+          "page": 21,
+          "heading": "Register Definitions > Comments:"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_19",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_20",
+        "category": "faq",
+        "question": "How do I set up Ethernet/IP communication on a FlexPro drive?",
+        "expected_source": "AMC_CommManual_EthernetIP_FP.pdf",
+        "expected_page": "15",
+        "expected_section": "Serial Communication Protocol / Modes of Operation",
+        "expected_answer_contains": "FlexPro Ethernet/IP drives support Profile Position,",
+        "full_expected_answer": "FlexPro Ethernet/IP drives support Profile Position, Profile Velocity, Cyclic Synchronous, Homing, and Current modes. Implicit I/O messaging provides real-time cyclic data exchange. Key addresses: 0011, 0001, 0000. For the full guide, download \"AMC_CommManual_EthernetIP_FP.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "Based on the search results, here's how to set up Ethernet/IP communication on a FlexPro drive:\n\n## Initial Connection and Configuration\n\n1. **Connect via USB first**: Use a USB cable from the drive's USB port to your computer for initial configuration. This is required before setting up Ethernet/IP communication.\n\n2. **Configure network parameters** using the Communication Commands:\n   - **IP Address** (Command 17): Set the drive's IP address. Each byte represents one octet.\n     - Example: C0 A8 64 01 = 192.168.100.1\n   - **Subnet Mask** (Command 18): Set the subnet mask. \n     - Example: FF FF FF 00 = 255.255.255.0  \n   - **Default Gateway** (Command 19): Set the gateway address.\n     - Example: C0 A8 64 64 = 192.168.100.100\n\n[Source: AMC_CommManual_EthernetIP_FP.pdf, Page 25]\n\n## Configuration Steps\n\n1. **Use ACE software** to configure the drive initially via USB\n2. **Set network parameters** through the Communication Commands section\n3. **Store parameters** to non-volatile memory using the Store Drive Parameters command (Command 23)\n4. **Switch to Ethernet interface** after configuration is complete\n\n## Communication Methods\n\nFlexPro Ethernet/IP drives support two communication methods:\n- **I/O messaging**: For real-time cyclic data exchange\n- **Explicit messaging**: For parameter access and configuration\n\nThe communication manual references explicit messaging examples for both read and write operations to drive parameters.\n\n## Network Setup Requirements\n\n- **EDS file**: You'll need the FlexPro Ethernet/IP EDS file for PLC integration (Studio 5000, etc.)\n- **Communication path configuration**: Set up the path to the drive in your PLC software\n- **IP addressing**: Ensure the drive's IP address is compatible with your network\n\n[Source: AMC_CommManual_EthernetIP_FP.pdf, Pages 17-22]\n\n**Note**: The communication manual references that detailed setup procedures for IP address configuration are found in the hardware manual and software configuration manual, which co",
+      "sources": [
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 6,
+          "heading": "2 Command Dictionary > v"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 5,
+          "heading": "2 Command Dictionary"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 32,
+          "heading": "Command Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 1,
+          "heading": "Reference Manual"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 30,
+          "heading": "TABLE 1.16 > IP Address   Refer to the hardware manual and software configuration manual for more"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 26,
+          "heading": "TABLE 1.16 > FIGURE 1.15 Communication Path Configuration"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 33,
+          "heading": "Command Dictionary > Example: C0 A8 64 64 = 192.168.100.100"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 236,
+          "heading": "Index > U"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 7,
+          "heading": "2 Command Dictionary > vi"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 29,
+          "heading": "TABLE 1.16 > FIGURE 1.21 Results and Verification"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 8,
+          "heading": "A > Appendix A"
+        },
+        {
+          "source": "AMC_AppNote_049.pdf",
+          "page": 2,
+          "heading": "AN-049 > drive’s Ethernet IP address set in the"
+        },
+        {
+          "source": "AMC_AppNote_057.pdf",
+          "page": 1,
+          "heading": "NOTE"
+        },
+        {
+          "source": "AMC_AppNote_053.pdf",
+          "page": 3,
+          "heading": "AN-053 > Running the Program"
+        },
+        {
+          "source": "AMC_AppNote_060.pdf",
+          "page": 1,
+          "heading": "ACE™ > Size (words)"
+        },
+        {
+          "source": "AMC_AppNote_053.pdf",
+          "page": 1,
+          "heading": "AN-053 > 3. Click the Add Library Element icon,"
+        },
+        {
+          "source": "AMC_AppNote_012.pdf",
+          "page": 3,
+          "heading": "80 38 01 00 00 00 00 30 > Scope Plot of PVT Move"
+        },
+        {
+          "source": "AMC_AppNote_047.pdf",
+          "page": 4,
+          "heading": "Setup Networking Hardware > Ping the MACC at its default address: 192.168.100.50"
+        },
+        {
+          "source": "AMC_AppNote_027.pdf",
+          "page": 1,
+          "heading": "AN-027 > Start-Up Motion"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_20",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 2,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_21",
+        "category": "faq",
+        "question": "How does implicit I/O messaging work on Ethernet/IP drives?",
+        "expected_source": "AMC_CommManual_EthernetIP_FP.pdf",
+        "expected_page": "20",
+        "expected_section": "Serial Communication Protocol / Implicit Messaging",
+        "expected_answer_contains": "Implicit messaging requires further configuration beyond",
+        "full_expected_answer": "Implicit I/O messaging requires no further configuration beyond setting up the connection. Actual Position is available as a DINT tag for real-time monitoring. Key addresses: 5000, FC1B, 1769. For the full guide, download \"AMC_CommManual_EthernetIP_FP.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## Implicit I/O Messaging on Ethernet/IP Drives\n\nImplicit I/O messaging on AMC Ethernet/IP drives provides **time-critical, real-time communication** using UDP protocol. This is the primary method for exchanging process data between the PLC and drive during normal operation.\n\n### Key Characteristics\n\n**Protocol**: Implicit messages use UDP for fast, deterministic communication, as opposed to explicit messages which use TCP/IP for non-time-critical data.\n\n**Purpose**: Also commonly referred to as \"I/O messaging,\" it handles real-time control and status data exchange between the PLC controller and servo drive.\n\n### Available I/O Parameters\n\nAMC Ethernet/IP drives support these standard parameters for implicit messaging:\n\n**Input Parameters (from drive to PLC):**\n- Status Word (Instance 912)\n- Modes of Operation Display (Instance 914) \n- Actual Position (Instance 915)\n- Actual Velocity (Instance 920)\n- Actual Current (Instance 924)\n\n**Output Parameters (from PLC to drive):**\n- Control Word (Instance 911)\n- Modes of Operation (Instance 913)\n- Target Position (Instance 925)\n- Target Current (Instance 923)\n- Target Velocity (Instance 938)\n\n### Configuration and Usage\n\n**Automatic Setup**: I/O messaging requires **no additional configuration** - these parameters become automatically available when you add an AMC Ethernet/IP drive as a module to your PLC controller.\n\n**Tag Access**: The parameters appear as standard I/O tags in your PLC programming software (e.g., RSLogix 5000). You can directly read from input tags and write to output tags using standard ladder logic.\n\n**Data Mapping**: Some parameters like position data are transmitted as multiple SINT (8-bit) values that need to be assembled into larger data types (DINT for 32-bit integers) using COP (Copy) instructions in your PLC program.\n\n[Source: AMC_CommManual_EthernetIP_FP.pdf, Pages 19-23]\n\n**Related questions you might have:**\n- How do you configure explicit messaging for parameter access on Ethernet/IP drives?\n-",
+      "sources": [
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 19,
+          "heading": "TABLE 1.16 > Instance"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 20,
+          "heading": "TABLE 1.16 > FIGURE 1.4 Actual Position DINT Tag"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 25,
+          "heading": "TABLE 1.16 > FIGURE 1.13 Read Message Rung Creation"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 5,
+          "heading": "2 Command Dictionary"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 24,
+          "heading": "TABLE 1.16 > FIGURE 1.11 Position Measured"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 26,
+          "heading": "TABLE 1.16 > FIGURE 1.15 Communication Path Configuration"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 23,
+          "heading": "TABLE 1.16 > FIGURE 1.10 Target Position Tag"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 28,
+          "heading": "TABLE 1.16 > FIGURE 1.19 Write Message Configuration"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 22,
+          "heading": "TABLE 1.16 > 1.3.2 Write Example"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 21,
+          "heading": "TABLE 1.16 > FIGURE 1.6 COP Rung Creation - Read"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_21",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_22",
+        "category": "faq",
+        "question": "How do I set the IP address on a FlexPro Ethernet/IP drive?",
+        "expected_source": "AMC_CommManual_EthernetIP_FP.pdf",
+        "expected_page": "15",
+        "expected_section": "Command Dictionary / Network Configuration",
+        "expected_answer_contains": "address configured through command dictionary. Example",
+        "full_expected_answer": "The IP address is configured through the command dictionary. Example format: C0 A8 64 64 corresponds to 192.168.100.100. Key addresses: 0011, 0001, 0000. For the full guide, download \"AMC_CommManual_EthernetIP_FP.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## Setting IP Address on FlexPro Ethernet/IP Drive\n\nYou can set the IP address on a FlexPro Ethernet/IP drive using **parameter 17** (IP Address) in the Network Configuration section.\n\n### Method 1: Using ACE Software\n1. Connect to the drive via USB initially (all drives ship with USB interface available)\n2. In ACE, go to the **Connect To Drive** window\n3. Select **Ethernet** as the communication interface\n4. Check the **User Defined IP** checkbox to enter a custom IP address\n5. Enter your desired IP address in the IP Address field\n6. Configure related network parameters as needed\n\n### Method 2: Direct Parameter Access\nConfigure these network parameters directly:\n\n**Parameter 17: IP Address**\n- Data Type: Integer32\n- Range: 0 – (2³¹-1)\n- Each byte represents one octet of the IP address\n- Example: `C0 A8 64 01` = 192.168.100.1\n\n**Parameter 18: Subnet Mask** \n- Data Type: Integer32\n- Example: `FF FF FF 00` = 255.255.255.0\n\n**Parameter 19: Default Gateway**\n- Data Type: Integer32  \n- Example: `C0 A8 64 64` = 192.168.100.100\n\n### Important Notes\n- All network configuration parameters are **stored to NVM** (non-volatile memory)\n- A **power cycle** may be required for IP address changes to take effect\n- Use the **USB interface** for initial configuration if you need to change the IP address and don't know the current one\n\n[Source: AMC_CommManual_EthernetIP_FP.pdf, Pages 25, 30, 33; AMC_SW_Manual_ACE.pdf, Page 60]\n\n**Related questions you might have:**\n- How do I set the Ethernet/IP node ID on a FlexPro drive?\n- What are the default network settings for FlexPro Ethernet/IP drives?",
+      "sources": [
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 5,
+          "heading": "2 Command Dictionary"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 6,
+          "heading": "2 Command Dictionary > v"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 30,
+          "heading": "TABLE 1.16 > IP Address   Refer to the hardware manual and software configuration manual for more"
+        },
+        {
+          "source": "AMC_CommManual_Ethernet_DP.pdf",
+          "page": 23,
+          "heading": "Command Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_EtherCAT.pdf",
+          "page": 45,
+          "heading": "MNCMECRF-06 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 33,
+          "heading": "Command Dictionary > Example: C0 A8 64 64 = 192.168.100.100"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 1,
+          "heading": "Reference Manual"
+        },
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 45,
+          "heading": "MNCMECFP-04 > Assignment (1 = assigned, 0 = not assigned)"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 39,
+          "heading": "MNCMPLRF-02 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 236,
+          "heading": "Index > U"
+        },
+        {
+          "source": "AMC_SW_Manual_ACE.pdf",
+          "page": 60,
+          "heading": "Configuring the Drive > Description"
+        },
+        {
+          "source": "AMC_SW_Manual_ACE.pdf",
+          "page": 25,
+          "heading": "RS485 > Help"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_22",
+        "category": "faq",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": false,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": "Expected answer to contain keywords from 'address configured through command dictionary. Example' (matched 2/6)"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_23",
+        "category": "faq",
+        "question": "How do I set up POWERLINK communication?",
+        "expected_source": "AMC_CommManual_POWERLINK.pdf",
+        "expected_page": "10",
+        "expected_section": "POWERLINK Communication / Communication Model",
+        "expected_answer_contains": "POWERLINK based model. Communication uses isochronous",
+        "full_expected_answer": "POWERLINK is based on the ISO OSI model. Communication uses isochronous and asynchronous phases with PReq/PRes polling for deterministic real-time data exchange. Key addresses: 2000h, 1000h, 1FFFh, 0x88AB. For the full guide, download \"AMC_CommManual_POWERLINK.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## POWERLINK Communication Setup\n\nTo set up POWERLINK communication with AMC drives (DPP and DZP series), follow these steps:\n\n### 1. Physical Connection\n\n**Network Hardware:**\n- Use dual RJ-45 connectors for POWERLINK network connections\n- Connect with standard CAT 5 cable between devices\n- For DZP drives: use mounting card or interface PCB for network connections\n\n**USB Interface for Initial Configuration:**\n- Connect USB cable from drive USB port to computer\n- Use this interface for initial drive configuration and storing project files to Non Volatile Memory\n\n### 2. Initial Setup with DriveWare\n\n**Connection Protocol:**\n- When connecting via Ethernet while a host is connected, ensure the host is in pre-operational state\n- Alternatively, use DriveWare in Read-only or Restricted Read/Write mode\n\n### 3. Network Configuration\n\nConfigure these network parameters in object 2006h:\n\n**IP Address (2006.01h):**\n- Format: Each byte represents one octet\n- Example: C0 A8 64 01 = 192.168.100.1\n\n**Subnet Mask (2006.02h):**\n- Example: FF FF FF 00 = 255.255.255.0\n\n**Default Gateway (2006.03h):**\n- Example: C0 A8 64 64 = 192.168.100.100\n\n### 4. PDO Configuration\n\n**Process Data Objects (PDOs):**\n- **RPDO (1600h):** Receives data from Managing Node (MN) to Controlled Node (CN)\n- **TPDO (1A00h):** Transmits data from CN to MN\n- Each PDO supports up to 16 object mappings\n- Configure by writing index, sub-index, and object length to appropriate PDO mapping object\n\n**PDO Mapping Process:**\n1. Map desired read/write objects to PDOs before data transmission\n2. Communication begins once POWERLINK cycle enters isochronous phase\n3. Total data for each PDO must be less than maximum allowed\n\n### 5. Control Modes Setup\n\nSelect appropriate mode via object 6060h (Modes of Operation):\n\n**Available Modes:**\n- Profile Position Mode\n- Profile Velocity Mode  \n- Profile Torque Mode\n- Homing Mode\n- Cyclic Synchronous Position (CSP)\n- Cyclic Synchronous Velocity (CSV)\n- Cyclic Synchronous Torque (CST)\n\n",
+      "sources": [
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 13,
+          "heading": "MNCMPLRF-02 > Bits 7 – 0"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 34,
+          "heading": "MNCMPLRF-02 > 1.9.3 POWERLINK Addressing"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 36,
+          "heading": "MNCMPLRF-02 > Description"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 9,
+          "heading": "POWERLINK Communication > •"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 39,
+          "heading": "MNCMPLRF-02 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 159,
+          "heading": "MNCMPLRF-02 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 239,
+          "heading": "Index > W"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 5,
+          "heading": "2 Object Dictionary"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 24,
+          "heading": "FIGURE 1.5 > Description"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 10,
+          "heading": "HTTP > SDO"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 45,
+          "heading": "MNCMPLRF-02 > Description:"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 23,
+          "heading": "TABLE 1.14 > Description"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 20,
+          "heading": "MNCMPLRF-02 > Modes of Operation"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 238,
+          "heading": "Index > Numerics"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 19,
+          "heading": "MNCMPLRF-02 > StatusWord"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 137,
+          "heading": "MNCMPLRF-02 > Apply Brake and Dynamic Brake"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_23",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_24",
+        "category": "faq",
+        "question": "How does POWERLINK node addressing work?",
+        "expected_source": "AMC_CommManual_POWERLINK.pdf",
+        "expected_page": "11",
+        "expected_section": "POWERLINK Communication / POWERLINK Addressing",
+        "expected_answer_contains": "POWERLINK uses managed node (MN) controlled",
+        "full_expected_answer": "POWERLINK uses a managed node (MN) and controlled node (CN) architecture. Each CN has a unique node ID. The cycle includes SoC, PReq/PRes exchange, and SoA frames. Key addresses: 2000h, 1000h, 1FFFh, 0x88AB. For the full guide, download \"AMC_CommManual_POWERLINK.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "The search isn't finding the specific addressing details. Let me try searching for DIP switch or hardware addressing configuration.",
+      "sources": [
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 34,
+          "heading": "MNCMPLRF-02 > 1.9.3 POWERLINK Addressing"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 118,
+          "heading": "MNCMPLRF-02 > Description"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 239,
+          "heading": "Index > W"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_Panel_POWERLINK.pdf",
+          "page": 53,
+          "heading": "STO OUT > Network Communication LEDs Functionality   The LINK/ACT LEDs on the dual RJ-45"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_24",
+        "category": "faq",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": false,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": "Expected answer to contain keywords from 'POWERLINK uses managed node (MN) controlled' (matched 0/5)"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_25",
+        "category": "faq",
+        "question": "What modes of operation do POWERLINK drives support?",
+        "expected_source": "AMC_CommManual_POWERLINK.pdf",
+        "expected_page": "20",
+        "expected_section": "POWERLINK Communication / Modes of Operation",
+        "expected_answer_contains": "POWERLINK drives support Profile Position, Profile",
+        "full_expected_answer": "POWERLINK drives support Profile Position, Profile Velocity, Cyclic Synchronous Position, Cyclic Synchronous Velocity, Cyclic Synchronous Torque, and Homing modes. Key addresses: 205B, 6041h. For the full guide, download \"AMC_CommManual_POWERLINK.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## POWERLINK Drive Modes of Operation\n\nPOWERLINK drives support **8 standard modes of operation** that can be selected via object 6060h:\n\n### Standard Modes\n\n1. **Profile Position Mode (1)** - Drive closes position, velocity, and current loops with command limiting enabled\n2. **Profile Velocity Mode (3)** - Drive closes velocity and current loops with command limiting enabled  \n3. **Profile Torque Mode (4)** - Also called Profile Current Mode, closes current loop only with command limiting enabled\n4. **Homing Mode (6)** - Specialized mode for establishing reference position using switches or index signals\n5. **Cyclic Synchronous Position Mode (8)** - Host controls trajectory, drive interpolates between position commands\n6. **Cyclic Synchronous Velocity Mode (9)** - Host controls trajectory, drive interpolates between velocity commands\n7. **Cyclic Synchronous Torque Mode (10)** - Host controls trajectory, drive interpolates between current/torque commands\n8. **Interpolated Position Mode (7)** - For PVT (Position-Velocity-Time) trajectories\n\n### Key Differences\n\n**Profile Modes** use the drive's internal command limiter (object 203Ch) to control acceleration/deceleration rates. The drive spreads large command steps over time to stay within configured limits.\n\n**Cyclic Synchronous Modes** give full trajectory control to the host controller. The command limiter is disabled, and the drive performs linear interpolation between command updates based on the interpolation time period (object 60C2h), which should equal the POWERLINK cycle time.\n\n### Custom Modes\n\nAMC also provides **custom defined modes** beyond the standard CANopen specification. Contact AMC technical support for drive configurations not available through the standard modes.\n\n[Source: AMC_CommManual_POWERLINK.pdf, Pages 12, 20, 24-26]\n\n**Related questions you might have:**\n- How do I configure the command limiter parameters for profile modes?\n- What objects are used to send position/velocity/current commands",
+      "sources": [
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 26,
+          "heading": "MNCMPLRF-02 > Description"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 24,
+          "heading": "FIGURE 1.5 > Description"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 25,
+          "heading": "MNCMPLRF-02 > Description"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 20,
+          "heading": "MNCMPLRF-02 > Modes of Operation"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 23,
+          "heading": "TABLE 1.14 > Description"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 22,
+          "heading": "TABLE 1.13 > Description"
+        },
+        {
+          "source": "AMC_CommManual_POWERLINK.pdf",
+          "page": 200,
+          "heading": "MNCMPLRF-02 > Operation Mode"
+        },
+        {
+          "source": "AMC_CommManual_EthernetIP_FP.pdf",
+          "page": 183,
+          "heading": "850 - 863 > Operation Mode"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_25",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_26",
+        "category": "faq",
+        "question": "How do I set up RS-485 serial communication with a DigiFlex drive?",
+        "expected_source": "AMC_CommManual_RS485.pdf",
+        "expected_page": "5",
+        "expected_section": "Serial Communication Protocol",
+        "expected_answer_contains": "RS-485 serial protocol supports multi-drop communication.",
+        "full_expected_answer": "The RS-485 serial protocol supports multi-drop communication. Configuration includes setting the baud rate, drive address, and proper termination of the bus. Key addresses: D02Eh, 2007, 2008. For the full guide, download \"AMC_CommManual_RS485.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## RS-485 Serial Communication Setup for DigiFlex Drives\n\nHere's how to configure RS-485 serial communication with DigiFlex drives:\n\n### Physical Layer Configuration\n\n**Communication Settings:**\n- **Baud Rate:** Factory default 115200 bits/s (configurable up to 921600 bits/s)\n- **Data Format:** 8 data bits, 1 start bit, 1 stop bit, no parity\n- **Node Address:** Factory default 63 (configurable range 1-63)\n- **Max Nodes:** Up to 32 drives per network\n\n### Hardware Setup\n\n#### 1. **PCB Mount Drives (DZR/DZC/DZXR):**\n- Install 2mm jumper on P3 header for RS-485 operation\n- Use pins on signal connector P1:\n  - Pin 13: RS232 RX / RS485 RX-\n  - Pin 14: RS485 RX+\n  - Pin 15: RS232 TX / RS485 TX-\n  - Pin 16: RS485 TX+\n\n#### 2. **Panel Mount Drives (DPR):**\n- Use 9-pin D-sub communication connector (COMM)\n- Short SELECT pin to signal ground for RS-485 operation\n- Pin assignments:\n  - RX-: RS232 RX / RS485 RX-\n  - RX+: RS485 RX+\n  - TX-: RS232 TX / RS485 TX-\n  - TX+: RS485 TX+\n  - GROUND: Isolated signal ground\n\n### Network Topologies\n\n#### **Two-Wire (Half Duplex):**\n- Tie TX and RX signals together on the interface card\n- TX+ connects to RX+, TX- connects to RX-\n- More common for multi-drop networks\n\n#### **Four-Wire (Full Duplex):**\n- Separate transmit and receive pairs\n- Better for point-to-point or dedicated connections\n\n### Termination Requirements\n\n**Critical:** Install 120-ohm termination resistors at:\n- The master/host device\n- The last drive on the network\n- Required for both two-wire and four-wire setups\n\n### Software Configuration\n\n#### **Parameter Setup:**\nSet these parameters via serial commands or DriveWare:\n- **05.03h:** RS-485 Baud Rate (0-7, where 4 = 115200 bits/s)\n- **06.00h:** Network Address (1-63)\n- **05.04h:** RS-485 Modbus Disable (set to 1 to disable Modbus)\n\n#### **Protocol Timing:**\n- The drive expects immediate control of the communication channel after message completion\n- Host should release channel within 10µs to prevent collisions\n\n[Source: AM",
+      "sources": [
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 16,
+          "heading": "Serial Communication Protocol > 1.1.1 Protocol Timing"
+        },
+        {
+          "source": "AMC_CommManual_FP_Serial.pdf",
+          "page": 11,
+          "heading": "Serial Communication Protocol > 1.1.1 Protocol Timing"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 33,
+          "heading": "Command Dictionary > Examples:"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 31,
+          "heading": "Command Dictionary > Description:"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 1,
+          "heading": "Reference Manual"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_RS485-ModbusRTU.pdf",
+          "page": 43,
+          "heading": "DRIVE > card."
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_CANopen.pdf",
+          "page": 43,
+          "heading": "DRIVE > card."
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_Panel_RS485-ModbusRTU.pdf",
+          "page": 65,
+          "heading": "OPTION B > 4.1.10 LED Functionality"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_RS485-ModbusRTU.pdf",
+          "page": 25,
+          "heading": "DZ-025L200 (P2 & P3) > Pin"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_XEnv.pdf",
+          "page": 24,
+          "heading": "DZXR-40 (P2 & P3) > Pin"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_RS485-ModbusRTU.pdf",
+          "page": 14,
+          "heading": "DZ-025L200 > 2.3.2 RS-485 Communication"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_RS485-ModbusRTU.pdf",
+          "page": 70,
+          "heading": "Index > I"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_Panel_RS485-ModbusRTU.pdf",
+          "page": 41,
+          "heading": "TABLE 3.2 > +24V LOGIC - Logic Power Connector"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_XEnv.pdf",
+          "page": 14,
+          "heading": "DZXC > 2.3.2 RS-485 Communication"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_Panel_RS485-ModbusRTU.pdf",
+          "page": 46,
+          "heading": "TABLE 3.17 > 3.6 Mounting"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_26",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_27",
+        "category": "faq",
+        "question": "What is the serial protocol message format for RS-485 drives?",
+        "expected_source": "AMC_CommManual_FP_Serial.pdf",
+        "expected_page": "11",
+        "expected_section": "Serial Communication Protocol / Protocol Timing",
+        "expected_answer_contains": "FlexPro serial protocol byte-based command/response protocol.",
+        "full_expected_answer": "The FlexPro serial protocol is a byte-based command/response protocol. Messages include start byte (A5h), address, command, data section, and CRC for error checking. Key addresses: 200Fh, 2021h, 2023h, 2024h. For the full guide, download \"AMC_CommManual_FP_Serial.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+        "expected_refuse": false
+      },
+      "answer": "## RS-485 Serial Protocol Message Format\n\nAMC's RS-485 serial protocol uses a structured message format with both command and response frames. Here's the detailed message structure:\n\n### **Host Command Frame Format**\n```\nSOF | Address | Control | Index | Offset | Data Words | Header CRC | Data Field | Data CRC\n```\n\n**Field Details:**\n- **SOF (Start of Frame)**: Always A5h (8 bits)\n- **Address**: Node ID (8 bits) - Valid range 01h-3Fh, factory default 3Fh\n- **Control Byte**: Message function and sequence (8 bits)\n- **Index**: Parameter structure identifier (8 bits) \n- **Offset**: Parameter location within index (8 bits)\n- **Data Words**: Number of 16-bit words in data field (8 bits) - Max 255 words (510 bytes)\n- **Header CRC**: 16-bit CRC on header section (MSB first)\n- **Data Field**: Variable length data in Little Endian format (LSB first)\n- **Data CRC**: 16-bit CRC on data field only (MSB first)\n\n### **Node Response Frame Format**\n```\nSOF | Address | Control | Status 1 | Status 2 | Data Words | Header CRC | Data Field | Data CRC  \n```\n\n**Field Details:**\n- **SOF**: Always A5h (8 bits)\n- **Address**: Always FFh for node responses (8 bits)\n- **Control Byte**: Response function and sequence echo (8 bits)\n- **Status 1**: 8-bit status field indicating drive conditions\n- **Status 2**: Reserved for future use (8 bits)\n- **Data Words**: Number of 16-bit words in response data (8 bits)\n- **Header CRC**: 16-bit CRC on header (MSB first)\n- **Data Field**: Response data in Little Endian format when present\n- **Data CRC**: 16-bit CRC on data field (MSB first)\n\n### **Key Protocol Details**\n- **CRC Algorithm**: CRC-16-CCITT (XModem) using polynomial X¹⁶+X¹²+X⁵+1\n- **Data Format**: Little Endian (LSB first) for data bytes, MSB first for CRC bytes\n- **Maximum Data**: 255 words (510 bytes) per message\n- **Addressing**: 00h = broadcast heartbeat, 01h-3Fh = valid node addresses, FFh = master address\n- **Sequence Bits**: 4-bit rolling counter in control byte for message tracking\n\n[Sou",
+      "sources": [
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 23,
+          "heading": "TABLE 1.6 > Description"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 22,
+          "heading": "NODE RESPONSE"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 11,
+          "heading": "1 Serial Communication Protocol"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 17,
+          "heading": "HOST READ/WRITE COMMAND"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 19,
+          "heading": "HOST READ/WRITE COMMAND > Description"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 24,
+          "heading": "TABLE 1.6 > 1.3.11 Node Response Notes:"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 18,
+          "heading": "HOST READ/WRITE COMMAND > Description"
+        },
+        {
+          "source": "AMC_CommManual_RS485.pdf",
+          "page": 21,
+          "heading": "HOST READ/WRITE COMMAND > 1.2.11 Host Command Notes:"
+        },
+        {
+          "source": "AMC_CommManual_Ethernet_DP.pdf",
+          "page": 12,
+          "heading": "Serial Communication Protocol > Description"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_27",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_28",
+        "category": "faq",
+        "question": "How do I wire the RS-232 connection for CAN drives?",
+        "expected_source": "AMC_AppNote_004.pdf",
+        "expected_page": "1",
+        "expected_section": "AN-004 / RS232 Connection for CAN Drives",
+        "expected_answer_contains": "CAN-based DigiFlex drives, RS-232 used commissioning",
+        "full_expected_answer": "For CAN-based DigiFlex drives, RS-232 is used for commissioning via DriveWare. Set Interface Access Control appropriately and connect using a standard DB-9 serial cable. Key addresses: 3012, 1338, 3805, 1935. For the full guide, download \"Application Note 004\" from a-m-c.com > Support > Downloads > Application Notes.",
+        "expected_refuse": false
+      },
+      "answer": "Based on the search results, here's how to wire the RS-232 connection for CAN drives:\n\n## RS-232 Wiring for DigiFlex CAN Drives\n\n### Basic Connection\nConnect the RS-232 interface using a **straight-through cable** (not a null modem cable):\n\n- **PC Transmit (Tx)** → **Drive Receive (Rx)**\n- **PC Receive (Rx)** → **Drive Transmit (Tx)**  \n- **PC RS-232 Ground** → **Drive Signal Ground**\n\n### Pin Locations by Drive Type\n\n**PCB Mount CAN Drives (DZC/DZXC):**\n- Pin 13: RS232 RX\n- Pin 15: RS232 TX\n- Pin 5 or 21: Ground (signal ground)\n\n**Panel Mount CAN Drives (DPC):**\n- Uses an Auxiliary Communication port with dedicated RS-232 pins\n- Refer to the connector pinout diagram in your specific drive manual\n\n### Default Communication Settings\n- **Drive Address:** 63\n- **Baud Rate:** 115200 (recommended)\n- Alternative: 9600 baud (but increase to 115200 after connection)\n\n### Important Notes\n- The RS-232 interface is used for drive commissioning through DriveWare software\n- RS-232 settings are independent of CAN network settings (node ID and baud rate)\n- For PCB mount drives, some models may require jumper configuration - leave the RS-485 select pins open for RS-232 mode\n- Power cycle the drive after making any hardware configuration changes\n\n[Source: AMC_HWManual_DigiFlex_PCB_CANopen.pdf, Page 50; AMC_HWManual_DigiFlex_Panel_CANopen.pdf, Page 64; AMC_HWManual_DigiFlex_PCB_XEnv.pdf, Page 27]\n\n**Related questions you might have:**\n- How do I configure the CAN network settings (node ID and baud rate)?\n- What DriveWare settings are needed to connect to the drive via RS-232?",
+      "sources": [
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_RS485-ModbusRTU.pdf",
+          "page": 24,
+          "heading": "DZ-025L200 (P2 & P3) > Pin"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_CANopen.pdf",
+          "page": 24,
+          "heading": "DZ-025L200 (P2 & P3) > Pin"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_Panel_CANopen.pdf",
+          "page": 64,
+          "heading": "STO OUT > Description"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_XEnv.pdf",
+          "page": 23,
+          "heading": "RS232 > Pin"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_Panel_CANopen.pdf",
+          "page": 63,
+          "heading": "STO OUT > is the last node on the CANopen network."
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_Panel_RS485-ModbusRTU.pdf",
+          "page": 65,
+          "heading": "OPTION B > 4.1.10 LED Functionality"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_CANopen.pdf",
+          "page": 58,
+          "heading": "5V I/O > —"
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_XEnv.pdf",
+          "page": 35,
+          "heading": "DRIVE > 3.4.6 Communication Wires"
+        },
+        {
+          "source": "AMC_HWManual_FlexPro_PCB.pdf",
+          "page": 53,
+          "heading": "INTERFACE PCB > card."
+        },
+        {
+          "source": "AMC_HWManual_DigiFlex_PCB_RS485-ModbusRTU.pdf",
+          "page": 37,
+          "heading": "DRIVE > 3.4.6 Communication Wires"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_28",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "faq_29",
+        "category": "faq",
+        "question": "What is the CAN bus cabling guide for CANopen networks?",
+        "expected_source": "AMC_AppNote_005.pdf",
+        "expected_page": "1",
+        "expected_section": "AN-005 / CANopen Network Bus Cabling",
+        "expected_answer_contains": "twisted-pair cabling with proper termination (120",
+        "full_expected_answer": "Use twisted-pair cabling with proper termination (120 ohm resistors) at each end of the bus. RJ-45 connectors can be used for PCB-mount DigiFlex (DZC) drives. Key addresses: 3012, 1000, 3805, 1935. For the full guide, download \"Application Note 005\" from a-m-c.com > Support > Downloads > Application Notes.",
+        "expected_refuse": false
+      },
+      "answer": "## CAN Bus Cabling Guide for CANopen Networks\n\nBased on the AMC CANopen communication manuals, here's the comprehensive CAN bus cabling guide:\n\n### Cable Requirements\n- **Use shielded cable with shielded twisted pairs**\n- Each twisted pair should have one drain wire\n- The cable must support differential signaling for CAN_H and CAN_L lines\n\n### Network Topology\n- **Daisy chain configuration** (series connection from drive to drive)\n- Avoid long branches from the main bus line to prevent reflections and transmission line effects\n- If long branches are unavoidable, a termination resistor may be required\n\n### Connector Pinout (9-pin D-SUB Male)\n| Pin | Signal | Description |\n|-----|--------|-------------|\n| 2 | CAN_L | CAN_L bus line (dominant low) |\n| 3 | CAN_GND | CAN bus ground |\n| 5 | CAN_SHIELD | CAN shield connection |\n| 7 | CAN_H | CAN_H bus line (dominant high) |\n| 8 | CAN_TERM | Termination (connect to CAN_H for 120Ω termination) |\n| 9 | CAN_V+ | Optional external supply (7.5-24 VDC) |\n\n### Termination Requirements\n- **120Ω termination resistors required at both ends** of the network\n- Generally the host controller provides the first termination\n- Only the last drive in the network should have termination enabled (connect pin 8 to pin 7)\n\n### Shielding Guidelines\n**Critical shielding rules to prevent ground loops:**\n\n1. **Twisted pair shields/drain wires**: Connect to CAN_SHIELD (pin 5) at the drive end only\n2. **Outer cable shield**: Connect to the metal D-SUB connector shell at the drive end only\n3. **NEVER terminate shields on both ends** - this creates ground loops and noise problems\n\n### Network Configuration\n- All nodes must operate at the same CAN bus bit rate\n- Each drive requires a unique node ID address\n- Reference the drive hardware manual for baud rate selection and termination options\n\n[Source: AMC_CommManual_CANopen.pdf, Pages 82-84; AMC_CommManual_FP_CANopen.pdf, Pages 82-84]\n\n**Related questions you might have:**\n- How do I configure CAN bus bau",
+      "sources": [
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 84,
+          "heading": "NAME > I/O"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 84,
+          "heading": "NAME > I/O"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 82,
+          "heading": "09 00 00 00 > 1.11.1 CAN Card"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 82,
+          "heading": "09 00 00 00 > 1.11.1 CAN Card"
+        },
+        {
+          "source": "AMC_CommManual_FP_CANopen.pdf",
+          "page": 83,
+          "heading": "TABLE 1.77 > Part Number"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 83,
+          "heading": "TABLE 1.77 > Part Number"
+        },
+        {
+          "source": "AMC_CommManual_CANopen.pdf",
+          "page": 10,
+          "heading": "2 Object Dictionary"
+        }
+      ],
+      "deterministic": {
+        "test_id": "faq_29",
+        "category": "faq",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": ""
+      },
+      "llm": null
+    }
+  ],
+  "config": {
+    "category_filter": "faq",
+    "limit": 30,
+    "dry_run": false,
+    "no_llm_judge": true,
+    "llm_judge_sample": 1.0
+  }
+}

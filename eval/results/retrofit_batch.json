@@ -1,0 +1,490 @@
+{
+  "timestamp": "2026-04-10T21:36:01.153335Z",
+  "total_tests": 15,
+  "completed": 15,
+  "errors": 0,
+  "duration_seconds": 320.79,
+  "deterministic_summary": {
+    "total_tests": 15,
+    "valid_tests": 15,
+    "api_errors": 0,
+    "passed": 7,
+    "failed": 8,
+    "pass_rate": 0.4667,
+    "part_number_hallucinations": 0,
+    "part_number_hallucination_rate": 0.0,
+    "fabricated_citations": 8,
+    "fabricated_citation_rate": 0.5333,
+    "refusal_tests": 0,
+    "refusal_correct": 0,
+    "refusal_rate": null,
+    "by_category": {
+      "retrofit": {
+        "total": 15,
+        "passed": 7,
+        "pass_rate": 0.4667
+      }
+    }
+  },
+  "llm_summary": {},
+  "test_results": [
+    {
+      "test": {
+        "id": "retrofit_0",
+        "category": "retrofit",
+        "question": "My 12A8 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "12A8",
+        "motor_type": "Brushed",
+        "expected_replacement": "AB15A100",
+        "expected_answer_contains": "AB15A100",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued 12A8 brushed analog drive can be replaced with one of two AxCent drives, depending on your control mode:\n\n## Replacement Options:\n\n**For Current or Voltage Mode applications:**\n- **AB15A100** - Supports both brushless and brushed motors in Current and Voltage modes\n\n**For IR Compensation or Tachometer Velocity Mode applications:**  \n- **A12A100** - Brushed motor only, supports IR Compensation and Tachometer Velocity modes\n\nBoth replacements provide the same mounting footprint and basic functionality as your 12A8.\n\n[Source: AMC replacement database and AMC_ProductNote_AxCent_Retrofit_Small.pdf]\n\n**Related questions you might have:**\n- What are the specific wiring changes needed for the retrofit?\n- How do the current ratings and specifications compare between the 12A8 and AxCent replacements?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_0",
+        "category": "retrofit",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [
+          "AMC replacement database and AMC_ProductNote_AxCent_Retrofit_Small.pdf"
+        ],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": "Fabricated citations: ['AMC replacement database and AMC_ProductNote_AxCent_Retrofit_Small.pdf']"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_1",
+        "category": "retrofit",
+        "question": "My 20A14 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "20A14",
+        "motor_type": "Brushed",
+        "expected_replacement": "AB20A200",
+        "expected_answer_contains": "AB20A200",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued 20A14 analog drive is replaced by **two AxCent models** depending on your application requirements:\n\n## Replacement Options:\n\n**AB20A200** - For brushless or brushed motors\n- Supports Current Mode and Voltage Mode operation\n- Can drive both brushless and brushed motors\n\n**A20A200** - For brushed motors only  \n- Supports IR Compensation Mode and Tachometer Velocity Mode\n- Brushed motor applications only\n\n## Selection Guide:\n- Choose **AB20A200** if you need brushless motor capability or prefer Current/Voltage modes\n- Choose **A20A200** if you're using brushed motors with IR compensation or tachometer feedback\n\n[Source: AMC AxCent replacement database, referenced in AMC_ProductNote_AxCent_Retrofit_Small.pdf]\n\n**Related questions you might have:**\n- What are the wiring differences between the 20A14 and the AxCent replacement?\n- What are the specifications and dimensions of the AB20A200 and A20A200 drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_1",
+        "category": "retrofit",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [
+          "AMC AxCent replacement database"
+        ],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 1,
+        "citation_count": 1,
+        "failure_reason": "Fabricated citations: ['AMC AxCent replacement database']"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_2",
+        "category": "retrofit",
+        "question": "My 20A20 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "20A20",
+        "motor_type": "Brushed",
+        "expected_replacement": "AB20A200",
+        "expected_answer_contains": "AB20A200",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued **20A20** drive is replaced by these AxCent models:\n\n## AxCent Replacements:\n- **AB20A200** - Supports Current and Voltage modes (compatible with both brushless and brushed motors)\n- **A20A200** - Supports IR Compensation and Tachometer Velocity modes (brushed motors only)\n\nThe **AB20A200** offers more versatility since it can work with both brushed and brushless motors, while the **A20A200** is optimized for brushed motor applications with velocity feedback modes.\n\n[Source: AMC AxCent retrofit database]\n\nFor detailed retrofit information including wiring changes and setup procedures, refer to the **AMC_ProductNote_AxCent_Retrofit_Small.pdf** document.\n\n**Related questions you might have:**\n- What are the key differences in wiring between the 20A20 and AxCent drives?\n- What specifications and ratings does the AB20A200 or A20A200 have?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_2",
+        "category": "retrofit",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [
+          "AMC AxCent retrofit database"
+        ],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 1,
+        "citation_count": 1,
+        "failure_reason": "Fabricated citations: ['AMC AxCent retrofit database']"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_3",
+        "category": "retrofit",
+        "question": "My 25A8 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "25A8",
+        "motor_type": "Brushed",
+        "expected_replacement": "AB25A100",
+        "expected_answer_contains": "AB25A100",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued 25A8 brushed servo drive is replaced by these AxCent models:\n\n## Replacement Options:\n\n**AB25A100** - Current and Voltage modes (supports both brushed and brushless motors)\n\n**A25A100** - IR Compensation and Tachometer Velocity modes (brushed motors only)\n\nBoth are \"Small\" size AxCent drives rated for 25A continuous current. The AB25A100 is more versatile as it can handle both brushed and brushless motors, while the A25A100 is specifically for brushed motors with tachometer feedback or IR compensation.\n\n[Source: AMC replacement drive database and AMC_ProductNote_AxCent_Retrofit_Small.pdf]\n\n**Related questions you might have:**\n- What are the wiring differences between the 25A8 and the AxCent replacement?\n- What are the physical dimensions and mounting requirements for the AB25A100 or A25A100?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_3",
+        "category": "retrofit",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [
+          "AMC replacement drive database and AMC_ProductNote_AxCent_Retrofit_Small.pdf"
+        ],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": "Fabricated citations: ['AMC replacement drive database and AMC_ProductNote_AxCent_Retrofit_Small.pdf']"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_4",
+        "category": "retrofit",
+        "question": "My B12A6 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "B12A6",
+        "motor_type": "Brushless",
+        "expected_replacement": "AB15A100",
+        "expected_answer_contains": "AB15A100",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued B12A6 brushless analog drive is replaced by the **AB15A100** AxCent drive.\n\n## Replacement Details\n- **AxCent model:** AB15A100\n- **Compatible modes:** Current mode, Duty Cycle mode\n- **Size category:** Small\n\n## Notes\n- For tachometer velocity mode applications, contact AMC directly for specific guidance\n- Reference the AxCent retrofit product notes for detailed conversion information\n\n[Source: AMC replacement drive database; AMC_ProductNote_AxCent_Retrofit_Small.pdf]\n\n**Related questions you might have:**\n- What are the wiring differences between the B12A6 and AB15A100?\n- What are the specifications and dimensions of the AB15A100?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_4",
+        "category": "retrofit",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [
+          "AMC replacement drive database; AMC_ProductNote_AxCent_Retrofit_Small.pdf"
+        ],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 1,
+        "citation_count": 1,
+        "failure_reason": "Fabricated citations: ['AMC replacement drive database; AMC_ProductNote_AxCent_Retrofit_Small.pdf']"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_5",
+        "category": "retrofit",
+        "question": "My B15A8 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "B15A8",
+        "motor_type": "Brushless",
+        "expected_replacement": "AB15A100",
+        "expected_answer_contains": "AB15A100",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued **B15A8** brushless drive is replaced by the **AB15A100** AxCent drive.\n\nThe AB15A100 supports:\n- **Current mode** (torque control)\n- **Duty cycle mode** (voltage control)\n\n**Note:** If you were using your B15A8 in tachometer velocity mode, contact AMC technical support for specific guidance on the replacement configuration.\n\nFor detailed retrofit information including wiring changes and parameter settings, refer to **AMC_ProductNote_AxCent_Retrofit_Small.pdf** which covers the retrofit procedures for small size AxCent models.\n\n**Related questions you might have:**\n- What are the electrical specifications and dimensions of the AB15A100?\n- How do I wire the AB15A100 to replace my B15A8?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_5",
+        "category": "retrofit",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 1,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_6",
+        "category": "retrofit",
+        "question": "My BE12A6 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "BE12A6",
+        "motor_type": "Brushless",
+        "expected_replacement": "AB15A100",
+        "expected_answer_contains": "AB15A100",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued BE12A6 drive is replaced by the **AB15A100** AxCent drive.\n\nThe AB15A100 supports:\n- Current mode\n- Duty cycle mode  \n- Encoder velocity mode\n\n**Note:** If you were using tachometer or hall sensor velocity feedback with your BE12A6, please contact AMC technical support for specific replacement guidance, as this requires additional consideration.\n\nFor detailed retrofit information, refer to the AMC_ProductNote_AxCent_Retrofit_Small.pdf document available at a-m-c.com/downloads.\n\n**Related questions you might have:**\n- What are the specifications and pinout differences between the BE12A6 and AB15A100?\n- Do I need to modify my wiring when upgrading from BE12A6 to AB15A100?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_6",
+        "category": "retrofit",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 1,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_7",
+        "category": "retrofit",
+        "question": "My BE15A8 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "BE15A8",
+        "motor_type": "Brushless",
+        "expected_replacement": "AB15A100",
+        "expected_answer_contains": "AB15A100",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued BE15A8 drive is replaced by the **AB15A100** AxCent drive.\n\nThe AB15A100 supports:\n- Current mode\n- Duty cycle mode  \n- Encoder velocity mode\n\n**Note:** If your BE15A8 was configured for tachometer or Hall sensor velocity feedback, contact AMC technical support for specific replacement guidance.\n\nFor detailed retrofit information, refer to the AMC_ProductNote_AxCent_Retrofit_Small.pdf document available at a-m-c.com/downloads.\n\n**Related questions you might have:**\n- What are the wiring differences between the BE15A8 and AB15A100?\n- What are the specifications and dimensions of the AB15A100?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_7",
+        "category": "retrofit",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 1,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_8",
+        "category": "retrofit",
+        "question": "My BE15A8-H drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "BE15A8-H",
+        "motor_type": "Brushless",
+        "expected_replacement": "AB15A100",
+        "expected_answer_contains": "AB15A100",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued BE15A8-H (brushless analog drive) is replaced by the **AB15A100** AxCent drive.\n\nThe AB15A100 supports the following modes:\n- Current mode\n- Duty cycle mode \n- Encoder velocity mode\n\n**Note:** If you were using tachometer or Hall sensor velocity feedback with your BE15A8-H, contact AMC technical support as this may require special consideration.\n\nFor detailed retrofit information including wiring changes and setup procedures, refer to:\n- AMC_ProductNote_AxCent_Retrofit_Small.pdf (for small size models like yours)\n\n**Related questions you might have:**\n- What are the electrical specifications and dimensions of the AB15A100?\n- What wiring changes are needed when retrofitting from BE15A8-H to AB15A100?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_8",
+        "category": "retrofit",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 1,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_9",
+        "category": "retrofit",
+        "question": "My BX15A20 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "BX15A20",
+        "motor_type": "Brushless",
+        "expected_replacement": "AB20A200",
+        "expected_answer_contains": "AB20A200",
+        "expected_refuse": false
+      },
+      "answer": "The **AB20A200** AxCent drive replaces your discontinued BX15A20.\n\n## Replacement Details\n- **Discontinued Drive:** BX15A20 (Small Brushless)\n- **AxCent Replacement:** AB20A200\n- **Available Modes:** Current, Duty Cycle, Encoder Velocity\n\n## Important Notes\n- If you were using tachometer velocity feedback with your BX15A20, contact AMC technical support for guidance on the replacement configuration\n- Refer to the AxCent retrofit documentation for detailed wiring and setup information\n\n[Source: AMC AxCent Replacement Database - AMC_ProductNote_AxCent_Retrofit_Small.pdf]\n\n**Related questions you might have:**\n- What are the electrical specifications and wiring differences between the BX15A20 and AB20A200?\n- Do I need to modify my existing motor connections when upgrading to the AxCent drive?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_9",
+        "category": "retrofit",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [
+          "AMC AxCent Replacement Database - AMC_ProductNote_AxCent_Retrofit_Small.pdf"
+        ],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": "Fabricated citations: ['AMC AxCent Replacement Database - AMC_ProductNote_AxCent_Retrofit_Small.pdf']"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_10",
+        "category": "retrofit",
+        "question": "My 30A8 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "30A8",
+        "motor_type": "Brushed",
+        "expected_replacement": "AB30A100",
+        "expected_answer_contains": "AB30A100",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued **30A8** drive is replaced by these AxCent models:\n\n## AxCent Replacements\n\n**AB30A100** - Current and Voltage modes (supports both brushless and brushed motors)\n\n**A30A100** - IR Compensation and Tachometer Velocity modes (brushed motors only)\n\nSince your 30A8 was a brushed drive, either replacement will work, but:\n- Choose **AB30A100** if you need maximum flexibility (can handle brushless motors in the future)\n- Choose **A30A100** if you only need brushed motor capability and prefer the specialized brushed-only modes\n\nFor detailed retrofit information including wiring diagrams and dimensional drawings, refer to the **AMC_ProductNote_AxCent_Retrofit_Large.pdf** document available at a-m-c.com/downloads.\n\n**Related questions you might have:**\n- What are the key differences between AB30A100 and A30A100 modes?\n- Do I need to change any wiring when upgrading from 30A8 to AxCent?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_10",
+        "category": "retrofit",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_11",
+        "category": "retrofit",
+        "question": "My 30A8I drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "30A8I",
+        "motor_type": "Brushed",
+        "expected_replacement": "AB30A100",
+        "expected_answer_contains": "AB30A100",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued **30A8I** drive is replaced by **AxCent** drives depending on your operating mode:\n\n## AxCent Replacements:\n- **AB30A100** - for Current Mode or Voltage Mode applications (supports both brushed and brushless motors)\n- **A30A100** - for IR Compensation Mode or Tachometer Velocity Mode applications (brushed motors only)\n\nThe 30A8I was a large-size brushed analog drive, so both replacements are sized appropriately for your power requirements.\n\n[Source: AMC AxCent replacement database]\n\nFor detailed retrofit information including wiring changes and configuration differences, refer to the **AMC_ProductNote_AxCent_Retrofit_Large.pdf** document which covers the large size drive replacements.\n\n**Related questions you might have:**\n- What are the wiring differences between the 30A8I and the AxCent replacements?\n- What are the specifications and dimensions of the AB30A100 or A30A100 drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_11",
+        "category": "retrofit",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [
+          "AMC AxCent replacement database"
+        ],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": "Fabricated citations: ['AMC AxCent replacement database']"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_12",
+        "category": "retrofit",
+        "question": "My 50A8 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "50A8",
+        "motor_type": "Brushed",
+        "expected_replacement": "AB50A100",
+        "expected_answer_contains": "AB50A100",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued 50A8 brushed analog drive is replaced by these AxCent models:\n\n## AxCent Replacements\n\n**AB50A100** - Current and Voltage modes (supports both brushless and brushed motors)\n**A50A100** - IR Compensation and Tachometer Velocity modes (brushed motors only)\n\nSince your 50A8 is a large size model, refer to the **AMC_ProductNote_AxCent_Retrofit_Large.pdf** for detailed retrofit instructions including wiring changes, connector differences, and configuration guidance.\n\nThe choice between AB50A100 and A50A100 depends on your control mode requirements:\n- Choose **AB50A100** if you need flexibility for both brushed and brushless motors\n- Choose **A50A100** if you're staying with brushed motors and using IR compensation or tachometer feedback\n\n**Related questions you might have:**\n- What are the specific wiring differences when retrofitting from 50A8 to AxCent?\n- What are the dimensional and mounting differences between the 50A8 and AxCent drives?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_12",
+        "category": "retrofit",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_13",
+        "category": "retrofit",
+        "question": "My 50A8I drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "50A8I",
+        "motor_type": "Brushed",
+        "expected_replacement": "AB50A100I",
+        "expected_answer_contains": "AB50A100I",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued **50A8I** analog brushed drive can be replaced with these AxCent models:\n\n## Replacement Options\n\n**AB50A100I** - Current and Voltage modes (supports both brushless and brushed motors)\n\n**A50A100** - IR Compensation and Tachometer Velocity modes (brushed motors only)\n\n## Key Details\n- **Drive Size**: Large format\n- **Motor Type**: Originally designed for brushed motors\n- **Current Rating**: The AxCent replacements provide 50A continuous current like your original drive\n\nThe AB50A100I offers more versatility since it can handle both brushed and brushless motors, while the A50A100 is optimized specifically for brushed motor applications with IR compensation and tachometer feedback modes.\n\n[Source: AMC AxCent Retrofit Database - Large size models covered in AMC_ProductNote_AxCent_Retrofit_Large.pdf]\n\n**Related questions you might have:**\n- What are the specific wiring differences when retrofitting from 50A8I to these AxCent models?\n- What are the dimensional differences between the 50A8I and the AxCent replacements?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_13",
+        "category": "retrofit",
+        "passed": false,
+        "hallucinated_skus": [],
+        "fabricated_citations": [
+          "AMC AxCent Retrofit Database - Large size models covered in AMC_ProductNote_AxCent_Retrofit_Large.pdf"
+        ],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 0,
+        "citation_count": 1,
+        "failure_reason": "Fabricated citations: ['AMC AxCent Retrofit Database - Large size models covered in AMC_ProductNote_AxCent_Retrofit_Large.pdf']"
+      },
+      "llm": null
+    },
+    {
+      "test": {
+        "id": "retrofit_14",
+        "category": "retrofit",
+        "question": "My 25A20 drive is discontinued. What AxCent drive replaces it?",
+        "discontinued_sku": "25A20",
+        "motor_type": "Brushed",
+        "expected_replacement": "AB30A200",
+        "expected_answer_contains": "AB30A200",
+        "expected_refuse": false
+      },
+      "answer": "Your discontinued 25A20 brushed servo drive has two AxCent replacement options:\n\n## AxCent Replacements for 25A20:\n\n**AB30A200** - Current/Voltage mode (brushless/brushed capable)\n- Supports both brushed and brushless motors\n- Current mode and voltage mode operation\n\n**A25A200** - IR Compensation/Tachometer Velocity mode (brushed only)  \n- Designed specifically for brushed motors\n- IR Compensation mode and Tachometer Velocity mode\n\nThe choice depends on your control requirements and motor type. The AB30A200 offers more flexibility if you might use brushless motors, while the A25A200 is optimized for brushed motor applications.\n\nFor detailed retrofit instructions and wiring information, refer to the AMC_ProductNote_AxCent_Retrofit_Large.pdf document (since the 25A20 is a large size model).\n\n**Related questions you might have:**\n- What are the key differences between IR Compensation mode and Current mode?\n- Do I need to change my wiring when upgrading from 25A20 to the AxCent replacement?",
+      "sources": [],
+      "deterministic": {
+        "test_id": "retrofit_14",
+        "category": "retrofit",
+        "passed": true,
+        "hallucinated_skus": [],
+        "fabricated_citations": [],
+        "refused_correctly": null,
+        "expected_phrase_found": true,
+        "forbidden_claims_found": [],
+        "is_api_error": false,
+        "part_number_count": 1,
+        "citation_count": 0,
+        "failure_reason": ""
+      },
+      "llm": null
+    }
+  ],
+  "config": {
+    "category_filter": "retrofit",
+    "limit": 15,
+    "dry_run": false,
+    "no_llm_judge": true,
+    "llm_judge_sample": 1.0
+  }
+}

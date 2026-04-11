@@ -955,12 +955,29 @@ def chat(user_message: str, history: list[dict] = None) -> dict:
         messages.append({"role": "user", "content": tool_results})
 
     else:
-        # Safety: hit MAX_TOOL_ROUNDS without end_turn
-        for block in response.content:
-            if block.type == "text":
-                answer += block.text
+        # Safety: hit MAX_TOOL_ROUNDS without end_turn. Force a final answer
+        # by disallowing further tool calls. This prevents mid-reasoning text
+        # like "Let me try searching for..." from leaking to the user.
+        try:
+            final_response = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=4096,
+                system=SYSTEM_PROMPT_CACHED,
+                tools=TOOLS,
+                tool_choice={"type": "none"},
+                messages=messages + [{
+                    "role": "user",
+                    "content": "You've reached the search budget. Based on what you found so far, give your best final answer. If you don't have enough information, say so and suggest what the user should check manually. Do NOT mention that you were cut off or try to continue searching.",
+                }],
+            )
+            for block in final_response.content:
+                if block.type == "text":
+                    answer += block.text
+        except Exception as e:
+            logger.warning("Final answer generation failed after MAX_TOOL_ROUNDS: %s", e)
+
         if not answer:
-            answer = "I was unable to complete the search. Please try rephrasing your question."
+            answer = "I wasn't able to find a confident answer to this question in the indexed manuals. Please try rephrasing or contact AMC support at a-m-c.com."
 
     return {"answer": answer, "sources": _dedup_sources(all_sources)}
 
@@ -1087,12 +1104,29 @@ def chat_stream(user_message: str, history: list[dict] = None, drive_context: di
         messages.append({"role": "user", "content": tool_results})
 
     else:
-        # Hit MAX_TOOL_ROUNDS
-        for block in response.content:
-            if block.type == "text":
-                yield {"type": "token", "text": block.text}
-                answer += block.text
+        # Hit MAX_TOOL_ROUNDS — force a final answer without tool calls
+        try:
+            final_response = client.messages.create(
+                model=CLAUDE_MODEL,
+                max_tokens=4096,
+                system=SYSTEM_PROMPT_CACHED,
+                tools=TOOLS,
+                tool_choice={"type": "none"},
+                messages=messages + [{
+                    "role": "user",
+                    "content": "You've reached the search budget. Based on what you found so far, give your best final answer. If you don't have enough information, say so and suggest what the user should check manually. Do NOT mention that you were cut off or try to continue searching.",
+                }],
+            )
+            for block in final_response.content:
+                if block.type == "text":
+                    yield {"type": "token", "text": block.text}
+                    answer += block.text
+        except Exception as e:
+            logger.warning("Final answer generation failed after MAX_TOOL_ROUNDS: %s", e)
+
         if not answer:
-            yield {"type": "token", "text": "I was unable to complete the search. Please try rephrasing your question."}
+            fallback = "I wasn't able to find a confident answer to this question in the indexed manuals. Please try rephrasing or contact AMC support at a-m-c.com."
+            yield {"type": "token", "text": fallback}
+            answer = fallback
 
     yield {"type": "done", "sources": _dedup_sources(all_sources)}

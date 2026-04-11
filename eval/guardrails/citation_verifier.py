@@ -18,12 +18,16 @@ from typing import Dict, List, Set
 BASE = Path(__file__).resolve().parent.parent.parent
 CHUNKS_PATH = BASE / "index_data" / "chunks.json"
 
-# Match "[Source: filename, Page X]" and "[Source: filename, p.X]" and variations
-# Filename is everything up to first comma or closing bracket.
+# Match "[Source: filename.pdf, Page X]" where filename MUST end in .pdf
+# (avoids capturing prose like "AMC replacement database" as a filename).
+# Handles multiple comma/and-separated filenames in a single [Source: ...] block.
 _CITATION_PATTERN = re.compile(
-    r"\[Source:\s*([^,\]]+)(?:,\s*(?:Page|p\.?)\s*(\d+))?[^\]]*\]",
+    r"([A-Za-z0-9_\-]+\.pdf)(?:\s*,?\s*(?:Page|p\.?)\s*(\d+))?",
     re.IGNORECASE,
 )
+
+# Detects the opening of a [Source: ...] block, used as a scoping filter
+_SOURCE_BLOCK = re.compile(r"\[Source:[^\]]*\]", re.IGNORECASE)
 
 
 @lru_cache(maxsize=1)
@@ -74,20 +78,27 @@ class Citation:
 
 
 def extract_citations(text: str) -> List[tuple[str, int | None]]:
-    """Parse all [Source: ...] citations from text."""
+    """
+    Parse all [Source: ...] citations from text.
+
+    Only considers content inside [Source: ...] blocks and only extracts strings
+    that look like actual .pdf filenames. This prevents false positives from
+    prose like "AMC replacement database" or "search results".
+    """
     if not text:
         return []
-    matches = _CITATION_PATTERN.findall(text)
     result = []
-    for filename, page_str in matches:
-        filename = filename.strip()
-        page = None
-        if page_str:
-            try:
-                page = int(page_str)
-            except ValueError:
-                pass
-        result.append((filename, page))
+    # Scope to [Source: ...] blocks so we don't match .pdf mentions in body text
+    for block in _SOURCE_BLOCK.findall(text):
+        for filename, page_str in _CITATION_PATTERN.findall(block):
+            filename = filename.strip()
+            page = None
+            if page_str:
+                try:
+                    page = int(page_str)
+                except ValueError:
+                    pass
+            result.append((filename, page))
     return result
 
 

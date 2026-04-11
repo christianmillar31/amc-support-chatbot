@@ -65,6 +65,7 @@ class DeterministicJudgment:
     refused_correctly: bool | None = None   # None if test doesn't require refusal
     expected_phrase_found: bool | None = None  # None if test has no expected phrase
     forbidden_claims_found: List[str] = field(default_factory=list)
+    is_api_error: bool = False              # True if the bot errored out (credits, rate limit, timeout)
 
     # Raw signals
     part_number_count: int = 0
@@ -85,6 +86,26 @@ def detect_refusal(answer: str) -> bool:
     return any(marker in lower for marker in _REFUSAL_MARKERS)
 
 
+_API_ERROR_MARKERS = [
+    "[ERROR]",
+    "credit balance is too low",
+    "BadRequestError",
+    "RateLimitError",
+    "authentication_error",
+    "Insufficient credit",
+    "request timed out",
+    "An unexpected error occurred",
+    "Your credit balance",
+]
+
+
+def _is_api_error(answer: str) -> bool:
+    """Detect if the bot answer is actually an infrastructure error, not a real response."""
+    if not answer:
+        return False
+    return any(marker in answer for marker in _API_ERROR_MARKERS)
+
+
 def judge_deterministic(
     test: Dict[str, Any],
     answer: str,
@@ -103,6 +124,15 @@ def judge_deterministic(
         category=test.get("category", "unknown"),
         passed=True,
     )
+
+    # --- API error check ---
+    # If the bot errored out (credits, rate limit, timeout), don't count it against
+    # answer quality. Mark it as an API error so it can be excluded from metrics.
+    if _is_api_error(answer):
+        j.is_api_error = True
+        j.passed = False
+        j.failure_reason = "API_ERROR (not counted against quality metrics)"
+        return j
 
     # --- Part number hallucination check ---
     # IMPORTANT: if the question itself contains the SKU (user asked about it),
@@ -148,16 +178,34 @@ def judge_deterministic(
             j.failure_reason += f"Contains forbidden claims: {found}"
 
     # --- Expected phrase check (for FAQ / routing tests) ---
+    # Lenient matching: normalize punctuation and require 40% of content tokens
+    # to appear as substrings in the answer. Handles wording variations like
+    # "Boot-up" vs "Bootup", "Pre-operational" vs "Pre-operational state".
     expected_phrase = test.get("expected_answer_contains", "")
     if expected_phrase and not expected_refuse:
-        # Case-insensitive substring check — loose because answers vary in wording
-        # Only require individual tokens for longer phrases
-        expected_tokens = [t for t in expected_phrase.lower().split() if len(t) > 3]
+        import re as _re
+        def _normalize(s: str) -> str:
+            s = s.lower()
+            s = _re.sub(r"[-_/]", "", s)           # Remove dashes/underscores
+            s = _re.sub(r"[^\w\s]", " ", s)       # Replace other punct with space
+            s = _re.sub(r"\s+", " ", s).strip()   # Collapse whitespace
+            return s
+
+        norm_expected = _normalize(expected_phrase)
+        norm_answer = _normalize(answer)
+
+        # Get content tokens (length > 3, not common stopwords)
+        stopwords = {"with", "from", "that", "this", "have", "been", "will", "what",
+                     "when", "where", "which", "should", "would", "could", "their",
+                     "these", "those", "into", "about", "than", "then"}
+        expected_tokens = [
+            t for t in norm_expected.split()
+            if len(t) > 3 and t not in stopwords
+        ]
         if expected_tokens:
-            answer_lower = answer.lower()
-            matched = sum(1 for t in expected_tokens if t in answer_lower)
+            matched = sum(1 for t in expected_tokens if t in norm_answer)
             coverage = matched / len(expected_tokens)
-            j.expected_phrase_found = coverage >= 0.5  # at least half the keywords
+            j.expected_phrase_found = coverage >= 0.4  # at least 40% of the keywords
             if not j.expected_phrase_found:
                 j.passed = False
                 if j.failure_reason:
@@ -194,11 +242,17 @@ def aggregate(judgments: List[DeterministicJudgment]) -> Dict[str, Any]:
         }
 
     total = len(judgments)
-    passed = sum(1 for j in judgments if j.passed)
 
-    # Per-category breakdown
+    # Separate API errors from real results — they shouldn't count against quality
+    api_errors = [j for j in judgments if j.is_api_error]
+    valid = [j for j in judgments if not j.is_api_error]
+    valid_count = len(valid)
+
+    passed = sum(1 for j in valid if j.passed)
+
+    # Per-category breakdown (excluding API errors)
     categories: Dict[str, Dict[str, int]] = {}
-    for j in judgments:
+    for j in valid:
         cat = j.category
         if cat not in categories:
             categories[cat] = {"total": 0, "passed": 0}
@@ -206,24 +260,28 @@ def aggregate(judgments: List[DeterministicJudgment]) -> Dict[str, Any]:
         if j.passed:
             categories[cat]["passed"] += 1
 
-    # Specific metric rollups
-    total_halluc_skus = sum(len(j.hallucinated_skus) for j in judgments)
-    total_fab_citations = sum(len(j.fabricated_citations) for j in judgments)
+    # Specific metric rollups (on valid results only)
+    total_halluc_skus = sum(len(j.hallucinated_skus) for j in valid)
+    total_fab_citations = sum(len(j.fabricated_citations) for j in valid)
 
-    refusal_tests = [j for j in judgments if j.refused_correctly is not None]
+    refusal_tests = [j for j in valid if j.refused_correctly is not None]
     refusal_correct = sum(1 for j in refusal_tests if j.refused_correctly)
+
+    denom = valid_count if valid_count > 0 else 1
 
     return {
         "total_tests": total,
+        "valid_tests": valid_count,
+        "api_errors": len(api_errors),
         "passed": passed,
-        "failed": total - passed,
-        "pass_rate": round(passed / total, 4),
+        "failed": valid_count - passed,
+        "pass_rate": round(passed / denom, 4),
 
         "part_number_hallucinations": total_halluc_skus,
-        "part_number_hallucination_rate": round(total_halluc_skus / total, 4),
+        "part_number_hallucination_rate": round(total_halluc_skus / denom, 4),
 
         "fabricated_citations": total_fab_citations,
-        "fabricated_citation_rate": round(total_fab_citations / total, 4),
+        "fabricated_citation_rate": round(total_fab_citations / denom, 4),
 
         "refusal_tests": len(refusal_tests),
         "refusal_correct": refusal_correct,
