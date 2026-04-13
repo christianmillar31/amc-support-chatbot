@@ -127,31 +127,55 @@
         /* Starfield canvas sits behind everything */
         #starfield-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 
+        /* Ambient color blobs — matches christianmillar.online */
+        .ambient-blob {
+            position: fixed; border-radius: 50%; pointer-events: none; z-index: -1;
+        }
+        .blob-purple {
+            top: -20vh; left: -10vw; width: 70vw; height: 70vw;
+            background: #8B5CF6; filter: blur(120px); opacity: 0.06;
+        }
+        .blob-rose {
+            bottom: -20vh; right: -10vw; width: 60vw; height: 60vw;
+            background: #F43F5E; filter: blur(120px); opacity: 0.05;
+        }
+
+        /* Grid overlay — subtle structural lines */
+        .grid-overlay {
+            position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 80px 80px;
+        }
+
         :root {
             --primary: #B91C1C;
             --primary-hover: #DC2626;
             --primary-glow: rgba(185,28,28,0.3);
             --secondary: #F43F5E;
+            --purple: #8B5CF6;
             --surface: #09090B;
             --surface-raised: #18181B;
             --surface-hover: #27272A;
             --bg: #09090B;
-            --border: rgba(255,255,255,0.06);
-            --border-hover: rgba(255,255,255,0.12);
+            --border: rgba(255,255,255,0.1);
+            --border-hover: rgba(255,255,255,0.2);
             --text: #FAFAFA;
             --text-secondary: #A1A1AA;
             --text-muted: #71717A;
             --success: #16A34A;
             --warning: #D97706;
             --danger: #DC2626;
-            --radius: 12px;
-            --radius-sm: 8px;
+            --radius: 0px;
+            --radius-sm: 0px;
             --font: 'Outfit', system-ui, sans-serif;
             --mono: 'JetBrains Mono', 'Fira Code', monospace;
             /* Dramatic uses ONLY 400 and 900 — maximum contrast */
         }
 
         html { overflow-x: hidden; }
+        ::selection { background: #8B5CF6; color: #FAFAFA; }
         body {
             font-family: var(--font); background: var(--bg); color: var(--text);
             height: 100vh; display: flex; flex-direction: column;
@@ -405,6 +429,9 @@
 </head>
 <body>
     <canvas id="starfield-canvas"></canvas>
+    <div class="ambient-blob blob-purple"></div>
+    <div class="ambient-blob blob-rose"></div>
+    <div class="grid-overlay"></div>
     <div class="header">
         <div class="header-left">
             <div class="header-icon" style="background:transparent;">

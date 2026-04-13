@@ -914,12 +914,22 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
 
 def chat(user_message: str, history: list[dict] = None) -> dict:
     """
-    Process a user question using agentic tool-use.
-    Claude decides what to search for and can do multiple retrieval passes.
+    Process a user question using agentic tool-use (Anthropic) or single-shot (Ollama).
     Returns dict with 'answer' and 'sources'.
     """
     if history is None:
         history = []
+
+    # Ollama: collect single_shot_chat_stream output into a single dict
+    if LLM_BACKEND == "ollama":
+        answer = ""
+        sources = []
+        for event in single_shot_chat_stream(user_message, history=history):
+            if event["type"] == "token":
+                answer += event["text"]
+            elif event["type"] == "done":
+                sources = event.get("sources", [])
+        return {"answer": answer, "sources": sources}
 
     # Rewrite follow-up questions into standalone queries
     standalone_query = rewrite_followup(user_message, history)
