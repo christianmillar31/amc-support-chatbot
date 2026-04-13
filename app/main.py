@@ -14,7 +14,7 @@ from cachetools import TTLCache
 from app.config import BASE_DIR, SESSION_TTL_SECONDS, MAX_SESSIONS, INGEST_API_KEY, UPLOAD_MAX_PAGES, UPLOAD_MAX_SIZE_MB
 from app.ingest import build_index, is_indexed, extract_text_with_headings, smart_chunk_text, _extract_tables_as_markdown
 from app.chat import chat, chat_stream, single_shot_chat_stream, RateLimitExceeded
-from app.config import ENABLE_SINGLE_SHOT
+from app.config import ENABLE_SINGLE_SHOT, LLM_BACKEND, OLLAMA_MODEL, OLLAMA_BASE_URL
 from app.retriever import reload as reload_index, get_chunk_count
 from app.feedback import log_feedback
 from app.chatlog import log_chat, get_chatlog, update_rating
@@ -190,8 +190,12 @@ async def chat_stream_endpoint(request: ChatRequest):
             if session_id in uploaded_docs:
                 upload_chunks = uploaded_docs[session_id]["chunks"]
 
-            # Use single-shot (1 Sonnet call) by default, fall back to agentic if disabled
-            stream_fn = single_shot_chat_stream if ENABLE_SINGLE_SHOT else chat_stream
+            # Ollama always uses single-shot (can't do agentic tool-use)
+            # Anthropic uses single-shot by default, agentic as fallback
+            if LLM_BACKEND == "ollama":
+                stream_fn = single_shot_chat_stream
+            else:
+                stream_fn = single_shot_chat_stream if ENABLE_SINGLE_SHOT else chat_stream
             for event in stream_fn(request.message, history=history, drive_context=drive_context, uploaded_chunks=upload_chunks):
                 if event["type"] == "status":
                     yield f"event: status\ndata: {json.dumps(event)}\n\n"
@@ -569,6 +573,23 @@ async def chatlog_api():
 async def eval_page():
     """Serve the eval dashboard."""
     return FileResponse(BASE_DIR / "static" / "eval.html")
+
+
+@app.get("/api/backend")
+async def backend_info():
+    """Return current LLM backend info."""
+    info = {"backend": LLM_BACKEND}
+    if LLM_BACKEND == "ollama":
+        from app.ollama_client import is_ollama_available, list_models
+        info["model"] = OLLAMA_MODEL
+        info["base_url"] = OLLAMA_BASE_URL
+        info["available"] = is_ollama_available(OLLAMA_BASE_URL)
+        if info["available"]:
+            info["installed_models"] = list_models(OLLAMA_BASE_URL)
+    else:
+        from app.config import CLAUDE_MODEL
+        info["model"] = CLAUDE_MODEL
+    return info
 
 
 @app.get("/api/eval/latest")

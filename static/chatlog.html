@@ -18,33 +18,33 @@
   .source-tag { border: 1.5px solid #1C1C1C; }
 </style>
 -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Inter', system-ui, sans-serif; background: #030712; color: #fff; }
-  .header { background: rgba(0,0,0,0.4); backdrop-filter: blur(12px); color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.05); }
-  .header h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 400; }
-  .header .stats { font-size: 14px; color: #71717a; }
-  .header a { color: white; text-decoration: none; font-size: 14px; font-weight: 500; background: rgba(255,255,255,0.05); padding: 6px 14px; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; transition: all 0.2s; }
-  .header a:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
-  .controls { padding: 16px 24px; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-  .controls input { padding: 8px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; font-size: 14px; width: 300px; background: rgba(255,255,255,0.05); color: white; }
-  .controls input:focus { outline: none; border-color: #B91C1C; box-shadow: 0 0 0 3px rgba(185,28,28,0.15); }
-  .controls button { padding: 8px 16px; background: white; color: black; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.15s; }
-  .controls button:hover { background: #e4e4e7; }
-  .controls .count { margin-left: auto; color: #71717a; font-size: 14px; }
+  body { font-family: 'Outfit', system-ui, sans-serif; background: #09090B; color: #FAFAFA; }
+  .header { background: #09090B; color: #FAFAFA; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .header h1 { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
+  .header .stats { font-size: 14px; color: #71717A; }
+  .header a { color: white; text-decoration: none; font-size: 14px; font-weight: 900; background: #B91C1C; padding: 8px 16px; border: none; border-radius: 8px; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px; }
+  .header a:hover { background: #DC2626; box-shadow: 0 0 20px rgba(185,28,28,0.3); }
+  .controls { padding: 16px 24px; background: #09090B; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .controls input { padding: 8px 12px; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; font-size: 14px; width: 300px; background: #18181B; color: #FAFAFA; }
+  .controls input:focus { outline: none; border-color: #B91C1C; box-shadow: 0 0 0 2px rgba(185,28,28,0.3); }
+  .controls button { padding: 8px 16px; background: #B91C1C; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 900; transition: all 0.15s; text-transform: uppercase; }
+  .controls button:hover { background: #DC2626; }
+  .controls .count { margin-left: auto; color: #71717A; font-size: 14px; }
   .entries { padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; }
-  .entry { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 16px; }
-  .entry-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: #71717a; }
-  .entry-question { font-weight: 600; font-size: 15px; margin-bottom: 8px; color: white; }
-  .entry-answer { font-size: 14px; color: #a1a1aa; line-height: 1.5; max-height: 200px; overflow: hidden; position: relative; }
+  .entry { background: #18181B; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; }
+  .entry-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: #71717A; }
+  .entry-question { font-weight: 900; font-size: 15px; margin-bottom: 8px; color: #FAFAFA; }
+  .entry-answer { font-size: 14px; color: #A1A1AA; line-height: 1.5; max-height: 200px; overflow: hidden; position: relative; }
   .entry-answer.expanded { max-height: none; }
-  .entry-answer:not(.expanded)::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, #030712); }
-  .toggle-btn { background: none; border: none; color: #B91C1C; cursor: pointer; font-size: 13px; margin-top: 4px; padding: 0; }
-  .toggle-btn:hover { text-decoration: underline; color: #DC2626; }
+  .entry-answer:not(.expanded)::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, #18181B); }
+  .toggle-btn { background: none; border: none; color: #B91C1C; cursor: pointer; font-size: 13px; margin-top: 4px; padding: 0; font-weight: 900; }
+  .toggle-btn:hover { color: #DC2626; }
   .sources { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 4px; }
-  .source-tag { font-size: 11px; background: rgba(255,255,255,0.05); color: #a1a1aa; padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); }
-  .empty { text-align: center; padding: 60px; color: #71717a; }
+  .source-tag { font-size: 11px; background: #18181B; color: #A1A1AA; padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); }
+  .empty { text-align: center; padding: 60px; color: #71717A; }
   @media (max-width: 640px) { .controls input { width: 100%; } }
 </style>
 </head>

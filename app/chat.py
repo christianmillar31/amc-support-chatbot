@@ -10,6 +10,7 @@ from app.config import (
     MAX_TOOL_ROUNDS, BASE_DIR, EMBEDDING_MODEL, EMBEDDING_QUERY_PREFIX,
     ENABLE_RERANKING, RERANK_CANDIDATES, RERANK_TOP_K, TOP_K,
     get_anthropic_client, ENABLE_SINGLE_SHOT,
+    LLM_BACKEND, OLLAMA_MODEL, OLLAMA_BASE_URL,
 )
 from app.retriever import retrieve, get_indexed_sources
 from app.ingest import get_all_pdfs
@@ -806,22 +807,29 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
     all_sources = list(chunks)
 
     # Quality gate: if results are weak, fall back to agentic multi-round search
+    # (Only for Anthropic backend — Ollama can't do agentic tool-use)
+    using_ollama = LLM_BACKEND == "ollama"
     if chunks:
         avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
         if avg_score < 0.01 or len(chunks) < 2:
-            logger.info("Single-shot quality gate triggered (avg_score=%.3f, chunks=%d) — falling back to agentic mode", avg_score, len(chunks))
-            yield {"type": "status", "text": "Results uncertain, searching deeper..."}
+            if not using_ollama:
+                logger.info("Single-shot quality gate triggered (avg_score=%.3f, chunks=%d) — falling back to agentic mode", avg_score, len(chunks))
+                yield {"type": "status", "text": "Results uncertain, searching deeper..."}
+                for event in chat_stream(user_message, history, drive_context, uploaded_chunks):
+                    yield event
+                return
+            else:
+                logger.info("Single-shot quality gate triggered but Ollama can't do agentic — proceeding with weak results")
+        yield {"type": "status", "text": f"Found {len(chunks)} results, generating answer..."}
+    elif not uploaded_chunks:
+        if not using_ollama:
+            logger.info("Single-shot found 0 results — falling back to agentic mode")
+            yield {"type": "status", "text": "No direct results, searching deeper..."}
             for event in chat_stream(user_message, history, drive_context, uploaded_chunks):
                 yield event
             return
-        yield {"type": "status", "text": f"Found {len(chunks)} results, generating answer..."}
-    elif not uploaded_chunks:
-        # No chunks at all and no uploaded docs — fall back to agentic
-        logger.info("Single-shot found 0 results — falling back to agentic mode")
-        yield {"type": "status", "text": "No direct results, searching deeper..."}
-        for event in chat_stream(user_message, history, drive_context, uploaded_chunks):
-            yield event
-        return
+        else:
+            yield {"type": "status", "text": "No results found, generating answer..."}
 
     # Build a single prompt with all context
     user_content = standalone_query
@@ -852,26 +860,50 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
         messages.append({"role": msg["role"], "content": msg["content"]})
     messages.append({"role": "user", "content": user_content})
 
-    # ONE Sonnet call — stream the answer
-    client = get_anthropic_client()
+    # ONE LLM call — stream the answer
     answer = ""
 
-    try:
-        with client.messages.stream(
-            model=CLAUDE_MODEL,
-            max_tokens=4096,
-            system=SYSTEM_PROMPT_CACHED,
-            messages=messages,
-        ) as stream:
-            for text in stream.text_stream:
-                yield {"type": "token", "text": text}
-                answer += text
-    except anthropic.RateLimitError as e:
-        logger.warning("Rate limit hit: %s", e)
-        raise RateLimitExceeded("The AI service is busy. Please wait a moment and try again.") from e
-    except Exception as e:
-        logger.error("Single-shot error: %s", e, exc_info=True)
-        yield {"type": "token", "text": "An error occurred generating the answer. Please try again."}
+    if using_ollama:
+        # --- Ollama (local, free) ---
+        from app.ollama_client import ollama_chat_stream, OllamaError
+        ollama_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+        for msg in messages:
+            ollama_messages.append({"role": msg["role"], "content": msg["content"] if isinstance(msg["content"], str) else str(msg["content"])})
+        try:
+            for token in ollama_chat_stream(
+                ollama_messages,
+                model=OLLAMA_MODEL,
+                base_url=OLLAMA_BASE_URL,
+                max_tokens=4096,
+                temperature=0.3,
+            ):
+                yield {"type": "token", "text": token}
+                answer += token
+        except OllamaError as e:
+            logger.error("Ollama error: %s", e)
+            yield {"type": "token", "text": f"Ollama error: {e}. Is Ollama running? Start with: ollama serve"}
+        except Exception as e:
+            logger.error("Ollama single-shot error: %s", e, exc_info=True)
+            yield {"type": "token", "text": "An error occurred generating the answer. Please try again."}
+    else:
+        # --- Anthropic (cloud, costs tokens) ---
+        client = get_anthropic_client()
+        try:
+            with client.messages.stream(
+                model=CLAUDE_MODEL,
+                max_tokens=4096,
+                system=SYSTEM_PROMPT_CACHED,
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    yield {"type": "token", "text": text}
+                    answer += text
+        except anthropic.RateLimitError as e:
+            logger.warning("Rate limit hit: %s", e)
+            raise RateLimitExceeded("The AI service is busy. Please wait a moment and try again.") from e
+        except Exception as e:
+            logger.error("Single-shot error: %s", e, exc_info=True)
+            yield {"type": "token", "text": "An error occurred generating the answer. Please try again."}
 
     yield {"type": "done", "sources": _dedup_sources(all_sources)}
 

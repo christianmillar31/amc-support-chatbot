@@ -4,60 +4,51 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AMC Bot — Eval Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
   html { overflow-x: hidden; }
   body {
-    font-family: 'Inter', system-ui, sans-serif;
-    background: #030712;
-    color: #FFFFFF;
+    font-family: 'Outfit', system-ui, sans-serif;
+    background: #09090B;
+    color: #FAFAFA;
     min-height: 100vh;
     overflow-x: hidden;
     position: relative;
-  }
-  body::before {
-    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-    background-image: radial-gradient(circle at center, #ffffff 1px, transparent 1px);
-    background-size: 32px 32px; opacity: 0.04;
   }
 
   .page { position: relative; z-index: 1; }
 
   .header {
-    background: rgba(0,0,0,0.4);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: #09090B;
     padding: 20px 32px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
     display: flex;
     align-items: center;
     justify-content: space-between;
   }
   .header h1 {
-    font-family: 'Playfair Display', Georgia, serif;
     font-size: 28px;
-    font-weight: 400;
-    color: white;
-    text-shadow: 0 0 40px rgba(255,255,255,0.4), 0 0 10px rgba(255,255,255,0.2);
+    font-weight: 900;
+    color: #FAFAFA;
+    letter-spacing: -0.5px;
   }
-  .header .stats { font-size: 14px; color: #a1a1aa; margin-top: 4px; }
+  .header .stats { font-size: 14px; color: #71717A; margin-top: 4px; }
   .nav {
-    display: flex; gap: 16px; align-items: center;
+    display: flex; gap: 12px; align-items: center;
   }
   .nav a {
-    color: #a1a1aa; text-decoration: none; font-size: 14px; font-weight: 500;
-    padding: 8px 16px; border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 10px; transition: all 0.15s;
+    color: white; text-decoration: none; font-size: 14px; font-weight: 900;
+    padding: 8px 16px; background: #B91C1C; border: none;
+    border-radius: 8px; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px;
   }
-  .nav a:hover { background: rgba(255,255,255,0.05); color: white; border-color: rgba(255,255,255,0.3); }
+  .nav a:hover { background: #DC2626; box-shadow: 0 0 20px rgba(185,28,28,0.3); }
 
   .container { max-width: 1200px; margin: 0 auto; padding: 32px; }
 
   h2 {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 22px; font-weight: 400; margin: 32px 0 16px;
-    color: white;
+    font-size: 22px; font-weight: 900; margin: 32px 0 16px;
+    color: #FAFAFA; letter-spacing: -0.3px; text-transform: uppercase;
   }
 
   /* Metric cards grid */
@@ -68,13 +59,13 @@
     margin-bottom: 24px;
   }
   .card {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
+    background: #18181B;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
     padding: 24px;
     transition: all 0.2s;
   }
-  .card:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); }
+  .card:hover { background: #27272A; border-color: rgba(255,255,255,0.12); }
   .card .label {
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -84,9 +75,8 @@
     margin-bottom: 8px;
   }
   .card .value {
-    font-family: 'Playfair Display', Georgia, serif;
     font-size: 36px;
-    font-weight: 400;
+    font-weight: 900;
     color: white;
     margin-bottom: 4px;
   }
@@ -97,14 +87,14 @@
 
   /* Category breakdown */
   .category-table {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
+    background: #18181B;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
     overflow: hidden;
   }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 12px 20px; text-align: left; font-size: 14px; }
-  th { color: #71717a; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.08); text-transform: uppercase; font-size: 11px; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace; }
+  th { color: #71717A; font-weight: 900; border-bottom: 1px solid rgba(255,255,255,0.06); text-transform: uppercase; font-size: 11px; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace; }
   td { border-bottom: 1px solid rgba(255,255,255,0.04); }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: rgba(255,255,255,0.02); }
@@ -122,8 +112,8 @@
 
   /* Failures list */
   .failure {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: #18181B;
+    border: 1px solid rgba(255,255,255,0.06);
     border-left: 3px solid #f87171;
     border-radius: 12px;
     padding: 20px;

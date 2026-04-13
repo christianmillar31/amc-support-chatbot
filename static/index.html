@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AMC Support Assistant</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="/static/marked.min.js"></script>
     <script src="/static/troubleshoot-trees.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
@@ -112,152 +112,117 @@
     <!-- END NEOBRUTALISM STYLES -->
 
     <!-- ============================================================
-         AGENTIC STYLES (active) — dark-first, reference-matched
-         Based on: agentic-ashen.vercel.app
-         AMC red #B91C1C replaces orange-400/500
+         AGENTIC STYLES (commented out)
+    ============================================================ -->
+    <!-- Previous Agentic dark theme preserved here for reference.
+         To restore: uncomment this block, delete the Dramatic block below. -->
+
+    <!-- ============================================================
+         DRAMATIC STYLES (active) — typeui.sh/design-skills/dramatic
+         AMC red #B91C1C overrides default purple #8B5CF6
     ============================================================ -->
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
+        /* Starfield canvas sits behind everything */
+        #starfield-canvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+
         :root {
-            --amc-primary: #FF5701;
-            --amc-primary-hover: #E64D00;
-            --amc-primary-light: rgba(255,87,1,0.15);
-            --amc-blue: #FF5701;
-            --amc-blue-light: rgba(255,87,1,0.15);
-            --surface: rgba(255,255,255,0.03);
-            --surface-warm: #F6F6F1;
-            --bg: #030712;
-            --border: rgba(255,255,255,0.08);
-            --border-hover: rgba(255,255,255,0.2);
-            --text: #FFFFFF;
-            --text-dark: #111827;
-            --text-secondary: #a1a1aa;
-            --text-muted: #71717a;
+            --primary: #B91C1C;
+            --primary-hover: #DC2626;
+            --primary-glow: rgba(185,28,28,0.3);
+            --secondary: #F43F5E;
+            --surface: #09090B;
+            --surface-raised: #18181B;
+            --surface-hover: #27272A;
+            --bg: #09090B;
+            --border: rgba(255,255,255,0.06);
+            --border-hover: rgba(255,255,255,0.12);
+            --text: #FAFAFA;
+            --text-secondary: #A1A1AA;
+            --text-muted: #71717A;
             --success: #16A34A;
             --warning: #D97706;
             --danger: #DC2626;
-            --radius: 16px;
-            --radius-sm: 10px;
-            --font-display: 'Playfair Display', Georgia, serif;
-            --font-body: 'Inter', system-ui, sans-serif;
-            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --font: 'Outfit', system-ui, sans-serif;
+            --mono: 'JetBrains Mono', 'Fira Code', monospace;
+            /* Dramatic uses ONLY 400 and 900 — maximum contrast */
         }
 
         html { overflow-x: hidden; }
         body {
-            font-family: var(--font-body);
-            background: var(--bg);
-            color: var(--text);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            font-size: 16px;
-            line-height: 1.5;
+            font-family: var(--font); background: var(--bg); color: var(--text);
+            height: 100vh; display: flex; flex-direction: column;
+            font-size: 16px; line-height: 1.5; font-weight: 400;
             overflow-x: hidden;
         }
-        /* Starfield — canvas rendered */
-        #starfield-canvas {
-            position: fixed; inset: 0; pointer-events: none; z-index: 0;
-        }
 
-        /* Ambient glow — cool blue */
-        .welcome::before {
-            content: ''; position: absolute; bottom: -200px; left: 50%; transform: translateX(-50%);
-            width: 800px; height: 500px; border-radius: 100%;
-            background: radial-gradient(ellipse at center, rgba(56,120,240,0.35) 0%, rgba(30,60,160,0.20) 40%, transparent 70%);
-            filter: blur(100px); pointer-events: none; z-index: -1;
-        }
-        .welcome::after {
-            content: ''; position: absolute; bottom: -120px; left: 50%; transform: translateX(-50%);
-            width: 600px; height: 400px; border-radius: 100%;
-            background: radial-gradient(ellipse at center, rgba(255,255,255,0.50) 0%, rgba(140,180,255,0.35) 30%, transparent 70%);
-            filter: blur(80px); pointer-events: none; z-index: -1;
-        }
-
-        /* Text glow — bold, not subtle */
-        .text-glow {
-            text-shadow:
-                0 0 80px rgba(255,255,255,0.6),
-                0 0 30px rgba(255,255,255,0.4),
-                0 0 10px rgba(255,255,255,0.3);
-        }
-
-        /* Header — dark glass nav */
+        /* Header — clean, high-contrast */
         .header {
-            background: transparent;
-            color: white; padding: 16px 24px;
-            display: flex; align-items: center; justify-content: space-between;
-            border-bottom: none;
-            flex-shrink: 0; position: relative; z-index: 10;
+            background: var(--surface); color: var(--text);
+            padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border); flex-shrink: 0;
+            position: relative; z-index: 10; /* above starfield canvas */
         }
         .header-left { display: flex; align-items: center; gap: 16px; }
-        .header-icon {
-            width: 40px; height: 40px; background: transparent;
-            border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center;
-        }
-        .header h1 { font-size: 18px; font-weight: 600; line-height: 1.2; letter-spacing: -0.3px; }
-        .header-sub { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+        .header-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+        .header h1 { font-size: 20px; font-weight: 900; letter-spacing: -0.5px; }
+        .header-sub { font-size: 14px; color: var(--text-muted); }
         .new-chat-btn {
             display: flex; align-items: center; gap: 8px; padding: 8px 16px;
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15);
-            color: white; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500;
-            cursor: pointer; transition: all 0.2s; backdrop-filter: blur(8px);
+            background: var(--primary); color: white; border: none;
+            border-radius: var(--radius-sm); font-size: 14px; font-weight: 900;
+            cursor: pointer; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .new-chat-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+        .new-chat-btn:hover { background: var(--primary-hover); box-shadow: 0 0 20px var(--primary-glow); }
 
-        /* Chat Container */
+        /* Chat container */
         #chat-container { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 32px 16px 120px; position: relative; z-index: 1; }
-        #chat-container::-webkit-scrollbar { width: 6px; }
+        #chat-container::-webkit-scrollbar { width: 4px; }
         #chat-container::-webkit-scrollbar-track { background: transparent; }
-        #chat-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        #chat-container::-webkit-scrollbar-thumb { background: var(--surface-hover); border-radius: 2px; }
 
-        /* Welcome — dramatic editorial */
-        .welcome { max-width: 640px; margin: 64px auto 0; text-align: center; position: relative; z-index: 1; }
-        .welcome-icon {
-            width: auto; height: auto; background: transparent; border-radius: 0;
-            display: flex; align-items: center; justify-content: center; margin: 0 auto 32px;
-        }
+        /* Welcome — theatrical, bold */
+        .welcome { max-width: 640px; margin: 80px auto 0; text-align: center; position: relative; z-index: 2; }
+        .welcome-icon { width: auto; height: auto; background: transparent; border-radius: 0; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px; }
         .welcome h2 {
-            font-family: var(--font-display);
-            font-size: 56px; font-weight: 400; color: white; margin-bottom: 16px;
-            letter-spacing: -0.5px; line-height: 1.1;
-            /* text-glow class handles the glow */
+            font-size: 48px; font-weight: 900; color: var(--text); margin-bottom: 16px;
+            letter-spacing: -1px; line-height: 1.05; text-transform: uppercase;
         }
-        .welcome p { font-size: 16px; color: var(--text-secondary); line-height: 1.7; max-width: 460px; margin: 0 auto 40px; }
-        .examples { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 560px; margin: 0 auto; }
+        .welcome p { font-size: 16px; color: var(--text-muted); line-height: 1.6; max-width: 460px; margin: 0 auto 40px; }
+        .examples { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 560px; margin: 0 auto; }
         .example-btn {
-            text-align: left; padding: 20px; background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius); font-size: 14px;
-            color: var(--text-secondary); cursor: pointer; transition: all 0.2s; line-height: 1.6;
+            text-align: left; padding: 16px; background: var(--surface-raised);
+            border: 1px solid var(--border); border-radius: var(--radius); font-size: 14px;
+            color: var(--text-secondary); cursor: pointer; transition: all 0.2s; line-height: 1.5;
         }
-        .example-btn:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); }
+        .example-btn:hover { background: var(--surface-hover); border-color: var(--primary); box-shadow: 0 0 16px var(--primary-glow); }
         .example-label {
-            display: block; font-family: var(--font-mono); font-size: 11px; font-weight: 500;
-            color: var(--amc-primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+            display: block; font-family: var(--mono); font-size: 11px; font-weight: 400;
+            color: var(--primary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
         }
 
-        /* Messages */
+        /* Messages — high contrast bubbles */
         .msg { max-width: 760px; margin: 0 auto 24px; display: flex; gap: 16px; position: relative; z-index: 1; }
         .msg-avatar {
             width: 36px; height: 36px; border-radius: var(--radius-sm);
             display: flex; align-items: center; justify-content: center;
-            font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+            font-size: 11px; font-weight: 900; flex-shrink: 0; margin-top: 2px;
         }
-        .msg-avatar.user { background: var(--amc-primary); color: white; }
-        .msg-avatar.ai { background: var(--amc-primary); color: white; }
+        .msg-avatar.user { background: var(--primary); color: white; }
+        .msg-avatar.ai { background: var(--surface-raised); color: var(--text); border: 1px solid var(--border); }
         .msg-body { flex: 1; min-width: 0; }
-
         .msg-content-user {
-            display: inline-block; background: var(--amc-primary); color: white;
+            display: inline-block; background: var(--primary); color: white;
             border-radius: var(--radius) var(--radius) var(--radius) 4px; padding: 12px 18px;
-            font-size: 15px; line-height: 1.6;
+            font-size: 16px; line-height: 1.5; font-weight: 400;
         }
         .msg-content-ai {
-            background: var(--surface-warm); border: none;
+            background: var(--surface-raised); border: 1px solid var(--border);
             border-radius: var(--radius) var(--radius) var(--radius) 4px; padding: 24px;
-            font-size: 15px; line-height: 1.7; color: var(--text-dark); position: relative;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            font-size: 16px; line-height: 1.65; color: #E4E4E7; position: relative;
         }
         .msg-content-ai:hover .copy-btn { opacity: 1; }
 
@@ -265,173 +230,152 @@
         .copy-btn {
             position: absolute; top: 16px; right: 16px; padding: 8px;
             background: transparent; border: none; border-radius: var(--radius-sm);
-            color: #9ca3af; cursor: pointer; opacity: 0; transition: all 0.15s;
+            color: var(--text-muted); cursor: pointer; opacity: 0; transition: all 0.15s;
         }
-        .copy-btn:hover { background: rgba(0,0,0,0.06); color: #374151; }
+        .copy-btn:hover { background: var(--surface-hover); color: var(--text); }
 
-        /* Feedback — ghost on dark */
+        /* Feedback */
         .feedback-row { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding-left: 2px; }
         .feedback-btn {
             display: inline-flex; align-items: center; justify-content: center;
-            width: 32px; height: 32px; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm);
+            width: 32px; height: 32px; border: 1px solid var(--border); border-radius: var(--radius-sm);
             background: transparent; cursor: pointer; color: var(--text-muted); transition: all 0.15s;
         }
-        .feedback-btn:hover { background: rgba(255,255,255,0.06); color: white; border-color: rgba(255,255,255,0.2); }
+        .feedback-btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-hover); }
         .feedback-btn.active-up { background: rgba(22,163,74,0.15); color: #4ade80; border-color: rgba(22,163,74,0.3); }
         .feedback-btn.active-down { background: rgba(220,38,38,0.15); color: #f87171; border-color: rgba(220,38,38,0.3); }
         .feedback-btn:disabled { cursor: default; opacity: 0.4; }
         .feedback-comment { display: none; margin-top: 8px; gap: 8px; align-items: center; }
         .feedback-comment.show { display: flex; }
         .feedback-comment input {
-            flex: 1; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm);
-            font-size: 14px; font-family: inherit; outline: none;
-            background: rgba(255,255,255,0.05); color: white;
+            flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            font-size: 14px; font-family: inherit; outline: none; background: var(--surface-raised); color: var(--text);
         }
-        .feedback-comment input:focus { border-color: var(--amc-primary); box-shadow: 0 0 0 3px rgba(255,87,1,0.15); }
+        .feedback-comment input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-glow); }
         .feedback-comment button {
-            padding: 8px 16px; background: var(--amc-primary); color: white;
-            border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer;
+            padding: 8px 16px; background: var(--primary); color: white;
+            border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 900; cursor: pointer;
         }
 
-        /* Sources — dark pills */
+        /* Sources */
         .sources { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding-left: 2px; }
         .source-tag {
             display: inline-flex; align-items: center; gap: 4px;
-            padding: 4px 12px; background: rgba(255,255,255,0.05); color: var(--text-secondary);
-            font-size: 12px; font-weight: 500; border-radius: 24px; transition: all 0.15s;
-            border: 1px solid rgba(255,255,255,0.08);
-            text-decoration: none; cursor: pointer;
+            padding: 4px 12px; background: var(--surface-raised); color: var(--text-secondary);
+            font-size: 12px; font-weight: 400; border-radius: 24px; transition: all 0.15s;
+            border: 1px solid var(--border);
         }
-        .source-tag:hover { background: rgba(255,255,255,0.08); color: white; border-color: rgba(255,255,255,0.2); }
+        .source-tag:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-hover); }
         .source-tag svg { width: 12px; height: 12px; flex-shrink: 0; }
 
-        /* Typing — AMC red thinking dots */
+        /* Typing — red pulsing dots */
         .typing-body { display: flex; align-items: center; gap: 12px; padding: 16px 24px; }
         .typing-dots { display: flex; gap: 6px; }
         .typing-dot {
-            width: 8px; height: 8px; background: var(--amc-primary); border-radius: 50%;
-            animation: agent-think 1.4s ease-in-out infinite;
+            width: 8px; height: 8px; background: var(--primary); border-radius: 50%;
+            animation: dramatic-pulse 1.2s ease-in-out infinite;
         }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        .typing-label { font-size: 14px; color: #6b7280; font-style: italic; }
-        @keyframes agent-think { 0%, 100% { opacity: 0.2; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
+        .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+        .typing-label { font-size: 14px; color: var(--text-muted); }
+        @keyframes dramatic-pulse { 0%, 100% { opacity: 0.15; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
 
-        /* Input — unified card */
+        /* Input — dramatic bottom bar */
         .input-area {
-            background: transparent;
-            padding: 12px 16px 16px; flex-shrink: 0; position: relative; z-index: 10;
+            border-top: 1px solid var(--border); background: var(--surface);
+            padding: 16px; flex-shrink: 0; position: relative; z-index: 10;
         }
-        .input-card {
-            max-width: 760px; margin: 0 auto;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 20px; padding: 10px 16px 12px;
-            transition: border-color 0.2s;
-        }
-        .input-card:focus-within { border-color: rgba(255,255,255,0.18); }
-        .input-top-row {
-            display: flex; align-items: center; justify-content: space-between;
-            padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);
-            margin-bottom: 8px;
-        }
-        .input-bottom-row { display: flex; align-items: flex-end; gap: 8px; }
+        .input-wrapper { max-width: 760px; margin: 0 auto; display: flex; align-items: flex-end; gap: 12px; }
         #message-input {
-            flex: 1; padding: 4px 0; border: none;
-            font-size: 15px; font-family: inherit;
-            outline: none; resize: none; overflow: hidden;
-            min-height: 24px; max-height: 160px;
-            line-height: 1.5; background: transparent; color: white;
+            flex: 1; padding: 12px 16px; border: 1px solid var(--border);
+            border-radius: var(--radius); font-size: 16px; font-family: inherit;
+            outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+            resize: none; overflow: hidden; min-height: 48px; max-height: 160px;
+            line-height: 1.5; background: var(--surface-raised); color: var(--text);
         }
-        #message-input::placeholder { color: transparent; }
-        #message-input { caret-color: var(--amc-primary); }
-        .input-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-        .input-icon-btn {
-            background: none; border: none; cursor: pointer; padding: 8px;
-            color: var(--text-muted); border-radius: 10px; transition: all 0.15s;
-        }
-        .input-icon-btn:hover { background: rgba(255,255,255,0.06); color: white; }
+        #message-input::placeholder { color: var(--text-muted); }
+        #message-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-glow), 0 0 24px var(--primary-glow); }
         #send-btn {
-            padding: 8px; background: white; color: black;
-            border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
-            cursor: pointer; transition: all 0.15s; display: flex; align-items: center;
-            justify-content: center; width: 36px; height: 36px; flex-shrink: 0;
+            padding: 12px 24px; background: var(--primary); color: white;
+            border: none; border-radius: var(--radius); font-size: 16px; font-weight: 900;
+            cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 8px;
+            flex-shrink: 0; min-height: 48px; text-transform: uppercase; letter-spacing: 0.5px;
         }
-        #send-btn:hover { background: #e4e4e7; }
-        #send-btn:disabled { background: rgba(255,255,255,0.06); color: var(--text-muted); cursor: not-allowed; }
+        #send-btn:hover { background: var(--primary-hover); box-shadow: 0 0 20px var(--primary-glow); }
+        #send-btn:disabled { background: var(--surface-hover); color: var(--text-muted); cursor: not-allowed; box-shadow: none; }
         #stop-btn {
-            padding: 8px; background: #dc2626; color: white;
-            border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
-            cursor: pointer; transition: all 0.15s; display: none; align-items: center;
-            justify-content: center; width: 36px; height: 36px; flex-shrink: 0;
+            padding: 12px 24px; background: var(--danger); color: white;
+            border: none; border-radius: var(--radius); font-size: 16px; font-weight: 900;
+            cursor: pointer; transition: all 0.15s; display: none; align-items: center; gap: 8px;
+            flex-shrink: 0; min-height: 48px;
         }
         #stop-btn:hover { background: #ef4444; }
         .feedback-confirm { font-size: 14px; color: #4ade80; opacity: 0; transition: opacity 0.3s; margin-left: 8px; }
         .input-footer { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 8px; }
 
-        /* Markdown — Playfair headings, editorial on warm surface */
-        .md h1 { font-family: var(--font-display); font-size: 24px; font-weight: 400; margin: 16px 0 8px; color: var(--text-dark); line-height: 1.2; }
-        .md h2 { font-family: var(--font-display); font-size: 20px; font-weight: 400; margin: 16px 0 8px; color: var(--text-dark); line-height: 1.3; }
-        .md h3 { font-family: var(--font-display); font-size: 16px; font-weight: 500; margin: 12px 0 4px; color: #374151; }
-        .md p { margin: 8px 0; color: #1f2937; }
+        /* Markdown — Outfit headings at weight 900 */
+        .md h1 { font-size: 24px; font-weight: 900; margin: 16px 0 8px; color: var(--text); line-height: 1.1; letter-spacing: -0.5px; }
+        .md h2 { font-size: 20px; font-weight: 900; margin: 16px 0 8px; color: var(--text); line-height: 1.2; }
+        .md h3 { font-size: 16px; font-weight: 900; margin: 12px 0 4px; color: var(--text-secondary); }
+        .md p { margin: 8px 0; }
         .md ul, .md ol { margin: 8px 0; padding-left: 1.5rem; }
-        .md li { margin: 4px 0; color: #1f2937; }
-        .md strong { font-weight: 600; color: var(--text-dark); }
+        .md li { margin: 4px 0; }
+        .md strong { font-weight: 900; color: var(--text); }
         .md code {
-            background: rgba(255,87,1,0.1); color: #c2410c; padding: 2px 6px; border-radius: 4px;
-            font-size: 0.875em; font-family: var(--font-mono);
+            background: rgba(185,28,28,0.12); color: #FCA5A5; padding: 2px 6px; border-radius: 4px;
+            font-size: 0.875em; font-family: var(--mono);
         }
         .md pre {
-            background: #1e1e2e; color: #d4d4d8; padding: 16px;
-            border: none; border-radius: var(--radius-sm);
+            background: var(--surface-raised); color: #D4D4D8; padding: 16px;
+            border: 1px solid var(--border); border-radius: var(--radius-sm);
             overflow-x: auto; margin: 16px 0; font-size: 14px; line-height: 1.6;
         }
         .md pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
         .md table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
-        .md th { background: #e8e8e3; font-weight: 600; text-align: left; padding: 8px 12px; border: 1px solid #d4d4cf; color: var(--text-dark); }
-        .md td { padding: 8px 12px; border: 1px solid #d4d4cf; color: #374151; }
-        .md tr:nth-child(even) { background: #ededea; }
-        .md blockquote { border-left: 3px solid var(--amc-primary); padding-left: 16px; margin: 16px 0; color: #6b7280; font-style: italic; }
-        .md hr { border: none; border-top: 1px solid #d4d4cf; margin: 16px 0; }
+        .md th { background: var(--surface-hover); font-weight: 900; text-align: left; padding: 8px 12px; border: 1px solid var(--border); color: var(--text); }
+        .md td { padding: 8px 12px; border: 1px solid var(--border); color: #D4D4D8; }
+        .md tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+        .md blockquote { border-left: 3px solid var(--primary); padding-left: 16px; margin: 16px 0; color: var(--text-secondary); }
+        .md hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
-        /* Troubleshooting — dark glass outcome card */
-        .ts-widget { margin-top: 16px; border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius); overflow: hidden; }
+        /* Troubleshooting widget */
+        .ts-widget { margin-top: 16px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
         .ts-header {
-            background: #0a0a0f; color: white; padding: 12px 16px;
-            font-family: var(--font-display); font-size: 14px; font-weight: 400;
-            display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            background: var(--surface-raised); color: var(--text); padding: 12px 16px;
+            font-size: 14px; font-weight: 900; display: flex; align-items: center; gap: 8px;
+            border-bottom: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .ts-body { padding: 16px; background: rgba(255,255,255,0.02); }
-        .ts-question { font-family: var(--font-display); font-size: 16px; font-weight: 400; margin-bottom: 12px; color: white; }
+        .ts-body { padding: 16px; background: var(--surface); }
+        .ts-question { font-size: 16px; font-weight: 900; margin-bottom: 12px; color: var(--text); }
         .ts-options { display: flex; flex-direction: column; gap: 8px; }
         .ts-option {
-            padding: 12px 16px; border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm);
-            background: rgba(255,255,255,0.02); cursor: pointer; font-size: 14px;
+            padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            background: var(--surface-raised); cursor: pointer; font-size: 14px;
             color: var(--text-secondary); text-align: left; transition: all 0.15s;
             min-height: 44px; display: flex; align-items: center;
         }
-        .ts-option:hover { border-color: var(--amc-primary); background: rgba(255,87,1,0.1); color: #FF5701; }
-        .ts-answer { font-size: 14px; line-height: 1.6; color: #d4d4d8; }
-        .ts-answer strong, .ts-answer b { color: white; font-weight: 600; }
+        .ts-option:hover { border-color: var(--primary); background: rgba(185,28,28,0.08); color: #FCA5A5; box-shadow: 0 0 12px var(--primary-glow); }
+        .ts-answer { font-size: 14px; line-height: 1.6; color: #D4D4D8; }
+        .ts-answer strong, .ts-answer b { color: var(--text); font-weight: 900; }
         .ts-source { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
         .ts-back {
-            margin-top: 12px; background: transparent; border: 1px solid rgba(255,255,255,0.1);
+            margin-top: 12px; background: transparent; border: 1px solid var(--border);
             border-radius: var(--radius-sm); padding: 8px 16px; font-size: 14px;
             color: var(--text-secondary); cursor: pointer; min-height: 44px;
         }
-        .ts-back:hover { background: rgba(255,255,255,0.05); color: white; }
+        .ts-back:hover { background: var(--surface-hover); color: var(--text); }
         .ts-ask-ai {
-            margin-top: 8px; background: var(--amc-primary); color: white;
+            margin-top: 8px; background: var(--primary); color: white;
             border: none; border-radius: var(--radius-sm); padding: 8px 16px;
-            font-size: 14px; font-weight: 600; cursor: pointer; min-height: 44px;
+            font-size: 14px; font-weight: 900; cursor: pointer; min-height: 44px;
         }
-        .ts-ask-ai:hover { background: var(--amc-primary-hover); }
+        .ts-ask-ai:hover { background: var(--primary-hover); box-shadow: 0 0 16px var(--primary-glow); }
         .ts-breadcrumb { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
 
-        /* Loading skeleton — dark shimmer */
+        /* Loading skeleton */
         .skeleton-line {
             height: 16px; border-radius: var(--radius-sm);
-            background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.06) 75%);
+            background: linear-gradient(90deg, var(--surface-raised) 25%, var(--surface-hover) 50%, var(--surface-raised) 75%);
             background-size: 200% 100%; animation: skeleton-shimmer 1.5s ease-in-out infinite;
         }
         .skeleton-line + .skeleton-line { margin-top: 12px; }
@@ -451,8 +395,8 @@
             .header { padding: 12px 16px; }
             .header h1 { font-size: 16px; }
             .input-area { padding: 12px 12px env(safe-area-inset-bottom, 0); }
-            .welcome { margin-top: 32px; }
-            .welcome h2 { font-size: 36px; }
+            .welcome { margin-top: 40px; }
+            .welcome h2 { font-size: 32px; }
             .welcome p { font-size: 14px; }
             .msg-content-ai { padding: 16px; font-size: 14px; }
             .msg-content-user { font-size: 14px; }
@@ -468,7 +412,7 @@
             </div>
             <div>
                 <h1>AMC Support Assistant</h1>
-                <div class="header-sub">Search manuals, datasheets &amp; app notes with AI</div>
+                <div class="header-sub">Search manuals, datasheets &amp; app notes with AI <span id="backend-badge" style="display:inline-block;padding:1px 8px;border-radius:12px;font-size:10px;font-weight:600;margin-left:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);"></span></div>
             </div>
         </div>
         <button class="new-chat-btn" onclick="newChat()">
@@ -515,7 +459,7 @@
                         <input id="drive-input" type="text" placeholder="None selected"
                             autocomplete="off" spellcheck="false"
                             style="width:160px;padding:4px 10px;border:1px solid rgba(255,255,255,0.1);border-radius:20px;font-size:12px;font-family:inherit;background:rgba(255,255,255,0.03);color:white;outline:none;">
-                        <div id="drive-dropdown" style="display:none;position:absolute;bottom:calc(100% + 4px);left:0;width:280px;max-height:220px;overflow-y:auto;background:#0a0a0f;border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-sm);z-index:100;box-shadow:0 -4px 24px rgba(0,0,0,0.5);"></div>
+                        <div id="drive-dropdown" style="display:none;position:absolute;bottom:calc(100% + 4px);left:0;width:280px;max-height:220px;overflow-y:auto;background:#18181B;border:1px solid rgba(255,255,255,0.06);border-radius:var(--radius-sm);z-index:100;box-shadow:0 -4px 24px rgba(0,0,0,0.8);"></div>
                     </div>
                     <div id="drive-info" style="display:none;align-items:center;gap:6px;">
                         <span style="display:inline-flex;align-items:center;gap:5px;padding:4px 8px 4px 10px;background:var(--amc-primary);color:white;border-radius:20px;font-size:12px;font-weight:500;">
@@ -636,10 +580,26 @@
         // Load drive list on startup
         fetch('/api/drives').then(r => r.json()).then(data => {
             allDrives = data.drives || [];
-            // Restore previous selection
             if (selectedDriveSku) {
                 const d = allDrives.find(d => d.sku === selectedDriveSku);
                 if (d) showDriveInfo(d);
+            }
+        }).catch(() => {});
+
+        // Load backend info and show badge
+        fetch('/api/backend').then(r => r.json()).then(data => {
+            const badge = document.getElementById('backend-badge');
+            if (!badge) return;
+            if (data.backend === 'ollama') {
+                badge.textContent = `Ollama · ${data.model || 'local'}`;
+                badge.style.background = 'rgba(22,163,74,0.15)';
+                badge.style.borderColor = 'rgba(22,163,74,0.3)';
+                badge.style.color = '#4ade80';
+            } else {
+                badge.textContent = 'Claude Sonnet';
+                badge.style.background = 'rgba(185,28,28,0.15)';
+                badge.style.borderColor = 'rgba(185,28,28,0.3)';
+                badge.style.color = '#FCA5A5';
             }
         }).catch(() => {});
 

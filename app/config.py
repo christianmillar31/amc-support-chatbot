@@ -49,6 +49,11 @@ EMBEDDING_MODEL = "BAAI/bge-large-en-v1.5"  # upgraded from bge-base — ~5-10% 
 RERANK_MODEL = "BAAI/bge-reranker-base"  # upgraded from ms-marco-MiniLM — 109M params, better technical content
 EMBEDDING_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "  # BGE asymmetric search prefix (queries only, not docs)
 
+# LLM Backend — "anthropic" (cloud, costs tokens) or "ollama" (local, free)
+LLM_BACKEND = os.getenv("LLM_BACKEND", "anthropic")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:14b")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+
 # Shared Anthropic client (singleton)
 import anthropic as _anthropic  # noqa: E402
 
