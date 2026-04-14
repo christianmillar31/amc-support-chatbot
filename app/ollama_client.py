@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import urllib.request
 import urllib.error
 from typing import Iterator, List, Dict, Any
@@ -28,6 +29,11 @@ logger = logging.getLogger(__name__)
 class OllamaError(Exception):
     """Raised when Ollama is not running or returns an error."""
     pass
+
+
+def _strip_think(text: str) -> str:
+    """Strip <think>...</think> reasoning blocks from model output (qwen3 does this)."""
+    return re.sub(r"<think>.*?</think>\s*", "", text, flags=re.DOTALL).strip()
 
 
 def _call(
@@ -72,7 +78,7 @@ def ollama_chat(
     try:
         with urllib.request.urlopen(req, timeout=120) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            return data["choices"][0]["message"]["content"]
+            return _strip_think(data["choices"][0]["message"]["content"])
     except urllib.error.URLError as e:
         raise OllamaError(
             f"Cannot connect to Ollama at {base_url}. "
@@ -96,12 +102,12 @@ def ollama_chat_stream(
     """
     req = _call(messages, model, base_url, max_tokens, temperature, stream=True)
     try:
+        in_think = False  # Track whether we're inside a <think> block
         with urllib.request.urlopen(req, timeout=120) as resp:
             for line in resp:
                 line = line.decode("utf-8").strip()
                 if not line:
                     continue
-                # SSE format: "data: {...}"
                 if line.startswith("data: "):
                     line = line[6:]
                 if line == "[DONE]":
@@ -110,8 +116,24 @@ def ollama_chat_stream(
                     chunk = json.loads(line)
                     delta = chunk.get("choices", [{}])[0].get("delta", {})
                     content = delta.get("content", "")
-                    if content:
-                        yield content
+                    if not content:
+                        continue
+                    # Suppress <think>...</think> blocks from streaming output
+                    if "<think>" in content:
+                        in_think = True
+                        content = content.split("<think>")[0]
+                        if content.strip():
+                            yield content
+                        continue
+                    if "</think>" in content:
+                        in_think = False
+                        content = content.split("</think>")[-1]
+                        if content.strip():
+                            yield content
+                        continue
+                    if in_think:
+                        continue  # Skip tokens inside think block
+                    yield content
                 except (json.JSONDecodeError, KeyError, IndexError):
                     continue
     except urllib.error.URLError as e:
