@@ -5,6 +5,7 @@ import logging
 import re
 import anthropic
 import numpy as np
+from app import config as _config
 from app.config import (
     CLAUDE_MODEL, QUERY_EXPANSION_MODEL, ENABLE_QUERY_EXPANSION,
     MAX_TOOL_ROUNDS, BASE_DIR, EMBEDDING_MODEL, EMBEDDING_QUERY_PREFIX,
@@ -808,7 +809,7 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
 
     # Quality gate: if results are weak, fall back to agentic multi-round search
     # (Only for Anthropic backend — Ollama can't do agentic tool-use)
-    using_ollama = LLM_BACKEND == "ollama"
+    using_ollama = _config.LLM_BACKEND == "ollama"
     if chunks:
         avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
         if avg_score < 0.01 or len(chunks) < 2:
@@ -872,8 +873,8 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
         try:
             for token in ollama_chat_stream(
                 ollama_messages,
-                model=OLLAMA_MODEL,
-                base_url=OLLAMA_BASE_URL,
+                model=_config.OLLAMA_MODEL,
+                base_url=_config.OLLAMA_BASE_URL,
                 max_tokens=4096,
                 temperature=0.3,
             ):
@@ -921,7 +922,7 @@ def chat(user_message: str, history: list[dict] = None) -> dict:
         history = []
 
     # Ollama: collect single_shot_chat_stream output into a single dict
-    if LLM_BACKEND == "ollama":
+    if _config.LLM_BACKEND == "ollama":
         answer = ""
         sources = []
         for event in single_shot_chat_stream(user_message, history=history):

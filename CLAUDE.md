@@ -1,12 +1,12 @@
 # AMC Support Chatbot
 
 ## Project Overview
-RAG chatbot for AMC support engineers to search 372 PDFs (manuals, datasheets, app notes) using Claude AI. Supports 644 drives across FlexPro, DigiFlex, AxCent, Classic, and Analog families. Deployed on Hugging Face Spaces.
+RAG chatbot for AMC support engineers to search 372 PDFs (manuals, datasheets, app notes) using a local LLM (Ollama). Supports 644 drives across FlexPro, DigiFlex, AxCent, Classic, and Analog families. Deployed on Hugging Face Spaces.
 
 ## Tech Stack
 - **Backend**: Python 3.11, FastAPI, uvicorn
 - **Frontend**: Single-page HTML with inline CSS/JS, marked.js for markdown
-- **AI**: Anthropic Claude Sonnet 4 (answers), Haiku 4.5 (query expansion)
+- **AI**: Ollama (local, default `qwen3:8b`) — set via `LLM_BACKEND=ollama` + `OLLAMA_MODEL`. Anthropic Claude Sonnet 4 / Haiku 4.5 still supported when `LLM_BACKEND=anthropic`.
 - **Search**: BM25 (rank_bm25) + semantic embeddings (sentence-transformers) with RRF fusion
 - **Reranking**: Cross-encoder (ms-marco-MiniLM-L-12-v2) replaces LLM-based reranking
 - **Embeddings**: BAAI/bge-base-en-v1.5

@@ -51,7 +51,7 @@ EMBEDDING_QUERY_PREFIX = "Represent this sentence for searching relevant passage
 
 # LLM Backend — "anthropic" (cloud, costs tokens) or "ollama" (local, free)
 LLM_BACKEND = os.getenv("LLM_BACKEND", "anthropic")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:14b")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3:8b")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
 
 # Shared Anthropic client (singleton)
