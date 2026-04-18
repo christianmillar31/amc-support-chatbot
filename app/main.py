@@ -1,11 +1,13 @@
 import json
 import logging
 import os
+import secrets
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 import pydantic
 from pydantic import BaseModel
@@ -22,6 +24,7 @@ from app.faq import match_faq
 from app.drive_lookup import get_all_drives, lookup_drive
 
 logger = logging.getLogger(__name__)
+admin_security = HTTPBasic(auto_error=False)
 
 # In-memory session store with auto-eviction
 sessions: TTLCache = TTLCache(maxsize=MAX_SESSIONS, ttl=SESSION_TTL_SECONDS)
@@ -90,6 +93,34 @@ def _resolve_chat_context(session_id: str, drive_sku: Optional[str]) -> tuple[Op
     drive_context = lookup_drive(drive_sku) if drive_sku else None
     upload_chunks = uploaded_docs.get(session_id, {}).get("chunks")
     return drive_context, upload_chunks
+
+
+def require_admin(credentials: Optional[HTTPBasicCredentials] = Depends(admin_security)) -> str:
+    """Protect internal dashboards/debug routes with explicit credentials."""
+    username = os.getenv("ADMIN_USERNAME", "").strip()
+    password = os.getenv("ADMIN_PASSWORD", "").strip()
+
+    # Secure by default: hide internal routes unless credentials are configured.
+    if not username or not password:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    if credentials is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    valid_user = secrets.compare_digest(credentials.username, username)
+    valid_pass = secrets.compare_digest(credentials.password, password)
+    if not (valid_user and valid_pass):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+
+    return credentials.username
 
 
 @app.get("/")
@@ -368,7 +399,7 @@ async def clear_upload(session_id: str):
 
 
 @app.get("/debug/email")
-async def debug_email():
+async def debug_email(_: str = Depends(require_admin)):
     """Debug endpoint — tests SMTP2GO API and sends a test email."""
     from urllib.request import Request, urlopen
     from urllib.error import URLError
@@ -423,7 +454,7 @@ async def debug_email():
 
 
 @app.get("/debug/chatlog-sync")
-async def debug_chatlog_sync():
+async def debug_chatlog_sync(_: str = Depends(require_admin)):
     """Debug endpoint — READ-ONLY check of HF Dataset sync status."""
     import os as _os
     hf_token = _os.getenv("HF_TOKEN", "")
@@ -469,7 +500,7 @@ async def debug_chatlog_sync():
 
 
 @app.get("/debug/chatlog-write-test")
-async def debug_chatlog_write_test():
+async def debug_chatlog_write_test(_: str = Depends(require_admin)):
     """Test that chatlog can actually write to disk."""
     from app.chatlog import CHATLOG_FILE, _write_local, get_chatlog
     import os as _os
@@ -562,20 +593,20 @@ async def feedback_endpoint(request: FeedbackRequest):
 
 
 @app.get("/chatlog")
-async def chatlog_page():
+async def chatlog_page(_: str = Depends(require_admin)):
     """Serve the chat log dashboard."""
     return FileResponse(BASE_DIR / "static" / "chatlog.html")
 
 
 @app.get("/api/chatlog")
-async def chatlog_api():
+async def chatlog_api(_: str = Depends(require_admin)):
     """Return chat log entries as JSON."""
     entries = get_chatlog()
     return {"entries": entries, "total": len(entries)}
 
 
 @app.get("/eval")
-async def eval_page():
+async def eval_page(_: str = Depends(require_admin)):
     """Serve the eval dashboard."""
     return FileResponse(BASE_DIR / "static" / "eval.html")
 
@@ -598,7 +629,7 @@ async def backend_info():
 
 
 @app.get("/api/eval/latest")
-async def eval_latest_api():
+async def eval_latest_api(_: str = Depends(require_admin)):
     """Return the latest eval results JSON."""
     import json as _json
     path = BASE_DIR / "eval" / "results" / "latest.json"
@@ -612,7 +643,7 @@ async def eval_latest_api():
 
 
 @app.get("/api/eval/history")
-async def eval_history_api():
+async def eval_history_api(_: str = Depends(require_admin)):
     """Return the eval run history (one line per run)."""
     import json as _json
     path = BASE_DIR / "eval" / "results" / "history.jsonl"
