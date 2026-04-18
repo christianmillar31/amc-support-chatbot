@@ -477,6 +477,12 @@ def handle_detect_drive_manual(part_number: str) -> tuple[str, list[dict]]:
             "comm_manual": result["comm_manual"],
             "hw_manual": result["hw_manual"],
         }
+        if result.get("site_status"):
+            info["product_status"] = result["site_status"]
+        if result.get("support_bucket"):
+            info["support_bucket"] = result["support_bucket"]
+        if result.get("site_url"):
+            info["product_page"] = result["site_url"]
         if result["alias_resolved"]:
             info["alias_resolution"] = (
                 f"'{result['requested_sku']}' maps to the canonical AMC support SKU "
@@ -501,6 +507,10 @@ def handle_detect_drive_manual(part_number: str) -> tuple[str, list[dict]]:
         if result["hw_manual"]:
             notes.append(f"For HW/installation questions, use manual_filter='{result['hw_manual']}'")
         notes.append("For software/configuration questions, search AMC_SW_Manual_ACE.pdf or AMC_SW_Manual_DriveWare.pdf")
+        if result.get("support_bucket") == "core_drive_missing":
+            notes.append("Local datasheet coverage is missing for this active drive. Prioritize hardware manual, communication manual, app notes, and product-page metadata.")
+        elif result.get("support_bucket") == "core_drive_reserved_gap":
+            notes.append("This is a reserved drive. Prefer concise support guidance and rely on hardware/manual metadata instead of assuming full current product coverage.")
         if notes:
             info["usage_notes"] = notes
 
@@ -739,6 +749,9 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
             "network": result["network"],
             "comm_manual": result["comm_manual"],
             "hw_manual": result["hw_manual"],
+            "product_status": result.get("site_status"),
+            "support_bucket": result.get("support_bucket"),
+            "product_page": result.get("site_url"),
         }, indent=2)
 
     # Search with query expansion

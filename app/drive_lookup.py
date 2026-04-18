@@ -11,6 +11,7 @@ Maps any AMC drive part number (SKU) to:
 """
 
 import csv
+import json
 import re
 from pathlib import Path
 from app.config import BASE_DIR
@@ -29,6 +30,7 @@ COL_NETWORK = 25    # EtherCAT, CANopen, Modbus RTU|RS-485/232, etc.
 
 # In-memory lookup: sku_upper -> {family, form_factor, network, title}
 _DRIVE_DB: dict[str, dict] = {}
+_SUPPORT_CATALOG: dict[str, dict] = {}
 
 
 def _normalize_family(raw: str) -> str:
@@ -180,6 +182,29 @@ def _load_csv():
             }
 
     print(f"Loaded {len(_DRIVE_DB)} drives from CSV.")
+
+
+def _load_support_catalog():
+    """Load support catalog rows keyed by SKU when available."""
+    global _SUPPORT_CATALOG
+    if _SUPPORT_CATALOG:
+        return
+
+    catalog_path = BASE_DIR / "site_data" / "support_catalog.json"
+    if not catalog_path.exists():
+        return
+
+    try:
+        with open(catalog_path, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception as exc:
+        print(f"WARNING: Failed to load support catalog: {exc}")
+        return
+
+    for row in payload.get("products", []):
+        sku = (row.get("sku") or "").strip().upper()
+        if sku:
+            _SUPPORT_CATALOG[sku] = row
 
 
 # ---------------------------------------------------------------------------
@@ -340,6 +365,7 @@ def lookup_drive(part_number: str) -> dict | None:
     If the user has a typo, they must fix it — we won't guess.
     """
     _load_csv()
+    _load_support_catalog()
     requested = part_number.strip().upper()
 
     # Exact match only
@@ -364,6 +390,7 @@ def _build_result(drive: dict, requested_sku: str | None = None, match_strategy:
 
     comm_info = _get_comm_manual(family, network)
     hw_manual = _get_hw_manual(family, form_factor, network)
+    support = _SUPPORT_CATALOG.get(drive["sku"].upper(), {})
 
     return {
         "sku": drive["sku"],
@@ -381,6 +408,11 @@ def _build_result(drive: dict, requested_sku: str | None = None, match_strategy:
         "comm_ambiguous": comm_info.get("ambiguous", False),
         "comm_options": comm_info.get("options"),
         "hw_manual": hw_manual,
+        "site_status": support.get("site_status"),
+        "site_category": support.get("category"),
+        "support_bucket": support.get("support_bucket"),
+        "recommended_next_action": support.get("recommended_next_action"),
+        "site_url": support.get("url"),
     }
 
 
@@ -574,17 +606,21 @@ def _friendly_network(network: str) -> str:
 def get_all_drives() -> list[dict]:
     """Return all unique drives from the CSV for the frontend autocomplete dropdown."""
     _load_csv()
+    _load_support_catalog()
     drives = []
     seen = set()
     for sku, drive in _DRIVE_DB.items():
         if sku in seen:
             continue
         seen.add(sku)
+        support = _SUPPORT_CATALOG.get(sku, {})
         drives.append({
             "sku": sku,
             "family": drive["family"],
             "form_factor": drive["form_factor"],
             "network": _friendly_network(drive["network"]),
+            "site_status": support.get("site_status"),
+            "support_bucket": support.get("support_bucket"),
         })
     # Sort by family then SKU
     drives.sort(key=lambda d: (d["family"], d["sku"]))

@@ -214,6 +214,19 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - local index contains `AMC_Datasheet_DZCANTE-025L200.pdf` but not `AMC_Datasheet_DZCANTE-025L200-10.pdf`
 - Result: the chatbot can now preserve the user’s requested SKU while routing retrieval to the correct local datasheet file.
 
+### 17. App now consumes the support catalog
+- Integrated `site_data/support_catalog.json` into `app/drive_lookup.py`.
+- Drive lookups now expose:
+  - site product status
+  - support bucket
+  - recommended next action
+  - product page URL
+- This upgrades the app from “offline analysis exists” to “runtime lookup knows coverage state.”
+- Practical effect:
+  - covered active drives can proceed normally with local datasheet/manual retrieval
+  - active uncovered drives can explicitly fall back to hardware/manual metadata without pretending a local datasheet exists
+  - reserved and variant drives can route more cautiously and with better provenance
+
 ---
 
 ## Currently blocked on

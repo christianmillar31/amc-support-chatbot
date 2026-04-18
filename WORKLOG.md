@@ -93,6 +93,20 @@
   - `AMC_Datasheet_AZBH25A20.pdf` exists while `AMC_Datasheet_AZBH25A20-10.pdf` does not
   - `AMC_Datasheet_DZCANTE-025L200.pdf` exists while `AMC_Datasheet_DZCANTE-025L200-10.pdf` does not
 - The app now exposes both the canonical part number and the datasheet-routing part number so retrieval can stay accurate without hiding what the user asked for.
+- Integrated `site_data/support_catalog.json` into `app/drive_lookup.py` so live drive lookups now carry:
+  - site product status
+  - support bucket
+  - recommended next action
+  - product page URL
+- `detect_drive_manual` and smart routing now surface these support hints to the model.
+- This means the app can now distinguish between:
+  - a covered active drive (`core_drive_covered`)
+  - an active drive missing local datasheet coverage (`core_drive_missing`)
+  - a reserved/variant drive that should route carefully (`core_drive_reserved_gap` / `core_drive_variant_match`)
+- Verified representative lookups:
+  - `100A40` → `core_drive_missing`, status `Active`
+  - `AZBH25A20-10` → `core_drive_variant_match`, status `Reserved`, datasheet routes to `AZBH25A20`
+  - `FE060-25-EM` → `core_drive_covered`, status `Active`
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.
