@@ -158,6 +158,18 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - subgroup preservation for reserved/discontinued software downloads
 - Confirmed current AMC discovery finds `359` live product pages, giving a realistic scope for a full metadata crawl.
 
+### 14. First full site-vs-local coverage result
+- Completed the first full AMC product metadata crawl and compared it against the local datasheet corpus.
+- Results:
+  - `359` live product pages on the AMC site
+  - `221` exact SKU matches between site products and local datasheets
+  - `138` site-only products
+  - `47` local-only datasheets
+- Interpretation:
+  - site-only skew is dominated by reserved products plus non-drive/control/accessory pages that do not map cleanly to the local datasheet set
+  - local-only skew appears to be mostly legacy or variant SKUs that are still in the local PDF set but do not have a current dedicated website product page
+- This makes the next data-quality step clearer: normalize SKU variants and decide whether to ingest non-drive product families as first-class support content.
+
 ---
 
 ## Currently blocked on

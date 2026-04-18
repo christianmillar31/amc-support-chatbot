@@ -52,6 +52,16 @@
   - preserve subgroup labels on reserved/discontinued software downloads
 - Confirmed AMC product discovery currently finds `359` live product pages.
 - Added a narrow ignore for generated `site_data/*.json` artifacts so repeated scrape/coverage runs do not clutter commit scope.
+- Completed the first full AMC product metadata crawl:
+  - `359` live product pages captured
+  - site status mix: `215` active, `58` reserved, `86` unknown/non-drive pages
+- Compared the full site snapshot against the local datasheet corpus:
+  - `221` exact SKU matches between site products and local datasheets
+  - `138` site-only products
+  - `47` local-only datasheets
+- Current coverage interpretation:
+  - most site-only items are reserved products, controls/accessories/power products, or pages with no drive-family classification
+  - most local-only datasheets look like older or more specific variants that do not have a current dedicated product page
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.
