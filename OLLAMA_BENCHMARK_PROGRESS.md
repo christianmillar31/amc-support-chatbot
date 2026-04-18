@@ -91,6 +91,14 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
 - This prevents duplicate result files such as `model_benchmark_smoketest.*` and `model_benchmark_smoke_test.*` from being produced by different invocations of the same logical run.
 - Existing duplicate untracked files are left alone for now; future runs will converge on the canonical names.
 
+### 7. Long-run benchmark operability
+- Attempted a canonical 10-test `smoke_test` run on the two locally installed models (`qwen3:8b`, `llama3.2:3b`).
+- The run remained healthy but was too slow to treat as an interactive routine step, so it was stopped rather than letting the session sit for an indeterminate amount of time.
+- Improved `eval/runners/benchmark_ollama.py` so future long runs are easier to manage:
+  - stdout is line-buffered for visible live progress
+  - result files are written after each model completes, not only at the very end
+- This means future benchmark sessions can be interrupted without losing all artifact progress.
+
 ---
 
 ## Currently blocked on

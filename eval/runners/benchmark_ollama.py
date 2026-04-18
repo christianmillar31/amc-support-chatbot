@@ -34,6 +34,8 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(line_buffering=True)
 
 from eval.runners.run_eval import run as run_eval_core, load_tests  # noqa: E402
 
@@ -326,6 +328,16 @@ def write_markdown(results: list[ModelResult], path: Path, limit: int, full: boo
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
+def write_result_files(results: list[ModelResult], json_path: Path, md_path: Path, limit: int, full: bool) -> None:
+    """Persist the current benchmark state so long runs leave usable partial artifacts."""
+    ranked = rank_with_latency_dq(results)
+    json_path.write_text(
+        json.dumps({"models": [asdict(r) for r in ranked], "full": full, "limit": limit}, indent=2),
+        encoding="utf-8",
+    )
+    write_markdown(ranked, md_path, limit=limit, full=full)
+
+
 # ============================================================
 # CLI
 # ============================================================
@@ -356,6 +368,10 @@ def main():
         print(f"Tag:    {args.tag} -> {normalized_tag}")
     print()
 
+    suffix = f"_{normalized_tag}" if normalized_tag else ""
+    json_path = RESULTS / f"model_benchmark{suffix}.json"
+    md_path = RESULTS / f"model_benchmark{suffix}.md"
+
     results: list[ModelResult] = []
     for model in args.models:
         print(f"[{model}] preparing...")
@@ -366,6 +382,7 @@ def main():
                 part_number_hallucination_rate=0.0, fabricated_citation_rate=0.0,
                 refusal_rate=None, error="pull failed",
             ))
+            write_result_files(results, json_path, md_path, limit=args.limit, full=args.full)
             continue
         print(f"[{model}] running eval...")
         r = run_one_model(model, limit=args.limit, full=args.full,
@@ -373,18 +390,9 @@ def main():
         print(f"[{model}] pass_rate={r.pass_rate * 100:.1f}%  "
               f"avg={r.avg_seconds_per_q:.1f}s/q  total={r.duration_seconds:.0f}s")
         results.append(r)
+        write_result_files(results, json_path, md_path, limit=args.limit, full=args.full)
 
     ranked = rank_with_latency_dq(results)
-
-    # Output
-    suffix = f"_{normalized_tag}" if normalized_tag else ""
-    json_path = RESULTS / f"model_benchmark{suffix}.json"
-    md_path = RESULTS / f"model_benchmark{suffix}.md"
-    json_path.write_text(
-        json.dumps({"models": [asdict(r) for r in ranked], "full": args.full, "limit": args.limit}, indent=2),
-        encoding="utf-8",
-    )
-    write_markdown(ranked, md_path, limit=args.limit, full=args.full)
 
     print()
     print("=" * 70)
