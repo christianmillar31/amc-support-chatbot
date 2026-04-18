@@ -82,6 +82,8 @@ STRATEGY:
 3. Use doc_type filter to narrow searches. Use manual_filter when you know the exact manual.
 4. One focused search usually suffices. Only do a second search if the first had low relevance (<0.15) or missed key info.
 5. For specs (current, voltage, dimensions) → search datasheets. For procedures → search app_notes.
+6. If drive lookup reports support_bucket=core_drive_missing, DO NOT pretend a local datasheet exists. Use the hardware manual, communication manual, application notes, and product metadata instead, and say clearly when exact local datasheet coverage is missing.
+7. If drive lookup reports a reserved drive status, prefer concise support guidance and avoid implying the product has full current-product coverage.
 
 ANSWER RULES:
 1. Be CONCISE. Give the direct answer with exact values, steps, or parameters. No filler. Aim for 3-8 sentences for simple questions, longer only for multi-step procedures.
@@ -404,6 +406,22 @@ def build_context(chunks: list[dict], max_chunk_chars: int = 1400) -> str:
             f"{text}\n"
         )
     return "\n".join(context_parts)
+
+
+def _build_drive_search_query(result: dict, user_message: str) -> str:
+    """Build a richer drive-aware search query without repeating identical tokens."""
+    parts: list[str] = []
+    for value in [
+        result.get("requested_sku"),
+        result.get("canonical_sku"),
+        result.get("datasheet_sku"),
+        result.get("title"),
+        user_message,
+    ]:
+        text = str(value or "").strip()
+        if text and text not in parts:
+            parts.append(text)
+    return " ".join(parts)
 
 
 # ---------------------------------------------------------------------------
@@ -759,6 +777,11 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
     fetch_k = RERANK_CANDIDATES if ENABLE_RERANKING else TOP_K
 
     if result:
+        drive_search_query = user_message
+        support_bucket = result.get("support_bucket")
+        if support_bucket in {"core_drive_missing", "core_drive_variant_match", "core_drive_reserved_gap"}:
+            drive_search_query = _build_drive_search_query(result, user_message)
+
         # --- Drive-aware priority search ---
         # Priority 1: Drive datasheet (most specific to this exact drive)
         # Priority 2: HW manual (wiring, connectors, mounting)
@@ -773,7 +796,10 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
         if datasheet_name in indexed_sources:
             priority_manuals.append(datasheet_name)
         else:
-            logger.warning("Datasheet not found in index: %s", datasheet_name)
+            if result.get("support_bucket") == "core_drive_missing":
+                logger.info("Active drive has no local datasheet coverage, using manual-first fallback: %s", datasheet_name)
+            else:
+                logger.warning("Datasheet not found in index: %s", datasheet_name)
         if result.get("hw_manual"):
             priority_manuals.append(result["hw_manual"])
         if result.get("comm_manual"):
@@ -781,7 +807,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
 
         # Search each priority manual (3-way RRF: BM25 original + semantic original + semantic expanded)
         for manual in priority_manuals:
-            manual_chunks = retrieve(user_message, top_k=fetch_k, source_filter=manual, expanded_query=expanded_query)
+            manual_chunks = retrieve(drive_search_query, top_k=fetch_k, source_filter=manual, expanded_query=expanded_query)
             for c in manual_chunks:
                 key = c["text"][:100]
                 if key not in seen:
@@ -789,7 +815,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
                     chunks.append(c)
 
         # Always search app notes as supplement (procedures, tuning, troubleshooting)
-        app_chunks = retrieve(user_message, top_k=fetch_k, doc_type_filter="app_note", expanded_query=expanded_query)
+        app_chunks = retrieve(drive_search_query, top_k=fetch_k, doc_type_filter="app_note", expanded_query=expanded_query)
         for c in app_chunks:
             key = c["text"][:100]
             if key not in seen:
@@ -798,7 +824,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
 
         # If still not enough, search everything
         if len(chunks) < 3:
-            extra = retrieve(user_message, top_k=fetch_k, expanded_query=expanded_query)
+            extra = retrieve(drive_search_query, top_k=fetch_k, expanded_query=expanded_query)
             for c in extra:
                 key = c["text"][:100]
                 if key not in seen:

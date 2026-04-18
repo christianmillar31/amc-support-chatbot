@@ -107,6 +107,12 @@
   - `100A40` → `core_drive_missing`, status `Active`
   - `AZBH25A20-10` → `core_drive_variant_match`, status `Reserved`, datasheet routes to `AZBH25A20`
   - `FE060-25-EM` → `core_drive_covered`, status `Active`
+- Refined the runtime drive-aware search strategy using the support bucket:
+  - `core_drive_missing` drives now use a manual-first fallback path without implying a local datasheet exists
+  - `core_drive_variant_match` and reserved-gap drives enrich the search query with canonical/base SKU context when helpful
+- Verified with a bounded local monkeypatch test that:
+  - `100A40` searches its hardware manual and app notes with a clean manual-first query
+  - `AZBH25A20-10` searches `AMC_Datasheet_AZBH25A20.pdf` using both the requested SKU and the base datasheet SKU in the query
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.

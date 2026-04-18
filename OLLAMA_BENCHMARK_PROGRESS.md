@@ -227,6 +227,16 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - active uncovered drives can explicitly fall back to hardware/manual metadata without pretending a local datasheet exists
   - reserved and variant drives can route more cautiously and with better provenance
 
+### 18. Runtime search strategy now uses coverage state
+- Refined `app/chat.py` so the runtime search path consumes the support bucket, not just the manual filenames.
+- New behavior:
+  - `core_drive_missing` drives use a manual-first fallback path and do not behave as though a local datasheet is available
+  - `core_drive_variant_match` and `core_drive_reserved_gap` searches enrich the query with canonical/base SKU context where that improves retrieval
+- Verified with a bounded monkeypatched `_smart_route()` check:
+  - `100A40` queries its hardware manual and app notes with a manual-first fallback query
+  - `AZBH25A20-10` targets `AMC_Datasheet_AZBH25A20.pdf` and includes both `AZBH25A20-10` and `AZBH25A20` in the query
+- This is a direct app-quality improvement: the chatbot’s runtime behavior now reflects corpus coverage reality instead of treating all drives as equally covered.
+
 ---
 
 ## Currently blocked on
