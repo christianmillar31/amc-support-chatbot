@@ -78,6 +78,21 @@
   - `51` servo-drive pages without local datasheet match
   - `87` non-drive product pages without local datasheet match
 - The highest-value next ingestion target is no longer “scrape more servo drives”; it is deciding which non-drive product categories should become first-class support content.
+- Added `build_support_catalog.py` to merge site products, the local PDF corpus, and the drive CSV into a reusable support-catalog artifact.
+- Current support-catalog summary:
+  - `221` core drive products already covered by local datasheets
+  - `4` variant/alias cases where the site/CSV SKU should route to an existing base datasheet
+  - `44` reserved drive gaps that should be metadata-first, not urgent PDF-ingest targets
+  - `3` truly active servo-drive gaps that deserve priority ingestion:
+    - `100A40`
+    - `120A10`
+    - `AZXBH40A8`
+  - `87` adjacent non-drive products that need an explicit scope decision
+- Fixed drive-aware datasheet routing for exact CSV/site SKUs whose local datasheet exists only under the normalized/base SKU.
+- Verified with the live local index that:
+  - `AMC_Datasheet_AZBH25A20.pdf` exists while `AMC_Datasheet_AZBH25A20-10.pdf` does not
+  - `AMC_Datasheet_DZCANTE-025L200.pdf` exists while `AMC_Datasheet_DZCANTE-025L200-10.pdf` does not
+- The app now exposes both the canonical part number and the datasheet-routing part number so retrieval can stay accurate without hiding what the user asked for.
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.

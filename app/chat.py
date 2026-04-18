@@ -466,7 +466,9 @@ def handle_detect_drive_manual(part_number: str) -> tuple[str, list[dict]]:
 
     if result:
         info = {
-            "part_number": result["sku"],
+            "part_number": result["requested_sku"],
+            "canonical_part_number": result["canonical_sku"],
+            "datasheet_part_number": result["datasheet_sku"],
             "title": result["title"],
             "drive_family": result["family"],
             "form_factor": result["form_factor"],
@@ -475,6 +477,16 @@ def handle_detect_drive_manual(part_number: str) -> tuple[str, list[dict]]:
             "comm_manual": result["comm_manual"],
             "hw_manual": result["hw_manual"],
         }
+        if result["alias_resolved"]:
+            info["alias_resolution"] = (
+                f"'{result['requested_sku']}' maps to the canonical AMC support SKU "
+                f"'{result['canonical_sku']}' for local datasheet/manual routing."
+            )
+        if result["datasheet_sku"] != result["canonical_sku"]:
+            info["datasheet_resolution"] = (
+                f"Use the local datasheet for '{result['datasheet_sku']}' when the exact "
+                f"PDF for '{result['canonical_sku']}' is not present in the corpus."
+            )
 
         if result["comm_ambiguous"]:
             info["WARNING"] = (
@@ -719,7 +731,9 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
 
     if result:
         drive_info = json.dumps({
-            "part_number": result["sku"],
+            "part_number": result["requested_sku"],
+            "canonical_part_number": result["canonical_sku"],
+            "datasheet_part_number": result["datasheet_sku"],
             "family": result["family"],
             "form_factor": result["form_factor"],
             "network": result["network"],
@@ -741,7 +755,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
         seen = set()
 
         priority_manuals = []
-        datasheet_name = f"AMC_Datasheet_{result['sku']}.pdf"
+        datasheet_name = f"AMC_Datasheet_{result['datasheet_sku']}.pdf"
         indexed_sources = get_indexed_sources()
         if datasheet_name in indexed_sources:
             priority_manuals.append(datasheet_name)

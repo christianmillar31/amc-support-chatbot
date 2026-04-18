@@ -196,6 +196,24 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - `87` site-only non-drive pages
 - This sharpens the next product decision: determine whether the chatbot should support only servo-drive support, or also non-drive AMC product categories such as power supplies, MACC/controls, cards, and accessories.
 
+### 16. Support catalog and retrieval routing
+- Added `build_support_catalog.py` to turn the scrape + local corpus + CSV into an actionable support catalog.
+- Current support bucket summary:
+  - `221` `core_drive_covered`
+  - `4` `core_drive_variant_match`
+  - `44` `core_drive_reserved_gap`
+  - `3` `core_drive_missing`
+  - `87` `adjacent_product_scope_decision`
+- This materially sharpens the next content priorities:
+  - immediate drive-ingest targets are only `100A40`, `120A10`, and `AZXBH40A8`
+  - reserved drive gaps are mostly metadata/routing concerns, not urgent corpus gaps
+  - the largest open product decision is whether to support the adjacent non-drive categories
+- Also fixed the app’s drive-aware datasheet routing for exact CSV/site SKUs whose local datasheet exists only under the normalized/base SKU.
+- Verified examples:
+  - local index contains `AMC_Datasheet_AZBH25A20.pdf` but not `AMC_Datasheet_AZBH25A20-10.pdf`
+  - local index contains `AMC_Datasheet_DZCANTE-025L200.pdf` but not `AMC_Datasheet_DZCANTE-025L200-10.pdf`
+- Result: the chatbot can now preserve the user’s requested SKU while routing retrieval to the correct local datasheet file.
+
 ---
 
 ## Currently blocked on

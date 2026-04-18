@@ -39,6 +39,41 @@ def _normalize_family(raw: str) -> str:
     return raw
 
 
+def _normalize_lookup_sku(raw: str) -> str:
+    """Normalize a small set of known SKU variant forms for lookup only.
+
+    This is intentionally conservative. We only normalize punctuation/spacing
+    and the `-10` suffix seen on a few AMC site product pages that map back to
+    existing local datasheets and CSV rows.
+    """
+    sku = raw.strip().upper()
+    sku = sku.replace("–", "-").replace("—", "-")
+    sku = re.sub(r"\s+", "", sku)
+    sku = re.sub(r"-{2,}", "-", sku)
+    if sku.endswith("-10"):
+        sku = sku[:-3]
+    return sku
+
+
+def _resolve_datasheet_sku(sku: str) -> str:
+    """Choose the best local datasheet SKU for a looked-up drive.
+
+    Some AMC site/CSV part numbers include a `-10` suffix while the local PDF
+    corpus stores the datasheet under the base SKU. Prefer the exact datasheet
+    filename when present; otherwise fall back to the normalized base SKU.
+    """
+    exact_name = BASE_DIR / f"AMC_Datasheet_{sku}.pdf"
+    if exact_name.exists():
+        return sku
+
+    normalized = _normalize_lookup_sku(sku)
+    normalized_name = BASE_DIR / f"AMC_Datasheet_{normalized}.pdf"
+    if normalized != sku and normalized_name.exists():
+        return normalized
+
+    return sku
+
+
 def _infer_network_from_sku(sku: str, family: str) -> str:
     """Infer network protocol from SKU naming convention when CSV field is empty.
 
@@ -305,27 +340,38 @@ def lookup_drive(part_number: str) -> dict | None:
     If the user has a typo, they must fix it — we won't guess.
     """
     _load_csv()
-    pn = part_number.strip().upper()
+    requested = part_number.strip().upper()
 
     # Exact match only
-    if pn in _DRIVE_DB:
-        drive = _DRIVE_DB[pn]
-        return _build_result(drive)
+    if requested in _DRIVE_DB:
+        drive = _DRIVE_DB[requested]
+        return _build_result(drive, requested_sku=requested, match_strategy="exact")
+
+    normalized = _normalize_lookup_sku(requested)
+    if normalized != requested and normalized in _DRIVE_DB:
+        drive = _DRIVE_DB[normalized]
+        return _build_result(drive, requested_sku=requested, match_strategy="normalized_variant")
 
     return None
 
 
-def _build_result(drive: dict) -> dict:
+def _build_result(drive: dict, requested_sku: str | None = None, match_strategy: str = "exact") -> dict:
     """Build the full result dict from a drive DB entry."""
     family = drive["family"]
     form_factor = drive["form_factor"]
     network = drive["network"]
+    requested_sku = requested_sku or drive["sku"]
 
     comm_info = _get_comm_manual(family, network)
     hw_manual = _get_hw_manual(family, form_factor, network)
 
     return {
         "sku": drive["sku"],
+        "requested_sku": requested_sku,
+        "canonical_sku": drive["sku"],
+        "datasheet_sku": _resolve_datasheet_sku(drive["sku"]),
+        "alias_resolved": requested_sku != drive["sku"],
+        "match_strategy": match_strategy,
         "title": drive["title"],
         "family": family,
         "form_factor": form_factor,
