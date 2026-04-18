@@ -9,6 +9,8 @@
 
 # User feedback data
 feedback.json
+chatlog.json
+faq_extract_results.txt
 
 # Python bytecode
 __pycache__/

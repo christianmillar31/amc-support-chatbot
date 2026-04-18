@@ -1,0 +1,39 @@
+discontinued_model,size,motor_type,replacement_brushless,replacement_brushed_only,notes
+12A8,Small,Brushed,AB15A100,A12A100,
+20A14,Small,Brushed,AB20A200,A20A200,
+20A20,Small,Brushed,AB20A200,A20A200,
+25A8,Small,Brushed,AB25A100,A25A100,
+B12A6,Small,Brushless,AB15A100,,Tachometer velocity: contact AMC
+B15A8,Small,Brushless,AB15A100,,Tachometer velocity: contact AMC
+BE12A6,Small,Brushless,AB15A100,,Tachometer/Hall velocity: contact AMC
+BE15A8,Small,Brushless,AB15A100,,Tachometer/Hall velocity: contact AMC
+BE15A8-H,Small,Brushless,AB15A100,,Tachometer/Hall velocity: contact AMC
+BX15A20,Small,Brushless,AB20A200,,Tachometer velocity: contact AMC
+30A8,Large,Brushed,AB30A100,A30A100,
+30A8I,Large,Brushed,AB30A100,A30A100,
+50A8,Large,Brushed,AB50A100,A50A100,
+50A8I,Large,Brushed,AB50A100I,A50A100,
+25A20,Large,Brushed,AB30A200,A25A200,
+25A20I,Large,Brushed,AB30A200I,A25A200,
+50A20,Large,Brushed,AB50A200,A50A200,
+50A20I,Large,Brushed,AB50A200I,A50A200,
+B30A8,Large,Brushless,AB30A100,,Tachometer velocity: contact AMC
+B30A8I,Large,Brushless,AB30A100,,Tachometer velocity: contact AMC
+BE30A8,Large,Brushless,AB30A100,,Tachometer/Hall velocity: contact AMC
+BE30A8I,Large,Brushless,AB30A100,,Tachometer/Hall velocity: contact AMC
+B40A8,Large,Brushless,AB50A100,,Tachometer velocity: contact AMC
+B40A8I,Large,Brushless,AB50A100I,,Tachometer velocity: contact AMC
+BE40A8,Large,Brushless,AB50A100,,Tachometer/Hall velocity: contact AMC
+BE40A8I,Large,Brushless,AB50A100I,,Tachometer/Hall velocity: contact AMC
+B25A20,Large,Brushless,AB30A200,,Tachometer velocity: contact AMC
+B25A20I,Large,Brushless,AB30A200I,,Tachometer velocity: contact AMC
+BE25A20,Large,Brushless,AB30A200,,Tachometer/Hall velocity: contact AMC
+BE25A20I,Large,Brushless,AB30A200I,,Tachometer/Hall velocity: contact AMC
+B40A20,Large,Brushless,AB50A200,,Tachometer velocity: contact AMC
+B40A20I,Large,Brushless,AB50A200I,,Tachometer velocity: contact AMC
+BE40A20,Large,Brushless,AB50A200,,Tachometer/Hall velocity: contact AMC
+BE40A20I,Large,Brushless,AB50A200I,,Tachometer/Hall velocity: contact AMC
+16A20AC,Large,Brushed AC,AB30A200AC,,IR Comp/Tach velocity: contact AMC
+30A20AC,Large,Brushed AC,AB30A200AC,,IR Comp/Tach velocity: contact AMC
+B25A20AC,Large,Brushless AC,AB30A200AC,,Tachometer velocity: contact AMC
+BE25A20AC,Large,Brushless AC,AB30A200AC,,Tachometer/Hall velocity: contact AMC

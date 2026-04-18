@@ -85,6 +85,13 @@ class ChatResponse(BaseModel):
     sources: list[dict]
 
 
+def _resolve_chat_context(session_id: str, drive_sku: Optional[str]) -> tuple[Optional[dict], Optional[list]]:
+    """Resolve optional drive selector and uploaded-document context for a request."""
+    drive_context = lookup_drive(drive_sku) if drive_sku else None
+    upload_chunks = uploaded_docs.get(session_id, {}).get("chunks")
+    return drive_context, upload_chunks
+
+
 @app.get("/")
 async def index():
     return FileResponse(str(BASE_DIR / "static" / "index.html"))
@@ -105,9 +112,15 @@ async def chat_endpoint(request: ChatRequest):
     # Get or create session history
     session_id = request.session_id or "default"
     history = sessions.get(session_id, [])
+    drive_context, upload_chunks = _resolve_chat_context(session_id, request.drive_sku)
 
     try:
-        result = chat(request.message, history=history)
+        result = chat(
+            request.message,
+            history=history,
+            drive_context=drive_context,
+            uploaded_chunks=upload_chunks,
+        )
 
         # Update session history
         history.append({"role": "user", "content": request.message})
@@ -180,15 +193,7 @@ async def chat_stream_endpoint(request: ChatRequest):
 
     async def event_generator():
         try:
-            # Resolve drive context if user pre-selected a drive
-            drive_context = None
-            if request.drive_sku:
-                drive_context = lookup_drive(request.drive_sku)
-
-            # Check for uploaded PDF in session
-            upload_chunks = None
-            if session_id in uploaded_docs:
-                upload_chunks = uploaded_docs[session_id]["chunks"]
+            drive_context, upload_chunks = _resolve_chat_context(session_id, request.drive_sku)
 
             # Ollama always uses single-shot (can't do agentic tool-use)
             # Anthropic uses single-shot by default, agentic as fallback

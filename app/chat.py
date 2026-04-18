@@ -288,6 +288,10 @@ def expand_query(user_message: str, context: str = "") -> str:
     if not ENABLE_QUERY_EXPANSION:
         return user_message
 
+    # Skip expansion in Ollama mode — no Anthropic credentials, avoid 120s timeouts
+    if _config.LLM_BACKEND == "ollama":
+        return user_message
+
     try:
         client = get_anthropic_client()
         prompt_content = user_message
@@ -913,7 +917,12 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
 # Main chat function — agentic tool-use loop (fallback)
 # ---------------------------------------------------------------------------
 
-def chat(user_message: str, history: list[dict] = None) -> dict:
+def chat(
+    user_message: str,
+    history: list[dict] = None,
+    drive_context: dict = None,
+    uploaded_chunks: list = None,
+) -> dict:
     """
     Process a user question using agentic tool-use (Anthropic) or single-shot (Ollama).
     Returns dict with 'answer' and 'sources'.
@@ -921,11 +930,17 @@ def chat(user_message: str, history: list[dict] = None) -> dict:
     if history is None:
         history = []
 
-    # Ollama: collect single_shot_chat_stream output into a single dict
-    if _config.LLM_BACKEND == "ollama":
+    # The UI uses the single-shot path by default, so keep the non-streaming API
+    # aligned with it when single-shot is enabled.
+    if _config.LLM_BACKEND == "ollama" or ENABLE_SINGLE_SHOT:
         answer = ""
         sources = []
-        for event in single_shot_chat_stream(user_message, history=history):
+        for event in single_shot_chat_stream(
+            user_message,
+            history=history,
+            drive_context=drive_context,
+            uploaded_chunks=uploaded_chunks,
+        ):
             if event["type"] == "token":
                 answer += event["text"]
             elif event["type"] == "done":

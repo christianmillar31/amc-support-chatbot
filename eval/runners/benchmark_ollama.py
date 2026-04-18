@@ -129,6 +129,32 @@ class ModelResult:
     error: str | None = None
 
 
+def warmup_model(model: str) -> bool:
+    """Ping the model once to load weights into memory. Returns True if successful."""
+    import urllib.request
+    import urllib.error
+    payload = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": "ping"}],
+        "max_tokens": 4,
+        "temperature": 0.0,
+        "stream": False,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "http://localhost:11434/v1/chat/completions",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=300) as resp:
+            resp.read()
+        return True
+    except Exception as e:
+        print(f"  [warmup WARN] {model}: {e}")
+        return False
+
+
 def run_one_model(
     model: str,
     limit: int,
@@ -145,7 +171,13 @@ def run_one_model(
     from app import config as _cfg
     importlib.reload(_cfg)
 
-    start = time.time()
+    # Warmup: load the model weights so first test doesn't pay the cold-start cost
+    if not dry_run:
+        print(f"  [warmup] loading {model}...")
+        warmup_model(model)
+
+    # Outer wall-clock timer — trusted source of truth for latency
+    outer_start = time.time()
     try:
         if full:
             run_info = run_eval_core(
@@ -177,16 +209,18 @@ def run_one_model(
     except Exception as e:
         return ModelResult(
             model=model, completed=0, errors=1,
-            duration_seconds=time.time() - start,
+            duration_seconds=time.time() - outer_start,
             avg_seconds_per_q=0.0, pass_rate=0.0,
             part_number_hallucination_rate=0.0,
             fabricated_citation_rate=0.0,
             refusal_rate=None, error=str(e),
         )
 
+    outer_dur = time.time() - outer_start
     det = run_info.deterministic_summary
     completed = run_info.completed
-    dur = run_info.duration_seconds
+    # Use outer wall-clock — inner timer showed bogus values in smoke test
+    dur = outer_dur
     return ModelResult(
         model=model,
         completed=completed,
