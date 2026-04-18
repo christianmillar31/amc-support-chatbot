@@ -62,6 +62,22 @@
 - Current coverage interpretation:
   - most site-only items are reserved products, controls/accessories/power products, or pages with no drive-family classification
   - most local-only datasheets look like older or more specific variants that do not have a current dedicated product page
+- Added a second-pass coverage analyzer with SKU normalization and product-category classification.
+- Normalization only changed the match count from `221` to `222`, which confirms the remaining gap is mostly real catalog shape rather than naming drift.
+- Current site category inventory from the scraper:
+  - `272` Servo Drives
+  - `36` Power Supplies
+  - `18` Mounting Cards
+  - `10` Shunt Regulators
+  - `7` Connector Kits
+  - `6` Filter Cards
+  - `5` Controls
+  - `4` I/O Boards
+  - `1` Tools
+- Current site-only gap composition:
+  - `51` servo-drive pages without local datasheet match
+  - `87` non-drive product pages without local datasheet match
+- The highest-value next ingestion target is no longer “scrape more servo drives”; it is deciding which non-drive product categories should become first-class support content.
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.

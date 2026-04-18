@@ -170,6 +170,32 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - local-only skew appears to be mostly legacy or variant SKUs that are still in the local PDF set but do not have a current dedicated website product page
 - This makes the next data-quality step clearer: normalize SKU variants and decide whether to ingest non-drive product families as first-class support content.
 
+### 15. Normalization outcome and category split
+- Added a second-pass analyzer with:
+  - lightweight SKU normalization for variant suffixes such as `-10`
+  - site product category classification from breadcrumbs
+  - explicit breakdown of site-only items into servo-drive vs non-drive buckets
+- Result:
+  - exact matches stayed near-flat: `221`
+  - normalized matches increased to `222`
+- Interpretation:
+  - normalization helps a little, but it is not the main lever
+  - the bigger issue is content scope mismatch between the local datasheet corpus and the live AMC product catalog
+- Current site category mix:
+  - `272` Servo Drives
+  - `36` Power Supplies
+  - `18` Mounting Cards
+  - `10` Shunt Regulators
+  - `7` Connector Kits
+  - `6` Filter Cards
+  - `5` Controls
+  - `4` I/O Boards
+  - `1` Tools
+- Site-only gap split now reads much more clearly:
+  - `51` site-only servo-drive pages
+  - `87` site-only non-drive pages
+- This sharpens the next product decision: determine whether the chatbot should support only servo-drive support, or also non-drive AMC product categories such as power supplies, MACC/controls, cards, and accessories.
+
 ---
 
 ## Currently blocked on

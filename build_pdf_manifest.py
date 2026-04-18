@@ -34,6 +34,16 @@ DOC_TYPE_PREFIXES = [
 ]
 
 
+def normalize_sku(value: str) -> str:
+    token = value.strip().upper()
+    token = token.replace("–", "-").replace("—", "-")
+    token = re.sub(r"\s+", "", token)
+    token = re.sub(r"-{2,}", "-", token)
+    if token.endswith("-10"):
+        token = token[:-3]
+    return token
+
+
 def classify_pdf(name: str) -> str:
     for prefix, doc_type in DOC_TYPE_PREFIXES:
         if name.startswith(prefix):
@@ -95,6 +105,7 @@ def build_manifest() -> dict:
                 "filename": name,
                 "doc_type": doc_type,
                 "sku": sku,
+                "normalized_sku": normalize_sku(sku) if sku else "",
                 "family": family,
                 "status": (drive or {}).get("Status", ""),
                 "network_communication": (drive or {}).get("Network Communication", ""),
