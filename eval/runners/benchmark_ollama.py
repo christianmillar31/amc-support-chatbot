@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -49,6 +50,27 @@ DEFAULT_SLATE = [
     "granite3.1-dense:8b",  # IBM, trained for enterprise RAG
     "mistral-nemo:12b",     # Mistral mid-size, long-context grounding
 ]
+
+
+def normalize_tag(tag: str) -> str:
+    """Normalize output tags so one run family maps to one filename suffix."""
+    raw = (tag or "").strip()
+    if not raw:
+        return ""
+
+    lowered = raw.lower().replace("-", "_").replace(" ", "_")
+    alias_map = {
+        "smoketest": "smoke_test",
+        "smoke_test": "smoke_test",
+        "phasea": "phase_a",
+        "phase_a": "phase_a",
+        "phaseb": "phase_b",
+        "phase_b": "phase_b",
+    }
+    canonical = alias_map.get(lowered, lowered)
+    canonical = re.sub(r"[^a-z0-9_]+", "_", canonical)
+    canonical = re.sub(r"_+", "_", canonical).strip("_")
+    return canonical
 
 
 # ============================================================
@@ -318,6 +340,7 @@ def main():
     p.add_argument("--verbose", "-v", action="store_true")
     p.add_argument("--tag", default="", help="Suffix to append to output filenames")
     args = p.parse_args()
+    normalized_tag = normalize_tag(args.tag)
 
     if not args.skip_pull and not args.dry_run and not shutil.which("ollama"):
         print("ollama CLI not found on PATH — install from https://ollama.com", file=sys.stderr)
@@ -329,6 +352,8 @@ def main():
     print(f"Models: {', '.join(args.models)}")
     print(f"Phase:  {'FULL (335 tests)' if args.full else f'FAST SCREEN ({args.limit} balanced tests)'}")
     print(f"Dry run: {args.dry_run}")
+    if args.tag and normalized_tag != args.tag:
+        print(f"Tag:    {args.tag} -> {normalized_tag}")
     print()
 
     results: list[ModelResult] = []
@@ -352,7 +377,7 @@ def main():
     ranked = rank_with_latency_dq(results)
 
     # Output
-    suffix = f"_{args.tag}" if args.tag else ""
+    suffix = f"_{normalized_tag}" if normalized_tag else ""
     json_path = RESULTS / f"model_benchmark{suffix}.json"
     md_path = RESULTS / f"model_benchmark{suffix}.md"
     json_path.write_text(

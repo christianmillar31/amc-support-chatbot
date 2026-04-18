@@ -25,6 +25,12 @@ Hand-picked for RAG/grounded-extraction performance on Apple Silicon 32GB+.
 
 ## Work completed
 
+### 0. Repo work log policy
+- This file is now being updated as the running Markdown record for benchmark and repo-shaping changes made during each working pass.
+- Latest commits:
+  - `3b20d1d` — aligned non-streaming `/chat` with single-shot context handling and committed support data (`glossary.csv`, `retrofit_mapping.csv`)
+  - `57178ae` — protected internal dashboards/debug routes behind `ADMIN_USERNAME` / `ADMIN_PASSWORD`
+
 ### 1. Investigation (status check)
 - Confirmed repo is on `main` at commit `414e20c` ("qwen3:8b active + strip think blocks + UI fixes").
 - Verified the Ollama migration is in place: `Modelfile` bakes system prompt into `qwen3:8b` (temperature 0.2, num_ctx 32768, top_p 0.9).
@@ -75,6 +81,15 @@ New runner that sweeps models through the existing eval harness.
 
 ### 5. Dry-run sanity check ✅
 Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen3:8b --limit 6` — harness loaded balanced test sample, reloaded config, ran eval end-to-end, and wrote leaderboard. Confirmed the plumbing works before spending GPU time.
+
+### 6. Benchmark artifact normalization
+- Standardized benchmark output tag handling in `eval/runners/benchmark_ollama.py`.
+- Canonical tags now collapse common variants to one filename family:
+  - `smoketest`, `smoke-test`, `smoke_test` -> `smoke_test`
+  - `phasea` -> `phase_a`
+  - `phaseb` -> `phase_b`
+- This prevents duplicate result files such as `model_benchmark_smoketest.*` and `model_benchmark_smoke_test.*` from being produced by different invocations of the same logical run.
+- Existing duplicate untracked files are left alone for now; future runs will converge on the canonical names.
 
 ---
 
