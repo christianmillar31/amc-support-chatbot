@@ -90,12 +90,36 @@ def balanced_sample(limit: int) -> list[dict]:
         cat = t.get("category", "unknown").split("_")[0]
         by_cat.setdefault(cat, []).append(t)
 
-    # Proportional allocation
-    total = sum(len(v) for v in by_cat.values())
+    categories = sorted(by_cat)
+    if limit <= 0 or not categories:
+        return []
+
+    # First pass: guarantee at least one test per category when the budget allows.
+    allocations = {cat: 0 for cat in categories}
+    remaining = limit
+    if limit >= len(categories):
+        for cat in categories:
+            allocations[cat] = 1
+            remaining -= 1
+
+    # Second pass: distribute the remaining budget proportionally by category size.
+    if remaining > 0:
+        total = sum(len(by_cat[cat]) for cat in categories)
+        remainders: list[tuple[float, str]] = []
+        for cat in categories:
+            exact = remaining * len(by_cat[cat]) / total
+            whole = int(exact)
+            allocations[cat] += whole
+            remainders.append((exact - whole, cat))
+
+        used = sum(int(remaining * len(by_cat[cat]) / total) for cat in categories)
+        leftover = remaining - used
+        for _, cat in sorted(remainders, reverse=True)[:leftover]:
+            allocations[cat] += 1
+
     picked: list[dict] = []
-    for cat, tests in by_cat.items():
-        n = max(1, round(limit * len(tests) / total))
-        picked.extend(tests[:n])
+    for cat in categories:
+        picked.extend(by_cat[cat][:allocations[cat]])
     return picked[:limit]
 
 

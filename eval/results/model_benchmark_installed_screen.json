@@ -1,0 +1,40 @@
+{
+  "models": [
+    {
+      "model": "amc-support:latest",
+      "completed": 4,
+      "errors": 0,
+      "duration_seconds": 499.43022108078003,
+      "avg_seconds_per_q": 124.85755527019501,
+      "pass_rate": 0.75,
+      "part_number_hallucination_rate": 0.0,
+      "fabricated_citation_rate": 0.0,
+      "refusal_rate": 1.0,
+      "by_category": {
+        "adversarial_fake_sku": {
+          "pass_rate": 1.0,
+          "passed": 1,
+          "total": 1
+        },
+        "drive_routing": {
+          "pass_rate": 1.0,
+          "passed": 1,
+          "total": 1
+        },
+        "faq": {
+          "pass_rate": 1.0,
+          "passed": 1,
+          "total": 1
+        },
+        "retrofit": {
+          "pass_rate": 0.0,
+          "passed": 0,
+          "total": 1
+        }
+      },
+      "error": null
+    }
+  ],
+  "full": false,
+  "limit": 4
+}

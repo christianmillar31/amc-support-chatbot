@@ -99,6 +99,38 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - result files are written after each model completes, not only at the very end
 - This means future benchmark sessions can be interrupted without losing all artifact progress.
 
+### 8. Low-limit screen quality fix
+- Fixed `balanced_sample()` so small screening runs still cover all top-level categories when the test budget allows.
+- This is important for AMC support use because adversarial refusal behavior is not optional; a model that looks good on FAQ-only micro-samples can still be unsafe for fake-SKU or mixed-family questions.
+- Installed models available right now for immediate comparison:
+  - `amc-support:latest`
+  - `amc-support-3b:latest`
+  - `qwen3:8b`
+  - `llama3.2:3b`
+
+### 9. First real result and slate narrowing
+- First completed real benchmark result from the installed slate:
+  - `amc-support:latest` on a 4-test balanced screen
+  - pass rate: `75.0%`
+  - refusal rate: `100%`
+  - avg latency: `124.9s/question`
+  - category result: passed FAQ, drive-routing, and adversarial fake-SKU; missed retrofit
+- The broad 4-model sequential run was stopped after this first completed result because the 3B variant was delaying the more important direct baseline comparison.
+- Practical next comparison: `amc-support:latest` vs raw `qwen3:8b`.
+
+### 10. Head-to-head result: tuned AMC model vs raw qwen3
+- Completed the direct comparison run for raw `qwen3:8b` on the same 4-test balanced screen.
+- Result:
+  - `qwen3:8b`
+  - pass rate: `75.0%`
+  - refusal rate: `100%`
+  - avg latency: `148.7s/question`
+  - same miss pattern as `amc-support:latest` (retrofit)
+- Interpretation:
+  - `amc-support:latest` currently wins the practical local deployment decision.
+  - It matches raw `qwen3:8b` on measured accuracy and safety while being faster on the same AMC support workload.
+  - The shared retrofit miss suggests the next accuracy gains will likely come from improving retrofit handling in the app stack rather than from switching between these two 8B variants.
+
 ---
 
 ## Currently blocked on
