@@ -131,6 +131,33 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - It matches raw `qwen3:8b` on measured accuracy and safety while being faster on the same AMC support workload.
   - The shared retrofit miss suggests the next accuracy gains will likely come from improving retrofit handling in the app stack rather than from switching between these two 8B variants.
 
+### 11. Next quality track: scrape structured AMC site metadata
+- Started a dedicated scraping pass aimed at improving data coverage rather than swapping models.
+- Highest-value public scrape targets identified:
+  - product detail pages by SKU
+  - download index metadata
+  - reserved/discontinued support page
+  - official glossary
+- Rationale: these sources can improve routing, structured answers, and retrofit/product-status handling without increasing LLM cost.
+
+### 12. Local PDF corpus is now part of the data-improvement path
+- Added `build_pdf_manifest.py` so the existing AMC PDFs can be treated as structured inventory rather than just a retrieval blob.
+- Confirmed the repo-root corpus currently contains:
+  - `372` PDFs total
+  - `268` datasheets
+  - `55` application notes
+  - `15` hardware manuals
+  - `10` communication manuals
+- All `268` local datasheet filenames match rows in `CM Servo Info.csv`, which makes the local folder a strong SKU-level enrichment source.
+
+### 13. Scraper quality improvements
+- Improved the website scraper so outputs are directly usable for retrieval/routing work:
+  - clean product breadcrumbs from the WooCommerce breadcrumb component
+  - structured download entries with an `access` flag (`public` vs `registration_required`)
+  - normalization of broken internal `amc.loc` links to usable AMC document URLs
+  - subgroup preservation for reserved/discontinued software downloads
+- Confirmed current AMC discovery finds `359` live product pages, giving a realistic scope for a full metadata crawl.
+
 ---
 
 ## Currently blocked on

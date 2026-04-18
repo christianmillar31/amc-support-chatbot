@@ -11,3 +11,5 @@ rank_bm25
 numpy
 huggingface_hub
 python-multipart
+requests
+beautifulsoup4

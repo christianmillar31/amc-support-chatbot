@@ -11,6 +11,7 @@
 feedback.json
 chatlog.json
 faq_extract_results.txt
+site_data/*.json
 
 # Python bytecode
 __pycache__/

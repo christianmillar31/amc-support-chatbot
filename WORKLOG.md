@@ -33,6 +33,25 @@
 - Important follow-up insight:
   - both measured 8B variants failed the same retrofit test
   - that points to a system/prompt/retrieval issue in the retrofit path, not a clear base-model winner problem
+- Began the next data-improvement track: structured scraping of AMC website metadata for product pages, downloads, glossary, and reserved/discontinued support content.
+- Added scraper dependencies for reproducible site extraction:
+  - `requests`
+  - `beautifulsoup4`
+- Added a local PDF inventory pipeline so the existing AMC corpus becomes machine-readable for comparison and routing work.
+- Confirmed the repo-root AMC corpus currently contains:
+  - `372` PDFs total
+  - `268` datasheets
+  - `55` application notes
+  - `15` hardware manuals
+  - `10` communication manuals
+- Confirmed all `268` local datasheet filenames match rows in `CM Servo Info.csv`.
+- Improved scraper output quality so the website metadata is cleaner to join against the local PDFs:
+  - use WooCommerce breadcrumbs instead of generic navigation links
+  - normalize broken `amc.loc/wp-json/url/...` links to AMC document URLs
+  - annotate each scraped download as `public` or `registration_required`
+  - preserve subgroup labels on reserved/discontinued software downloads
+- Confirmed AMC product discovery currently finds `359` live product pages.
+- Added a narrow ignore for generated `site_data/*.json` artifacts so repeated scrape/coverage runs do not clutter commit scope.
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.
