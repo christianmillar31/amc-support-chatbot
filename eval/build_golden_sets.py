@@ -7,7 +7,7 @@ Generates 3 JSONL files in eval/golden/:
 - drive_routing_tests.jsonl: 100 sampled drives from CM Servo Info.csv
 - retrofit_tests.jsonl: 38 discontinued → replacement mappings
 
-adversarial_tests.jsonl is hand-written, not generated here.
+coverage_state_tests.jsonl and adversarial_tests.jsonl are hand-written, not generated here.
 
 Usage: python eval/build_golden_sets.py
 """
@@ -159,7 +159,14 @@ def main():
     retrofit_count = build_retrofit_tests()
     print(f"  retrofit_tests.jsonl         — {retrofit_count} tests")
 
-    # adversarial_tests.jsonl is hand-authored, not generated
+    coverage_path = GOLDEN / "coverage_state_tests.jsonl"
+    if coverage_path.exists():
+        coverage_count = sum(1 for _ in open(coverage_path, encoding="utf-8"))
+        print(f"  coverage_state_tests.jsonl   — {coverage_count} tests (hand-written)")
+    else:
+        print(f"  coverage_state_tests.jsonl   — NOT FOUND (hand-written, create manually)")
+        coverage_count = 0
+
     adv_path = GOLDEN / "adversarial_tests.jsonl"
     if adv_path.exists():
         adv_count = sum(1 for _ in open(adv_path, encoding="utf-8"))
@@ -168,7 +175,7 @@ def main():
         print(f"  adversarial_tests.jsonl      — NOT FOUND (hand-written, create manually)")
         adv_count = 0
 
-    total = faq_count + drive_count + retrofit_count + adv_count
+    total = faq_count + drive_count + retrofit_count + coverage_count + adv_count
     print()
     print(f"Total golden test cases: {total}")
 

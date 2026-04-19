@@ -9,7 +9,7 @@ Usage:
     # Phase A — fast screen, 40 balanced tests per model
     python eval/runners/benchmark_ollama.py
 
-    # Phase B — top survivors on the full 335-test set
+    # Phase B — top survivors on the full eval set
     python eval/runners/benchmark_ollama.py --models qwen3:8b qwen2.5:14b llama3.1:8b --full
 
     # Dry run — no LLM calls, just exercise the harness
@@ -79,15 +79,22 @@ def normalize_tag(tag: str) -> str:
 # Balanced sampling across categories
 # ============================================================
 
+def benchmark_group(category: str) -> str:
+    """Collapse category variants into stable benchmark suites."""
+    raw = str(category or "").strip()
+    if raw.startswith("adversarial"):
+        return "adversarial"
+    return raw
+
 def balanced_sample(limit: int) -> list[dict]:
     """
-    Return `limit` tests sampled proportionally across the 4 golden sets.
-    Ensures every category is represented in the fast screen.
+    Return `limit` tests sampled proportionally across the eval suites.
+    Ensures every top-level suite is represented in the fast screen.
     """
     all_tests = load_tests()
     by_cat: dict[str, list[dict]] = {}
     for t in all_tests:
-        cat = t.get("category", "unknown").split("_")[0]
+        cat = benchmark_group(t.get("category", "unknown"))
         by_cat.setdefault(cat, []).append(t)
 
     categories = sorted(by_cat)
@@ -310,7 +317,8 @@ def write_markdown(results: list[ModelResult], path: Path, limit: int, full: boo
     lines = []
     lines.append("# Ollama Model Benchmark — AMC Support Bot")
     lines.append("")
-    phase = "Phase B — full 335-test eval" if full else f"Phase A — {limit}-test balanced screen"
+    total_tests = len(load_tests())
+    phase = f"Phase B — full {total_tests}-test eval" if full else f"Phase A — {limit}-test balanced screen"
     lines.append(f"**Phase:** {phase}")
     lines.append(f"**Scoring:** Balanced — pass rate primary, DQ if avg latency > 2× fastest")
     lines.append("")
@@ -385,8 +393,9 @@ def main():
     print("=" * 70)
     print("AMC Support Bot — Ollama Model Benchmark")
     print("=" * 70)
+    total_tests = len(load_tests())
     print(f"Models: {', '.join(args.models)}")
-    print(f"Phase:  {'FULL (335 tests)' if args.full else f'FAST SCREEN ({args.limit} balanced tests)'}")
+    print(f"Phase:  {'FULL (' + str(total_tests) + ' tests)' if args.full else f'FAST SCREEN ({args.limit} balanced tests)'}")
     print(f"Dry run: {args.dry_run}")
     if args.tag and normalized_tag != args.tag:
         print(f"Tag:    {args.tag} -> {normalized_tag}")

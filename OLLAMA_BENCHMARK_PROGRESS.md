@@ -271,6 +271,12 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - `FE060-25-EM` → no special note
 - Also verified in a bounded stream test that the support note appears as an early status update before answer generation begins.
 
+### 22. Coverage-state suite is now part of routine model screening
+- Updated the benchmark sampler so `coverage_state` is preserved as its own top-level suite instead of being left implicit.
+- Updated regression planning to allocate explicit coverage-state cases and enforce a `coverage_state_pass_rate` target.
+- Removed stale hard-coded full-eval counts from benchmark output so reports track the actual live golden-set size.
+- Added lightweight runner tests to keep benchmark sampling and regression planning aligned with the new reliability-first support behavior.
+
 ---
 
 ## Currently blocked on

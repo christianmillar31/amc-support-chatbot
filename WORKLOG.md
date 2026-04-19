@@ -155,6 +155,16 @@
 - Extended the deterministic eval judge with `required_substrings_all` / `required_substrings_any` so coverage-state expectations can be expressed without relying only on fuzzy phrase matching.
 - Updated the main eval loader so coverage-state tests now run alongside FAQ, drive-routing, retrofit, and adversarial suites.
 - Added regression checks proving the new coverage-state suite loads and the deterministic substring requirements behave as intended.
+- Promoted `coverage_state` from “loaded by the harness” to “used by the workflow”:
+  - benchmark balanced sampling now treats it as a first-class top-level suite
+  - regression planning now allocates explicit coverage-state slots
+  - regression targets now enforce `coverage_state_pass_rate`
+- Removed the old hard-coded `335-test` benchmark wording so eval counts now reflect the actual live golden set size.
+- Added `eval/tests/test_eval_runners.py` to verify:
+  - benchmark grouping keeps `coverage_state` visible
+  - balanced samples include the coverage-state suite
+  - regression planning preserves the suite even at small limits
+- Updated `eval/build_golden_sets.py` reporting so hand-authored coverage-state tests are included in the reported golden-set total.
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.
