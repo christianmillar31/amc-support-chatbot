@@ -12,6 +12,11 @@ feedback.json
 chatlog.json
 faq_extract_results.txt
 site_data/*.json
+# Whitelist runtime-required data files (scraped/generated but the deployed
+# app needs them to avoid graceful-degradation on HF):
+!site_data/retrofit_map.json
+!site_data/pdf_url_map.json
+!site_data/amc_classic_products.json
 
 # Python bytecode
 __pycache__/

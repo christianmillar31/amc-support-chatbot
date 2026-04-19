@@ -1,0 +1,1456 @@
+{
+  "source": "https://www.a-m-c.com",
+  "scraped_at": "2026-04-19T02:33:42Z",
+  "count": 38,
+  "errors": [],
+  "products": [
+    {
+      "sku": "12A8",
+      "url": "https://www.a-m-c.com/product/12a8/",
+      "title": "12A8",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Small Size",
+            "url": "https://www.a-m-c.com/d/?h=ab0a26b",
+            "description": "Replace classic analog drives with new AxCent™ models - small size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "20A14",
+      "url": "https://www.a-m-c.com/product/20a14/",
+      "title": "20A14",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "20A20",
+      "url": "https://www.a-m-c.com/product/20a20/",
+      "title": "20A20",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Small Size",
+            "url": "https://www.a-m-c.com/d/?h=ab0a26b",
+            "description": "Replace classic analog drives with new AxCent™ models - small size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "25A8",
+      "url": "https://www.a-m-c.com/product/25a8/",
+      "title": "25A8",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Small Size",
+            "url": "https://www.a-m-c.com/d/?h=ab0a26b",
+            "description": "Replace classic analog drives with new AxCent™ models - small size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B12A6",
+      "url": "https://www.a-m-c.com/product/b12a6/",
+      "title": "B12A6",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Small Size",
+            "url": "https://www.a-m-c.com/d/?h=ab0a26b",
+            "description": "Replace classic analog drives with new AxCent™ models - small size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B15A8",
+      "url": "https://www.a-m-c.com/product/b15a8/",
+      "title": "B15A8",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Small Size",
+            "url": "https://www.a-m-c.com/d/?h=ab0a26b",
+            "description": "Replace classic analog drives with new AxCent™ models - small size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE12A6",
+      "url": "https://www.a-m-c.com/product/be12a6/",
+      "title": "BE12A6",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Small Size",
+            "url": "https://www.a-m-c.com/d/?h=ab0a26b",
+            "description": "Replace classic analog drives with new AxCent™ models - small size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE15A8",
+      "url": "https://www.a-m-c.com/product/be15a8/",
+      "title": "BE15A8",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Small Size",
+            "url": "https://www.a-m-c.com/d/?h=ab0a26b",
+            "description": "Replace classic analog drives with new AxCent™ models - small size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE15A8-H",
+      "url": "https://www.a-m-c.com/product/be15a8-h/",
+      "title": "BE15A8-H",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BX15A20",
+      "url": "https://www.a-m-c.com/product/bx15a20/",
+      "title": "BX15A20",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Small Size",
+            "url": "https://www.a-m-c.com/d/?h=ab0a26b",
+            "description": "Replace classic analog drives with new AxCent™ models - small size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "30A8",
+      "url": "https://www.a-m-c.com/product/30a8/",
+      "title": "30A8",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "30A8I",
+      "url": "https://www.a-m-c.com/product/30a8i/",
+      "title": "30A8I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "50A8",
+      "url": "https://www.a-m-c.com/product/50a8/",
+      "title": "50A8",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "50A8I",
+      "url": "https://www.a-m-c.com/product/50a8i/",
+      "title": "50A8I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "25A20",
+      "url": "https://www.a-m-c.com/product/25a20/",
+      "title": "25A20",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "25A20I",
+      "url": "https://www.a-m-c.com/product/25a20i/",
+      "title": "25A20I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "50A20",
+      "url": "https://www.a-m-c.com/product/50a20/",
+      "title": "50A20",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "50A20I",
+      "url": "https://www.a-m-c.com/product/50a20i/",
+      "title": "50A20I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B30A8",
+      "url": "https://www.a-m-c.com/product/b30a8/",
+      "title": "B30A8",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B30A8I",
+      "url": "https://www.a-m-c.com/product/b30a8i/",
+      "title": "B30A8I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE30A8",
+      "url": "https://www.a-m-c.com/product/be30a8/",
+      "title": "BE30A8",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE30A8I",
+      "url": "https://www.a-m-c.com/product/be30a8i/",
+      "title": "BE30A8I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B40A8",
+      "url": "https://www.a-m-c.com/product/b40a8/",
+      "title": "B40A8",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B40A8I",
+      "url": "https://www.a-m-c.com/product/b40a8i/",
+      "title": "B40A8I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE40A8",
+      "url": "https://www.a-m-c.com/product/be40a8/",
+      "title": "BE40A8",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE40A8I",
+      "url": "https://www.a-m-c.com/product/be40a8i/",
+      "title": "BE40A8I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B25A20",
+      "url": "https://www.a-m-c.com/product/b25a20/",
+      "title": "B25A20",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B25A20I",
+      "url": "https://www.a-m-c.com/product/b25a20i/",
+      "title": "B25A20I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE25A20",
+      "url": "https://www.a-m-c.com/product/be25a20/",
+      "title": "BE25A20",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE25A20I",
+      "url": "https://www.a-m-c.com/product/be25a20i/",
+      "title": "BE25A20I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B40A20",
+      "url": "https://www.a-m-c.com/product/b40a20/",
+      "title": "B40A20",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B40A20I",
+      "url": "https://www.a-m-c.com/product/b40a20i/",
+      "title": "B40A20I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE40A20",
+      "url": "https://www.a-m-c.com/product/be40a20/",
+      "title": "BE40A20",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE40A20I",
+      "url": "https://www.a-m-c.com/product/be40a20i/",
+      "title": "BE40A20I",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "16A20AC",
+      "url": "https://www.a-m-c.com/product/16a20ac/",
+      "title": "16A20AC",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "30A20AC",
+      "url": "https://www.a-m-c.com/product/30a20ac/",
+      "title": "30A20AC",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          },
+          {
+            "label": "Product Instructions",
+            "url": "https://www.a-m-c.com/d/?h=6066055",
+            "description": "Instructions for adding a heatsink to the AB30A200AC",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "B25A20AC",
+      "url": "https://www.a-m-c.com/product/b25a20ac/",
+      "title": "B25A20AC",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          },
+          {
+            "label": "Product Instructions",
+            "url": "https://www.a-m-c.com/d/?h=6066055",
+            "description": "Instructions for adding a heatsink to the AB30A200AC",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    },
+    {
+      "sku": "BE25A20AC",
+      "url": "https://www.a-m-c.com/product/be25a20ac/",
+      "title": "BE25A20AC",
+      "summary": "",
+      "breadcrumb": [
+        "Products Home",
+        "Servo Drives"
+      ],
+      "specifications": {
+        "Form Factor": "",
+        "Family": "Classic (Discontinued)",
+        "Product Status": "Discontinued",
+        "Current Continuous (A)": "",
+        "Current Peak (A)": "",
+        "AC Supply Voltage (VAC)": "-",
+        "Network Communication": "",
+        "Size (mm)": "",
+        "Weight (g)": ""
+      },
+      "attributes": {},
+      "downloads": {
+        "Product Downloads": [
+          {
+            "label": "AxCent™ Retrofit - Large Size",
+            "url": "https://www.a-m-c.com/d/?h=1023aaa",
+            "description": "Replace classic analog drives with new AxCent™ models - large size",
+            "access": "registration_required"
+          },
+          {
+            "label": "Product Instructions",
+            "url": "https://www.a-m-c.com/d/?h=6066055",
+            "description": "Instructions for adding a heatsink to the AB30A200AC",
+            "access": "registration_required"
+          }
+        ],
+        "Software Downloads": [],
+        "Application Notes": [],
+        "Instructional Videos": [],
+        "Compliance and Approvals": [],
+        "White Papers": []
+      },
+      "related_products": []
+    }
+  ]
+}

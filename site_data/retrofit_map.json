@@ -1,0 +1,69 @@
+{
+  "source": "AMC_ProductNote_AxCent_Retrofit_Small.pdf + AMC_ProductNote_AxCent_Retrofit_Large.pdf",
+  "notes": [
+    "Discontinued classic analog drives are replaced by AxCent drives.",
+    "Replacement depends on mode of operation. Default (Current / Voltage / Duty Cycle) maps to the AxCent 'AB*' drive. IR Compensation / Tachometer Velocity on brushed-only analog drives maps to a brushed-only 'A*' AxCent drive.",
+    "Part numbers ending in a single revision letter (e.g. 12A8J) and option suffixes (-INV, -QD, -QDI, -ANP) should be normalized to the base model before lookup.",
+    "AC-input analog drives retrofit to AxCent AC drives (AB30A200AC).",
+    "For some legacy brushless modes (Tachometer Velocity, Hall Velocity), the retrofit document says 'Contact AMC' rather than a specific AxCent SKU."
+  ],
+  "retrofit_document": {
+    "small_size": {
+      "title": "AxCent Retrofit - Small Size",
+      "local_pdf": "AMC_ProductNote_AxCent_Retrofit_Small.pdf",
+      "site_url": "https://www.a-m-c.com/d/?h=ab0a26b"
+    },
+    "large_size": {
+      "title": "AxCent Retrofit - Large Size",
+      "local_pdf": "AMC_ProductNote_AxCent_Retrofit_Large.pdf",
+      "site_url": "https://www.a-m-c.com/d/?h=1023aaa"
+    }
+  },
+  "retrofits": [
+    {"classic_sku": "12A8", "size": "small", "motor_type": "Brushed", "default_replacement": "AB15A100", "alternate_modes": {"IR Compensation": "A12A100", "Tachometer Velocity": "A12A100"}},
+    {"classic_sku": "20A14", "size": "small", "motor_type": "Brushed", "default_replacement": "AB20A200", "alternate_modes": {"IR Compensation": "A20A200", "Tachometer Velocity": "A20A200"}},
+    {"classic_sku": "20A20", "size": "small", "motor_type": "Brushed", "default_replacement": "AB20A200", "alternate_modes": {"IR Compensation": "A20A200", "Tachometer Velocity": "A20A200"}},
+    {"classic_sku": "25A8", "size": "small", "motor_type": "Brushed", "default_replacement": "AB25A100", "alternate_modes": {"IR Compensation": "A25A100", "Tachometer Velocity": "A25A100"}},
+
+    {"classic_sku": "B12A6", "size": "small", "motor_type": "Brushless", "default_replacement": "AB15A100", "alternate_modes": {"Tachometer Velocity": "Contact AMC"}},
+    {"classic_sku": "B15A8", "size": "small", "motor_type": "Brushless", "default_replacement": "AB15A100", "alternate_modes": {"Tachometer Velocity": "Contact AMC"}},
+    {"classic_sku": "BE12A6", "size": "small", "motor_type": "Brushless", "default_replacement": "AB15A100", "alternate_modes": {"Tachometer Velocity": "Contact AMC", "Hall Velocity": "Contact AMC"}},
+    {"classic_sku": "BE15A8", "size": "small", "motor_type": "Brushless", "default_replacement": "AB15A100", "alternate_modes": {"Tachometer Velocity": "Contact AMC", "Hall Velocity": "Contact AMC"}},
+    {"classic_sku": "BE15A8-H", "size": "small", "motor_type": "Brushless", "default_replacement": "AB15A100", "alternate_modes": {"Tachometer Velocity": "Contact AMC", "Hall Velocity": "Contact AMC"}},
+    {"classic_sku": "BX15A20", "size": "small", "motor_type": "Brushless", "default_replacement": "AB20A200", "alternate_modes": {"Tachometer Velocity": "Contact AMC"}},
+
+    {"classic_sku": "30A8", "size": "large", "motor_type": "Brushed", "default_replacement": "AB30A100", "alternate_modes": {"IR Compensation": "A30A100"}},
+    {"classic_sku": "30A8I", "size": "large", "motor_type": "Brushed", "default_replacement": "AB30A100", "alternate_modes": {"IR Compensation": "A30A100"}},
+    {"classic_sku": "50A8", "size": "large", "motor_type": "Brushed", "default_replacement": "AB50A100", "alternate_modes": {"IR Compensation": "A50A100"}},
+    {"classic_sku": "50A8I", "size": "large", "motor_type": "Brushed", "default_replacement": "AB50A100I", "alternate_modes": {"IR Compensation": "A50A100"}},
+    {"classic_sku": "25A20", "size": "large", "motor_type": "Brushed", "default_replacement": "AB30A200", "alternate_modes": {"IR Compensation": "A25A200"}},
+    {"classic_sku": "25A20I", "size": "large", "motor_type": "Brushed", "default_replacement": "AB30A200I", "alternate_modes": {"IR Compensation": "A25A200"}},
+    {"classic_sku": "50A20", "size": "large", "motor_type": "Brushed", "default_replacement": "AB50A200", "alternate_modes": {"IR Compensation": "A50A200"}},
+    {"classic_sku": "50A20I", "size": "large", "motor_type": "Brushed", "default_replacement": "AB50A200I", "alternate_modes": {"IR Compensation": "A50A200"}},
+
+    {"classic_sku": "B30A8", "size": "large", "motor_type": "Brushless", "default_replacement": "AB30A100"},
+    {"classic_sku": "B30A8I", "size": "large", "motor_type": "Brushless", "default_replacement": "AB30A100"},
+    {"classic_sku": "BE30A8", "size": "large", "motor_type": "Brushless", "default_replacement": "AB30A100"},
+    {"classic_sku": "BE30A8I", "size": "large", "motor_type": "Brushless", "default_replacement": "AB30A100"},
+
+    {"classic_sku": "B40A8", "size": "large", "motor_type": "Brushless", "default_replacement": "AB50A100"},
+    {"classic_sku": "B40A8I", "size": "large", "motor_type": "Brushless", "default_replacement": "AB50A100I"},
+    {"classic_sku": "BE40A8", "size": "large", "motor_type": "Brushless", "default_replacement": "AB50A100"},
+    {"classic_sku": "BE40A8I", "size": "large", "motor_type": "Brushless", "default_replacement": "AB50A100I"},
+
+    {"classic_sku": "B25A20", "size": "large", "motor_type": "Brushless", "default_replacement": "AB30A200"},
+    {"classic_sku": "B25A20I", "size": "large", "motor_type": "Brushless", "default_replacement": "AB30A200I"},
+    {"classic_sku": "BE25A20", "size": "large", "motor_type": "Brushless", "default_replacement": "AB30A200"},
+    {"classic_sku": "BE25A20I", "size": "large", "motor_type": "Brushless", "default_replacement": "AB30A200I"},
+
+    {"classic_sku": "B40A20", "size": "large", "motor_type": "Brushless", "default_replacement": "AB50A200"},
+    {"classic_sku": "B40A20I", "size": "large", "motor_type": "Brushless", "default_replacement": "AB50A200I"},
+    {"classic_sku": "BE40A20", "size": "large", "motor_type": "Brushless", "default_replacement": "AB50A200"},
+    {"classic_sku": "BE40A20I", "size": "large", "motor_type": "Brushless", "default_replacement": "AB50A200I"},
+
+    {"classic_sku": "16A20AC", "size": "large", "motor_type": "Brushed AC", "default_replacement": "AB30A200AC"},
+    {"classic_sku": "30A20AC", "size": "large", "motor_type": "Brushed AC", "default_replacement": "AB30A200AC"},
+    {"classic_sku": "B25A20AC", "size": "large", "motor_type": "Brushless AC", "default_replacement": "AB30A200AC"},
+    {"classic_sku": "BE25A20AC", "size": "large", "motor_type": "Brushless AC", "default_replacement": "AB30A200AC"}
+  ]
+}
