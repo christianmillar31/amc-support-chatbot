@@ -162,7 +162,7 @@ def run(
     for i, test in enumerate(tests, 1):
         tid = test.get("id", f"test_{i}")
         question = test.get("question", "")
-        if verbose or i % 10 == 0:
+        if verbose or len(tests) <= 10 or i % 10 == 0:
             print(f"  [{i}/{len(tests)}] {tid}: {question[:80]}")
 
         # 1. Call the chatbot

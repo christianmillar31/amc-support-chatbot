@@ -277,6 +277,14 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
 - Removed stale hard-coded full-eval counts from benchmark output so reports track the actual live golden-set size.
 - Added lightweight runner tests to keep benchmark sampling and regression planning aligned with the new reliability-first support behavior.
 
+### 23. Live coverage-state baseline needs progress visibility
+- Attempted the first real `coverage_state` eval run against the local model stack.
+- Confirmed two distinct runtime constraints:
+  - sandboxed runs can fail on restricted network access when the embedding stack tries to touch Hugging Face
+  - unrestricted runs can still appear silent for a long time because the local Ollama answer path is slow and small eval suites were not printing per-test progress
+- Updated `eval/runners/run_eval.py` so suites with `<=10` tests now log each case automatically.
+- Result: the next real coverage-state baseline run will be much easier to monitor and reason about.
+
 ---
 
 ## Currently blocked on

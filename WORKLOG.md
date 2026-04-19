@@ -165,6 +165,12 @@
   - balanced samples include the coverage-state suite
   - regression planning preserves the suite even at small limits
 - Updated `eval/build_golden_sets.py` reporting so hand-authored coverage-state tests are included in the reported golden-set total.
+- Attempted the first real `coverage_state` baseline run against the local model stack.
+- Confirmed the prior sandbox failure was environmental:
+  - sandboxed run tried to resolve the embedding model from Hugging Face and failed on restricted DNS/network
+  - unrestricted rerun reached the live Ollama response stream, so the remaining bottleneck is model latency rather than setup
+- Updated `eval/runners/run_eval.py` so small eval suites (`<=10` tests) now print per-test progress automatically.
+- This makes future 5-test coverage-state runs observable instead of looking hung for several minutes with no terminal output.
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.
