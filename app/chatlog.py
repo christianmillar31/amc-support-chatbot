@@ -3,6 +3,9 @@ Chat logging — automatically logs every question + answer for manager review.
 Stored locally in chatlog.json + synced to HF Dataset repo for persistence.
 Viewable at /chatlog dashboard.
 """
+from __future__ import annotations
+
+from collections import Counter
 import json
 import logging
 import os
@@ -213,8 +216,10 @@ def log_chat(
     question: str,
     answer: str,
     sources: list,
+    metadata: dict | None = None,
 ) -> None:
     """Log a chat entry. Saves locally, syncs to HF, sends email."""
+    metadata = metadata or {}
     entry = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "session_id": session_id,
@@ -225,6 +230,17 @@ def log_chat(
             {"source": s.get("source", ""), "page": s.get("page", ""), "heading": s.get("heading", "")}
             for s in (sources or [])
         ],
+        "provider_used": metadata.get("provider_used"),
+        "model_used": metadata.get("model_used"),
+        "latency_ms": int(metadata.get("latency_ms", 0) or 0),
+        "estimated_cost_usd": float(metadata.get("estimated_cost_usd", 0.0) or 0.0),
+        "support_bucket": metadata.get("support_bucket"),
+        "retrieval_chunk_count": int(metadata.get("retrieval_chunk_count", 0) or 0),
+        "used_fallback": bool(metadata.get("used_fallback", False)),
+        "broad_retrieval": bool(metadata.get("broad_retrieval", False)),
+        "channel": metadata.get("channel"),
+        "drive_sku": metadata.get("requested_sku") or metadata.get("drive_sku"),
+        "support_note": metadata.get("support_note"),
     }
 
     # Email notification
@@ -285,3 +301,58 @@ def update_rating(session_id: str, question: str, rating: str) -> None:
 def get_chatlog() -> list:
     """Return all chat log entries (merged local + HF)."""
     return list(_ensure_loaded())
+
+
+def summarize_chatlog(entries: list | None = None, *, top_n: int = 5) -> dict:
+    """Return lightweight admin metrics derived from request metadata."""
+    entries = list(entries) if entries is not None else get_chatlog()
+    today_prefix = datetime.now(timezone.utc).date().isoformat()
+    today_entries = [entry for entry in entries if str(entry.get("timestamp", "")).startswith(today_prefix)]
+
+    def _top_items(sorted_entries: list[dict], key_name: str, value_name: str) -> list[dict]:
+        items = []
+        for entry in sorted_entries[:top_n]:
+            items.append({
+                "question": entry.get("question", ""),
+                "value": entry.get(key_name, 0),
+                "label": value_name,
+                "session_id": entry.get("session_id", ""),
+            })
+        return items
+
+    expensive = sorted(entries, key=lambda entry: float(entry.get("estimated_cost_usd", 0.0) or 0.0), reverse=True)
+    slow = sorted(entries, key=lambda entry: int(entry.get("latency_ms", 0) or 0), reverse=True)
+
+    sku_counts = Counter(entry.get("drive_sku") for entry in entries if entry.get("drive_sku"))
+    question_counts = Counter(entry.get("question", "").strip().lower() for entry in entries if entry.get("question"))
+
+    common_questions = []
+    for normalized_question, count in question_counts.most_common(top_n):
+        exemplar = next((entry.get("question", "") for entry in entries if entry.get("question", "").strip().lower() == normalized_question), normalized_question)
+        common_questions.append({"question": exemplar, "count": count})
+
+    broad_or_fallback = [
+        {
+            "question": entry.get("question", ""),
+            "retrieval_chunk_count": entry.get("retrieval_chunk_count", 0),
+            "used_fallback": bool(entry.get("used_fallback", False)),
+            "broad_retrieval": bool(entry.get("broad_retrieval", False)),
+            "support_bucket": entry.get("support_bucket"),
+        }
+        for entry in entries
+        if entry.get("used_fallback") or entry.get("broad_retrieval") or int(entry.get("retrieval_chunk_count", 0) or 0) >= 6
+    ][:top_n]
+
+    return {
+        "today_requests": len(today_entries),
+        "today_cost_usd": round(sum(float(entry.get("estimated_cost_usd", 0.0) or 0.0) for entry in today_entries), 6),
+        "today_avg_latency_ms": round(
+            sum(int(entry.get("latency_ms", 0) or 0) for entry in today_entries) / len(today_entries),
+            1,
+        ) if today_entries else 0.0,
+        "most_expensive": _top_items(expensive, "estimated_cost_usd", "Estimated cost"),
+        "highest_latency": _top_items(slow, "latency_ms", "Latency"),
+        "common_skus": [{"sku": sku, "count": count} for sku, count in sku_counts.most_common(top_n)],
+        "common_questions": common_questions,
+        "broad_retrieval_or_fallback": broad_or_fallback,
+    }

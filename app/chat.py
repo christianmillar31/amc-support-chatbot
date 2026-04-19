@@ -3,19 +3,25 @@ import csv
 import json
 import logging
 import re
+import time
 import anthropic
 import numpy as np
 from app import config as _config
 from app.config import (
+    ANSWER_MAX_TOKENS,
+    ANSWER_PROVIDER,
+    CHEAP_TASK_PROVIDER,
     CLAUDE_MODEL, QUERY_EXPANSION_MODEL, ENABLE_QUERY_EXPANSION,
     MAX_TOOL_ROUNDS, BASE_DIR, EMBEDDING_MODEL, EMBEDDING_QUERY_PREFIX,
-    ENABLE_RERANKING, RERANK_CANDIDATES, RERANK_TOP_K, TOP_K,
+    ENABLE_RERANKING, PILOT_CONTEXT_MAX_CHARS, PILOT_ENABLE_AGENTIC_FALLBACK,
+    PILOT_RETRIEVAL_TOP_K, RERANK_CANDIDATES, RERANK_TOP_K, TOP_K,
     get_anthropic_client, ENABLE_SINGLE_SHOT,
-    LLM_BACKEND, OLLAMA_MODEL, OLLAMA_BASE_URL,
+    LLM_BACKEND,
 )
 from app.retriever import retrieve, get_indexed_sources
 from app.ingest import get_all_pdfs
 from app.drive_lookup import lookup_drive, search_drives, detect_part_number, lookup_replacement
+from app.model_provider import get_provider
 from app.reranker import rerank
 from app.support_catalog import build_support_note
 
@@ -96,13 +102,6 @@ ANSWER RULES:
 7. Format answers for readability: use markdown headers (##), line breaks between sections, and keep paragraphs short (2-3 sentences max per paragraph).
 8. If search results from different manuals contain conflicting information, cite both sources and note the discrepancy. Prefer: (1) drive-specific datasheet over general manual, (2) newer document revision over older, (3) more specific manual (e.g., comm manual) over general HW manual.
 9. Chunks marked [UPLOADED DOCUMENT] are user-provided (e.g., motor datasheets), not official AMC sources. Use their specs but clearly note the data came from the user's uploaded document.
-
-FOLLOW-UP GUIDANCE:
-- At the end of your answer, suggest 1-2 natural follow-up questions the user might want to ask next, formatted as:
-  **Related questions you might have:**
-  - [follow-up question 1]
-  - [follow-up question 2]
-- Only include follow-ups that are genuinely useful and related to what was just asked. Skip this section if the answer is self-contained and no follow-up would be helpful.
 
 ABSOLUTE RULES — VIOLATION OF THESE IS A CRITICAL FAILURE:
 10. NEVER invent drive model numbers, SKUs, or part numbers. AMC drive SKUs follow SPECIFIC patterns: FlexPro = FE/FM/FD/FMP/FX + voltage code + current + protocol (e.g., FE060-25-EM). DigiFlex = DP/DZ/DX + model code (e.g., DPRALTE-020B080). AxCent = AZ + model (e.g., AZBH10A4). If you cannot find a specific drive model in search results, DO NOT make one up. Say "Search the AMC product selector at a-m-c.com/products/servo-drives for drives matching your requirements."
@@ -286,25 +285,19 @@ from cachetools import TTLCache
 _expansion_cache: TTLCache = TTLCache(maxsize=500, ttl=3600)
 
 
-def expand_query(user_message: str, context: str = "") -> str:
-    """Use Claude Haiku to generate alternative search terms for better TF-IDF retrieval."""
+def expand_query(user_message: str, context: str = "", provider_name: str | None = None) -> str:
+    """Use the configured cheap-task provider to generate better search terms."""
     if not ENABLE_QUERY_EXPANSION:
         return user_message
 
-    # Skip expansion in Ollama mode — no Anthropic credentials, avoid 120s timeouts
-    if _config.LLM_BACKEND == "ollama":
-        return user_message
-
     try:
-        client = get_anthropic_client()
         prompt_content = user_message
         if context:
             prompt_content = f"Recent conversation context:\n{context}\n\nCurrent question: {user_message}"
 
-        response = client.messages.create(
-            model=QUERY_EXPANSION_MODEL,
+        response = get_provider(provider_name or CHEAP_TASK_PROVIDER).complete(
             max_tokens=150,
-            system=(
+            system_prompt=(
                 "You are a query expansion engine for AMC servo drive technical manuals "
                 "covering communication protocols (CANopen, EtherCAT, Ethernet/IP, Modbus, Serial, RS485) "
                 "hardware installation (wiring, connectors, pinouts, mounting, power, I/O), "
@@ -321,17 +314,19 @@ def expand_query(user_message: str, context: str = "") -> str:
                 "Output ONLY the search terms, one per line. No explanation."
             ),
             messages=[{"role": "user", "content": prompt_content}],
+            temperature=0.0,
         )
-        expanded_terms = response.content[0].text.strip()
+        expanded_terms = response.text.strip()
         return f"{user_message} {expanded_terms}"
     except Exception as e:
         logger.warning("Query expansion failed: %s", e)
         return user_message
 
 
-def _expand_query_cached(query: str, cache: dict, context: str = "") -> str:
+def _expand_query_cached(query: str, cache: dict, context: str = "", provider_name: str | None = None) -> str:
     """expand_query() with a per-request + global cache to avoid redundant Haiku calls."""
-    cache_key = f"{query}||{context}"
+    provider_key = provider_name or CHEAP_TASK_PROVIDER
+    cache_key = f"{provider_key}||{query}||{context}"
     # Check per-request cache first
     if cache_key in cache:
         return cache[cache_key]
@@ -340,13 +335,13 @@ def _expand_query_cached(query: str, cache: dict, context: str = "") -> str:
         result = _expansion_cache[cache_key]
         cache[cache_key] = result
         return result
-    result = expand_query(query, context=context)
+    result = expand_query(query, context=context, provider_name=provider_name)
     cache[cache_key] = result
     _expansion_cache[cache_key] = result
     return result
 
 
-def rewrite_followup(user_message: str, history: list[dict]) -> str:
+def rewrite_followup(user_message: str, history: list[dict], provider_name: str | None = None) -> str:
     """Rewrite a vague follow-up question into a standalone question using conversation context."""
     followup_indicators = [r'\bthem\b', r'\bthose\b', r'\bsame\b', r'\balso\b',
                            r'\bwhat about\b', r'\bhow about\b', r'\band for\b']
@@ -366,11 +361,9 @@ def rewrite_followup(user_message: str, history: list[dict]) -> str:
     )
 
     try:
-        client = get_anthropic_client()
-        response = client.messages.create(
-            model=QUERY_EXPANSION_MODEL,
+        response = get_provider(provider_name or CHEAP_TASK_PROVIDER).complete(
             max_tokens=100,
-            system=(
+            system_prompt=(
                 "Given the conversation history and the user's follow-up question, "
                 "rewrite the follow-up as a complete standalone question. "
                 "Output ONLY the rewritten question, nothing else."
@@ -379,17 +372,17 @@ def rewrite_followup(user_message: str, history: list[dict]) -> str:
                 "role": "user",
                 "content": f"Conversation:\n{context_str}\n\nFollow-up: {user_message}",
             }],
+            temperature=0.0,
         )
-        return response.content[0].text.strip()
+        return response.text.strip()
     except Exception as e:
         logger.warning("Follow-up rewrite failed: %s", e)
         return user_message
 
 
-def build_context(chunks: list[dict], max_chunk_chars: int = 1400) -> str:
+def build_context(chunks: list[dict], max_chunk_chars: int = PILOT_CONTEXT_MAX_CHARS) -> str:
     """Format retrieved chunks into a context block for tool results.
-    Caps each chunk to max_chunk_chars to control token usage.
-    Increased from 1000 to 1400 to preserve spec tables and complete procedures."""
+    Caps each chunk to control token usage for the pilot runtime."""
     if not chunks:
         return "No results found for this search query."
     context_parts = []
@@ -429,9 +422,20 @@ def _build_drive_search_query(result: dict, user_message: str) -> str:
 # Tool handlers
 # ---------------------------------------------------------------------------
 
-def handle_search_manuals(query: str, manual_filter: str | None = None, doc_type_filter: str | None = None, expansion_cache: dict | None = None, conversation_context: str = "") -> tuple[str, list[dict]]:
+def handle_search_manuals(
+    query: str,
+    manual_filter: str | None = None,
+    doc_type_filter: str | None = None,
+    expansion_cache: dict | None = None,
+    conversation_context: str = "",
+    provider_name: str | None = None,
+) -> tuple[str, list[dict]]:
     """Search manuals with query expansion and optional re-ranking."""
-    expanded_query = _expand_query_cached(query, expansion_cache, context=conversation_context) if expansion_cache is not None else expand_query(query, context=conversation_context)
+    expanded_query = (
+        _expand_query_cached(query, expansion_cache, context=conversation_context, provider_name=provider_name)
+        if expansion_cache is not None
+        else expand_query(query, context=conversation_context, provider_name=provider_name)
+    )
 
     # Fetch more candidates when re-ranking is enabled
     fetch_k = RERANK_CANDIDATES if ENABLE_RERANKING else TOP_K
@@ -459,6 +463,7 @@ def handle_search_manuals(query: str, manual_filter: str | None = None, doc_type
     # noise from inflating scores. Haiku judges against what the user actually asked.
     if ENABLE_RERANKING and len(chunks) > RERANK_TOP_K:
         chunks = rerank(query, chunks, top_k=RERANK_TOP_K)
+    chunks = chunks[:PILOT_RETRIEVAL_TOP_K]
 
     # Build context with retrieval quality stats
     scores = [c.get("score", 0) for c in chunks]
@@ -672,7 +677,13 @@ def _dedup_sources(all_sources: list[dict]) -> list[dict]:
     return sources
 
 
-def dispatch_tool(tool_name: str, tool_input: dict, expansion_cache: dict | None = None, conversation_context: str = "") -> tuple[str, list[dict]]:
+def dispatch_tool(
+    tool_name: str,
+    tool_input: dict,
+    expansion_cache: dict | None = None,
+    conversation_context: str = "",
+    provider_name: str | None = None,
+) -> tuple[str, list[dict]]:
     """Route a tool call to the appropriate handler. Returns (result_text, chunks)."""
     try:
         if tool_name == "search_manuals":
@@ -682,6 +693,7 @@ def dispatch_tool(tool_name: str, tool_input: dict, expansion_cache: dict | None
                 doc_type_filter=tool_input.get("doc_type"),
                 expansion_cache=expansion_cache,
                 conversation_context=conversation_context,
+                provider_name=provider_name,
             )
         elif tool_name == "detect_drive_manual":
             return handle_detect_drive_manual(
@@ -736,7 +748,13 @@ def _classify_query_type(message: str) -> str:
     return None  # Can't determine — let the search be unfiltered
 
 
-def _smart_route(user_message: str, history: list[dict] = None, drive_context: dict = None) -> tuple[str, list[dict], str]:
+def _smart_route(
+    user_message: str,
+    history: list[dict] = None,
+    drive_context: dict = None,
+    cheap_task_provider_name: str | None = None,
+    include_metadata: bool = False,
+) -> tuple[str, list[dict], str] | tuple[str, list[dict], str, dict]:
     """
     Search without calling any LLM. Returns (context_text, source_chunks, drive_info).
     Uses rule-based routing + BM25/semantic search directly.
@@ -779,8 +797,15 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
         }, indent=2)
 
     # Search with query expansion
-    expanded_query = _expand_query_cached(user_message, expansion_cache, context=conv_context)
+    expanded_query = _expand_query_cached(
+        user_message,
+        expansion_cache,
+        context=conv_context,
+        provider_name=cheap_task_provider_name,
+    )
     fetch_k = RERANK_CANDIDATES if ENABLE_RERANKING else TOP_K
+    broad_retrieval = False
+    priority_manuals: list[str] = []
 
     if result:
         drive_search_query = user_message
@@ -796,7 +821,6 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
         chunks = []
         seen = set()
 
-        priority_manuals = []
         datasheet_name = f"AMC_Datasheet_{result['datasheet_sku']}.pdf"
         indexed_sources = get_indexed_sources()
         if datasheet_name in indexed_sources:
@@ -830,6 +854,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
 
         # If still not enough, search everything
         if len(chunks) < 3:
+            broad_retrieval = True
             extra = retrieve(drive_search_query, top_k=fetch_k, expanded_query=expanded_query)
             for c in extra:
                 key = c["text"][:100]
@@ -842,17 +867,106 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
     else:
         # No drive context — search by query type
         doc_type = _classify_query_type(user_message)
+        broad_retrieval = doc_type is None
         chunks = retrieve(user_message, top_k=fetch_k, doc_type_filter=doc_type, expanded_query=expanded_query)
 
     # Rerank
     if ENABLE_RERANKING and len(chunks) > RERANK_TOP_K:
         chunks = rerank(user_message, chunks, top_k=RERANK_TOP_K)
+    chunks = chunks[:PILOT_RETRIEVAL_TOP_K]
 
     context_text = build_context(chunks)
-    return context_text, chunks, drive_info
+    if not include_metadata:
+        return context_text, chunks, drive_info
+
+    route_metadata = {
+        "support_note": build_support_note(result) if result else "",
+        "support_bucket": result.get("support_bucket") if result else None,
+        "requested_sku": result.get("requested_sku") if result else None,
+        "canonical_sku": result.get("canonical_sku") if result else None,
+        "datasheet_sku": result.get("datasheet_sku") if result else None,
+        "site_status": result.get("site_status") if result else None,
+        "recommended_next_action": result.get("recommended_next_action") if result else None,
+        "product_page": result.get("site_url") if result else None,
+        "retrieval_chunk_count": len(chunks),
+        "broad_retrieval": broad_retrieval,
+        "priority_manuals": priority_manuals,
+    }
+    return context_text, chunks, drive_info, route_metadata
 
 
-def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive_context: dict = None, uploaded_chunks: list = None):
+def _build_structured_context_bundle(
+    *,
+    question: str,
+    drive_context: dict | None,
+    route_metadata: dict,
+    context_text: str,
+    uploaded_chunks: list[dict] | None,
+) -> str:
+    """Build a compact structured prompt payload for the final answer model."""
+    bundle = {
+        "user_question": question,
+        "requested_sku": route_metadata.get("requested_sku"),
+        "canonical_sku": route_metadata.get("canonical_sku"),
+        "datasheet_sku": route_metadata.get("datasheet_sku"),
+        "support_bucket": route_metadata.get("support_bucket"),
+        "product_status": route_metadata.get("site_status"),
+        "recommended_next_action": route_metadata.get("recommended_next_action"),
+        "product_page": route_metadata.get("product_page"),
+        "retrieval_chunk_count": route_metadata.get("retrieval_chunk_count"),
+        "priority_manuals": route_metadata.get("priority_manuals") or [],
+    }
+    if drive_context:
+        bundle["family"] = drive_context.get("family")
+        bundle["form_factor"] = drive_context.get("form_factor")
+        bundle["network"] = drive_context.get("network")
+        bundle["comm_manual"] = drive_context.get("comm_manual")
+        bundle["hw_manual"] = drive_context.get("hw_manual")
+
+    sections = [question, "\n\n[Support Context Bundle]\n" + json.dumps(bundle, indent=2)]
+
+    support_note = route_metadata.get("support_note")
+    if support_note:
+        sections.append("\n\n[Support Coverage Note]\n" + support_note)
+
+    if uploaded_chunks:
+        filename = uploaded_chunks[0].get("source", "uploaded document")
+        ranked_upload = _rank_uploaded_chunks(question, uploaded_chunks, top_k=4)
+        upload_text = (
+            f"\n\n[Uploaded Document Context]\n"
+            f"Filename: {filename}\n"
+            "Use uploaded specs only when relevant to compatibility or setup.\n"
+        )
+        for chunk in ranked_upload:
+            heading = chunk.get("heading", "")
+            heading_str = f" — {heading}" if heading else ""
+            excerpt = chunk["text"][:PILOT_CONTEXT_MAX_CHARS]
+            if len(chunk["text"]) > PILOT_CONTEXT_MAX_CHARS:
+                excerpt += "..."
+            upload_text += (
+                f"\n--- [UPLOADED DOCUMENT] {filename}, Page {chunk.get('page', '?')}{heading_str} ---\n"
+                f"{excerpt}\n"
+            )
+        sections.append(upload_text)
+
+    if context_text:
+        sections.append("\n\n[Top Retrieved Evidence]\n" + context_text)
+    else:
+        sections.append("\n\n[Top Retrieved Evidence]\nNo relevant manual chunks were retrieved.")
+
+    return "".join(sections)
+
+
+def single_shot_chat_stream(
+    user_message: str,
+    history: list[dict] = None,
+    drive_context: dict = None,
+    uploaded_chunks: list = None,
+    answer_provider_name: str | None = None,
+    cheap_task_provider_name: str | None = None,
+    allow_agentic_fallback: bool | None = None,
+    channel: str = "web",
+):
     """
     Single-shot RAG: search in Python (0 Sonnet calls), then 1 Sonnet call for the answer.
     Falls back to agentic mode if Sonnet says it needs more info.
@@ -861,27 +975,43 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
     if history is None:
         history = []
 
+    start_time = time.perf_counter()
+    answer_provider_name = answer_provider_name or ANSWER_PROVIDER
+    cheap_task_provider_name = cheap_task_provider_name or CHEAP_TASK_PROVIDER
+    allow_agentic_fallback = (
+        PILOT_ENABLE_AGENTIC_FALLBACK if allow_agentic_fallback is None else allow_agentic_fallback
+    )
+
     yield {"type": "status", "text": "Searching manuals..."}
 
     # Rewrite follow-ups
-    standalone_query = rewrite_followup(user_message, history)
+    standalone_query = rewrite_followup(
+        user_message,
+        history,
+        provider_name=cheap_task_provider_name,
+    )
 
     # Search entirely in Python — no LLM calls
-    context_text, chunks, drive_info = _smart_route(standalone_query, history, drive_context=drive_context)
+    context_text, chunks, drive_info, route_metadata = _smart_route(
+        standalone_query,
+        history,
+        drive_context=drive_context,
+        cheap_task_provider_name=cheap_task_provider_name,
+        include_metadata=True,
+    )
     all_sources = list(chunks)
 
-    if drive_context:
-        support_note = build_support_note(drive_context)
-        if support_note:
-            yield {"type": "status", "text": support_note}
+    support_note = route_metadata.get("support_note") or (build_support_note(drive_context) if drive_context else "")
+    if support_note:
+        yield {"type": "status", "text": support_note}
 
     # Quality gate: if results are weak, fall back to agentic multi-round search
     # (Only for Anthropic backend — Ollama can't do agentic tool-use)
-    using_ollama = _config.LLM_BACKEND == "ollama"
+    using_ollama = answer_provider_name == "ollama"
     if chunks:
         avg_score = sum(c.get("score", 0) for c in chunks) / len(chunks)
         if avg_score < 0.01 or len(chunks) < 2:
-            if not using_ollama:
+            if not using_ollama and allow_agentic_fallback:
                 logger.info("Single-shot quality gate triggered (avg_score=%.3f, chunks=%d) — falling back to agentic mode", avg_score, len(chunks))
                 yield {"type": "status", "text": "Results uncertain, searching deeper..."}
                 for event in chat_stream(user_message, history, drive_context, uploaded_chunks):
@@ -891,7 +1021,7 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
                 logger.info("Single-shot quality gate triggered but Ollama can't do agentic — proceeding with weak results")
         yield {"type": "status", "text": f"Found {len(chunks)} results, generating answer..."}
     elif not uploaded_chunks:
-        if not using_ollama:
+        if not using_ollama and allow_agentic_fallback:
             logger.info("Single-shot found 0 results — falling back to agentic mode")
             yield {"type": "status", "text": "No direct results, searching deeper..."}
             for event in chat_stream(user_message, history, drive_context, uploaded_chunks):
@@ -900,85 +1030,59 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
         else:
             yield {"type": "status", "text": "No results found, generating answer..."}
 
-    # Build a single prompt with all context
-    user_content = standalone_query
-    if drive_info:
-        user_content += f"\n\n[Drive Info]\n{drive_info}"
-        if drive_context:
-            support_note = build_support_note(drive_context)
-            if support_note:
-                user_content += f"\n\n[Support Coverage Note]\n{support_note}"
-
-    # Inject uploaded PDF content — ranked by semantic relevance to the query
-    if uploaded_chunks:
-        filename = uploaded_chunks[0].get("source", "uploaded document") if uploaded_chunks else "uploaded document"
-        # Rank uploaded chunks by relevance instead of injecting all
-        ranked_upload = _rank_uploaded_chunks(standalone_query, uploaded_chunks, top_k=6)
-        upload_text = f"\n\n=== UPLOADED DOCUMENT: {filename} ===\n"
-        upload_text += "The user uploaded this document. Use its specs (voltage, current, feedback type, encoder resolution, motor parameters) to answer compatibility questions.\n\n"
-        for chunk in ranked_upload:
-            heading = chunk.get("heading", "")
-            heading_str = f" — {heading}" if heading else ""
-            upload_text += f"--- [UPLOADED DOCUMENT] {filename}, Page {chunk.get('page', '?')}{heading_str} ---\n{chunk['text']}\n\n"
-        user_content += upload_text
-
-    if context_text:
-        user_content += f"\n\n[AMC Manual Search Results]\n{context_text}"
-    else:
-        user_content += "\n\n[No search results found. Answer from general knowledge or suggest what to search.]"
+    user_content = _build_structured_context_bundle(
+        question=standalone_query,
+        drive_context=drive_context,
+        route_metadata=route_metadata,
+        context_text=context_text,
+        uploaded_chunks=uploaded_chunks,
+    )
 
     # Build messages with history
     messages = []
-    for msg in history[-6:]:
+    for msg in history[-4:]:
         messages.append({"role": msg["role"], "content": msg["content"]})
     messages.append({"role": "user", "content": user_content})
 
     # ONE LLM call — stream the answer
     answer = ""
+    provider_result = None
+    provider = get_provider(answer_provider_name)
 
-    if using_ollama:
-        # --- Ollama (local, free) ---
-        from app.ollama_client import ollama_chat_stream, OllamaError
-        ollama_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-        for msg in messages:
-            ollama_messages.append({"role": msg["role"], "content": msg["content"] if isinstance(msg["content"], str) else str(msg["content"])})
-        try:
-            for token in ollama_chat_stream(
-                ollama_messages,
-                model=_config.OLLAMA_MODEL,
-                base_url=_config.OLLAMA_BASE_URL,
-                max_tokens=4096,
-                temperature=0.3,
-            ):
-                yield {"type": "token", "text": token}
-                answer += token
-        except OllamaError as e:
-            logger.error("Ollama error: %s", e)
-            yield {"type": "token", "text": f"Ollama error: {e}. Is Ollama running? Start with: ollama serve"}
-        except Exception as e:
-            logger.error("Ollama single-shot error: %s", e, exc_info=True)
-            yield {"type": "token", "text": "An error occurred generating the answer. Please try again."}
-    else:
-        # --- Anthropic (cloud, costs tokens) ---
-        client = get_anthropic_client()
-        try:
-            with client.messages.stream(
-                model=CLAUDE_MODEL,
-                max_tokens=4096,
-                system=SYSTEM_PROMPT_CACHED,
-                messages=messages,
-            ) as stream:
-                for text in stream.text_stream:
-                    yield {"type": "token", "text": text}
-                    answer += text
-        except anthropic.RateLimitError as e:
-            logger.warning("Rate limit hit: %s", e)
-            raise RateLimitExceeded("The AI service is busy. Please wait a moment and try again.") from e
-        except Exception as e:
-            logger.error("Single-shot error: %s", e, exc_info=True)
-            yield {"type": "token", "text": "An error occurred generating the answer. Please try again."}
+    try:
+        stream = provider.open_stream(
+            messages=messages,
+            system_prompt=SYSTEM_PROMPT,
+            max_tokens=ANSWER_MAX_TOKENS,
+            temperature=0.2,
+            cache_system_prompt=answer_provider_name.startswith("anthropic"),
+        )
+        for text in stream:
+            yield {"type": "token", "text": text}
+            answer += text
+        provider_result = stream.final_result()
+    except anthropic.RateLimitError as e:
+        logger.warning("Rate limit hit: %s", e)
+        raise RateLimitExceeded("The AI service is busy. Please wait a moment and try again.") from e
+    except Exception as e:
+        logger.error("Single-shot error: %s", e, exc_info=True)
+        yield {"type": "token", "text": "An error occurred generating the answer. Please try again."}
 
-    yield {"type": "done", "sources": _dedup_sources(all_sources)}
+    latency_ms = int((time.perf_counter() - start_time) * 1000)
+    yield {
+        "type": "done",
+        "sources": _dedup_sources(all_sources),
+        "support_note": support_note or None,
+        "provider_used": provider_result.provider_name if provider_result else provider.provider_name,
+        "model_used": provider_result.model_name if provider_result else provider.model_name,
+        "latency_ms": latency_ms,
+        "estimated_cost_usd": provider_result.estimated_cost_usd if provider_result else 0.0,
+        "support_bucket": route_metadata.get("support_bucket"),
+        "retrieval_chunk_count": route_metadata.get("retrieval_chunk_count", len(chunks)),
+        "used_fallback": False,
+        "broad_retrieval": route_metadata.get("broad_retrieval", False),
+        "channel": channel,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1002,7 +1106,7 @@ def chat(
     # aligned with it when single-shot is enabled.
     if _config.LLM_BACKEND == "ollama" or ENABLE_SINGLE_SHOT:
         answer = ""
-        sources = []
+        result = {"sources": []}
         for event in single_shot_chat_stream(
             user_message,
             history=history,
@@ -1012,11 +1116,12 @@ def chat(
             if event["type"] == "token":
                 answer += event["text"]
             elif event["type"] == "done":
-                sources = event.get("sources", [])
-        return {"answer": answer, "sources": sources}
+                result.update(event)
+        result["answer"] = answer
+        return result
 
     # Rewrite follow-up questions into standalone queries
-    standalone_query = rewrite_followup(user_message, history)
+    standalone_query = rewrite_followup(user_message, history, provider_name=CHEAP_TASK_PROVIDER)
 
     # Build messages array with conversation history + user question
     messages = []
@@ -1069,7 +1174,13 @@ def chat(
         tool_results = []
         for block in response.content:
             if block.type == "tool_use":
-                result_text, chunks = dispatch_tool(block.name, block.input, expansion_cache, conversation_context=conv_context)
+                result_text, chunks = dispatch_tool(
+                    block.name,
+                    block.input,
+                    expansion_cache,
+                    conversation_context=conv_context,
+                    provider_name=CHEAP_TASK_PROVIDER,
+                )
                 all_sources.extend(chunks)
                 tool_results.append({
                     "type": "tool_result",
@@ -1105,7 +1216,20 @@ def chat(
         if not answer:
             answer = "I wasn't able to find a confident answer to this question in the indexed manuals. Please try rephrasing or contact AMC support at a-m-c.com."
 
-    return {"answer": answer, "sources": _dedup_sources(all_sources)}
+    return {
+        "answer": answer,
+        "sources": _dedup_sources(all_sources),
+        "support_note": build_support_note(drive_context) if drive_context else None,
+        "provider_used": "anthropic_agentic",
+        "model_used": CLAUDE_MODEL,
+        "latency_ms": 0,
+        "estimated_cost_usd": 0.0,
+        "support_bucket": drive_context.get("support_bucket") if drive_context else None,
+        "retrieval_chunk_count": len(all_sources),
+        "used_fallback": True,
+        "broad_retrieval": True,
+        "channel": "legacy",
+    }
 
 
 def _tool_call_description(name: str, tool_input: dict) -> str:
@@ -1138,10 +1262,11 @@ def chat_stream(user_message: str, history: list[dict] = None, drive_context: di
     if history is None:
         history = []
 
+    start_time = time.perf_counter()
     yield {"type": "status", "text": "Analyzing your question..."}
 
     # Rewrite follow-up questions
-    standalone_query = rewrite_followup(user_message, history)
+    standalone_query = rewrite_followup(user_message, history, provider_name=CHEAP_TASK_PROVIDER)
 
     # Build messages
     messages = []
@@ -1215,7 +1340,13 @@ def chat_stream(user_message: str, history: list[dict] = None, drive_context: di
         for block in response.content:
             if block.type == "tool_use":
                 yield {"type": "status", "text": _tool_call_description(block.name, block.input)}
-                result_text, chunks = dispatch_tool(block.name, block.input, expansion_cache, conversation_context=conv_context)
+                result_text, chunks = dispatch_tool(
+                    block.name,
+                    block.input,
+                    expansion_cache,
+                    conversation_context=conv_context,
+                    provider_name=CHEAP_TASK_PROVIDER,
+                )
                 all_sources.extend(chunks)
                 round_result_count += len(chunks)
                 tool_results.append({
@@ -1255,4 +1386,17 @@ def chat_stream(user_message: str, history: list[dict] = None, drive_context: di
             yield {"type": "token", "text": fallback}
             answer = fallback
 
-    yield {"type": "done", "sources": _dedup_sources(all_sources)}
+    yield {
+        "type": "done",
+        "sources": _dedup_sources(all_sources),
+        "support_note": build_support_note(drive_context) if drive_context else None,
+        "provider_used": "anthropic_agentic",
+        "model_used": CLAUDE_MODEL,
+        "latency_ms": int((time.perf_counter() - start_time) * 1000),
+        "estimated_cost_usd": 0.0,
+        "support_bucket": drive_context.get("support_bucket") if drive_context else None,
+        "retrieval_chunk_count": len(all_sources),
+        "used_fallback": True,
+        "broad_retrieval": True,
+        "channel": "legacy",
+    }

@@ -33,6 +33,15 @@
   .controls button { padding: 8px 16px; background: #B91C1C; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 900; transition: all 0.15s; text-transform: uppercase; }
   .controls button:hover { background: #DC2626; }
   .controls .count { margin-left: auto; color: #71717A; font-size: 14px; }
+  .summary { padding: 16px 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .summary-card { background: #18181B; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px; }
+  .summary-card h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: #71717A; margin-bottom: 10px; }
+  .summary-value { font-size: 24px; font-weight: 900; color: #FAFAFA; margin-bottom: 4px; }
+  .summary-subtext { font-size: 12px; color: #A1A1AA; }
+  .summary-list { display: flex; flex-direction: column; gap: 8px; }
+  .summary-list-item { font-size: 13px; color: #E4E4E7; line-height: 1.4; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .summary-list-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .summary-meta { display: block; color: #71717A; font-size: 11px; margin-top: 2px; }
   .entries { padding: 16px 24px; display: flex; flex-direction: column; gap: 12px; }
   .entry { background: #18181B; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; }
   .entry-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 12px; color: #71717A; }
@@ -64,6 +73,10 @@
   <div class="count" id="count"></div>
 </div>
 
+<div class="summary" id="summary">
+  <div class="summary-card"><h3>Loading</h3><div class="summary-subtext">Preparing telemetry...</div></div>
+</div>
+
 <div class="entries" id="entries">
   <div class="empty">Loading chat log...</div>
 </div>
@@ -81,11 +94,82 @@ async function loadLog() {
     const ratingText = (ups || downs) ? ` | ${ups} good, ${downs} bad` : '';
     document.getElementById('stats').textContent =
       `${data.total} conversations${ratingText}`;
+    renderSummary(data.summary || {});
     renderEntries(allEntries);
   } catch (e) {
+    document.getElementById('summary').innerHTML =
+      '<div class="summary-card"><h3>Telemetry</h3><div class="summary-subtext">Failed to load request metrics.</div></div>';
     document.getElementById('entries').innerHTML =
       '<div class="empty">Failed to load chat log.</div>';
   }
+}
+
+function renderSummary(summary) {
+  const topList = (items, render) => {
+    if (!items || !items.length) return '<div class="summary-subtext">No data yet.</div>';
+    return `<div class="summary-list">${items.map(render).join('')}</div>`;
+  };
+
+  const summaryHtml = `
+    <div class="summary-card">
+      <h3>Today</h3>
+      <div class="summary-value">$${Number(summary.today_cost_usd || 0).toFixed(3)}</div>
+      <div class="summary-subtext">${summary.today_requests || 0} requests today</div>
+      <div class="summary-subtext">Avg latency: ${Math.round(summary.today_avg_latency_ms || 0)} ms</div>
+    </div>
+    <div class="summary-card">
+      <h3>Most Expensive</h3>
+      ${topList(summary.most_expensive, item => `
+        <div class="summary-list-item">
+          ${escapeHtml((item.question || '').slice(0, 90) || 'Unknown question')}
+          <span class="summary-meta">$${Number(item.value || 0).toFixed(4)}</span>
+        </div>
+      `)}
+    </div>
+    <div class="summary-card">
+      <h3>Highest Latency</h3>
+      ${topList(summary.highest_latency, item => `
+        <div class="summary-list-item">
+          ${escapeHtml((item.question || '').slice(0, 90) || 'Unknown question')}
+          <span class="summary-meta">${Number(item.value || 0).toLocaleString()} ms</span>
+        </div>
+      `)}
+    </div>
+    <div class="summary-card">
+      <h3>Common SKUs</h3>
+      ${topList(summary.common_skus, item => `
+        <div class="summary-list-item">
+          ${escapeHtml(item.sku || 'Unknown SKU')}
+          <span class="summary-meta">${item.count || 0} requests</span>
+        </div>
+      `)}
+    </div>
+    <div class="summary-card">
+      <h3>Common Questions</h3>
+      ${topList(summary.common_questions, item => `
+        <div class="summary-list-item">
+          ${escapeHtml((item.question || '').slice(0, 90) || 'Unknown question')}
+          <span class="summary-meta">${item.count || 0} repeats</span>
+        </div>
+      `)}
+    </div>
+    <div class="summary-card">
+      <h3>Broad / Fallback</h3>
+      ${topList(summary.broad_retrieval_or_fallback, item => `
+        <div class="summary-list-item">
+          ${escapeHtml((item.question || '').slice(0, 90) || 'Unknown question')}
+          <span class="summary-meta">
+            chunks=${item.retrieval_chunk_count || 0}
+            ${item.used_fallback ? ' | fallback' : ''}
+            ${item.broad_retrieval ? ' | broad retrieval' : ''}
+            ${item.support_bucket ? ' | ' + escapeHtml(item.support_bucket) : ''}
+          </span>
+        </div>
+      `)}
+    </div>
+  `;
+
+  document.getElementById('summary').innerHTML = summaryHtml;
 }
 
 function renderEntries(entries) {

@@ -3,6 +3,33 @@
 ## 2026-04-17
 
 ### Completed
+- Reworked the runtime toward a Claude-first pilot path instead of a backend toggle:
+  - added `app/model_provider.py` with a real `ModelProvider` abstraction
+  - default final-answer path is now `anthropic`
+  - cheap helper tasks route through `anthropic_haiku`
+  - Ollama remains available behind the same interface for local fallback and eval work
+- Added `app/support_core.py` as the first stable AMC support-core contract layer:
+  - request shape: `message`, `session_id`, `drive_sku`, `channel`
+  - response shape now includes `support_note`, `provider_used`, `model_used`, `latency_ms`, `estimated_cost_usd`, `support_bucket`, `retrieval_chunk_count`, and fallback flags
+- Tightened the default runtime for pilot token control:
+  - single-shot remains the normal path
+  - agentic fallback is now config-gated instead of normal behavior
+  - top retrieved evidence is trimmed before the final answer call
+  - context is sent as a compact structured bundle instead of a larger free-form dump
+- Re-enabled deterministic-first FAQ routing ahead of the answer model through the support-core layer for zero-token matches when applicable.
+- Added pilot safeguards and telemetry plumbing:
+  - per-session request cap
+  - daily cost rollup derived from chat logs
+  - budget mode switch (`warn`, `hard_stop`, `local_fallback`)
+  - per-request logging of provider, latency, estimated cost, support bucket, retrieval chunk count, and fallback markers
+- Extended the admin chatlog pipeline so `/api/chatlog` now exposes request telemetry summaries.
+- Updated the chatlog dashboard UI with simple admin visibility for:
+  - most expensive prompts
+  - highest-latency prompts
+  - common SKUs
+  - common repeated questions
+  - broad-retrieval / fallback cases
+- Updated `README.md` and `ARCHITECTURE.md` so the repo now documents the Claude-first pilot direction instead of presenting Ollama as the default production path.
 - Committed `3b20d1d` — aligned non-streaming `/chat` with the single-shot path so `drive_sku` and uploaded PDF context are honored consistently.
 - Committed `57178ae` — protected `/chatlog`, `/eval`, `/api/eval/*`, and `/debug/*` behind HTTP Basic auth using `ADMIN_USERNAME` and `ADMIN_PASSWORD`.
 - Added local artifact ignores for `chatlog.json` and `faq_extract_results.txt`.

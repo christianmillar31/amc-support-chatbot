@@ -15,14 +15,15 @@ from cachetools import TTLCache
 
 from app.config import BASE_DIR, SESSION_TTL_SECONDS, MAX_SESSIONS, INGEST_API_KEY, UPLOAD_MAX_PAGES, UPLOAD_MAX_SIZE_MB
 from app.ingest import build_index, is_indexed, extract_text_with_headings, smart_chunk_text, _extract_tables_as_markdown
-from app.chat import chat, chat_stream, single_shot_chat_stream, RateLimitExceeded
-from app.config import ENABLE_SINGLE_SHOT, LLM_BACKEND, OLLAMA_MODEL, OLLAMA_BASE_URL
+from app.chat import RateLimitExceeded
+from app.config import ANSWER_PROVIDER, CHEAP_TASK_PROVIDER, LOCAL_PROVIDER, LLM_BACKEND, OLLAMA_MODEL, OLLAMA_BASE_URL
 from app.retriever import reload as reload_index, get_chunk_count
 from app.feedback import log_feedback
-from app.chatlog import log_chat, get_chatlog, update_rating
+from app.chatlog import log_chat, get_chatlog, summarize_chatlog, update_rating
 from app.faq import match_faq
 from app.drive_lookup import get_all_drives, lookup_drive
 from app.support_catalog import get_support_catalog_summary
+from app.support_core import BudgetLimitExceeded, SessionLimitExceeded, SupportRequest, run_support_request, stream_support_request
 
 logger = logging.getLogger(__name__)
 admin_security = HTTPBasic(auto_error=False)
@@ -82,11 +83,24 @@ class ChatRequest(BaseModel):
     message: str = pydantic.Field(max_length=2000)
     session_id: Optional[str] = None
     drive_sku: Optional[str] = None
+    channel: str = "web"
 
 
 class ChatResponse(BaseModel):
     answer: str
     sources: list[dict]
+    support_note: Optional[str] = None
+    provider_used: str
+    model_used: Optional[str] = None
+    latency_ms: int
+    estimated_cost_usd: float
+    support_bucket: Optional[str] = None
+    retrieval_chunk_count: int = 0
+    used_fallback: bool = False
+    broad_retrieval: bool = False
+    channel: str = "web"
+    session_request_count: int = 0
+    cost_budget_state: str = "disabled"
 
 
 def _resolve_chat_context(session_id: str, drive_sku: Optional[str]) -> tuple[Optional[dict], Optional[list]]:
@@ -154,8 +168,13 @@ async def chat_endpoint(request: ChatRequest):
     drive_context, upload_chunks = _resolve_chat_context(session_id, request.drive_sku)
 
     try:
-        result = chat(
-            request.message,
+        result = run_support_request(
+            SupportRequest(
+                message=request.message,
+                session_id=session_id,
+                drive_sku=request.drive_sku,
+                channel=request.channel,
+            ),
             history=history,
             drive_context=drive_context,
             uploaded_chunks=upload_chunks,
@@ -163,7 +182,7 @@ async def chat_endpoint(request: ChatRequest):
 
         # Update session history
         history.append({"role": "user", "content": request.message})
-        history.append({"role": "assistant", "content": result["answer"]})
+        history.append({"role": "assistant", "content": result.answer})
         # Trim to max history
         if len(history) > MAX_HISTORY:
             history = history[-MAX_HISTORY:]
@@ -171,11 +190,17 @@ async def chat_endpoint(request: ChatRequest):
 
         # Log chat for manager dashboard
         try:
-            log_chat(session_id, request.message, result["answer"], result["sources"])
+            metadata = result.to_chatlog_metadata()
+            metadata["drive_sku"] = request.drive_sku or (drive_context or {}).get("requested_sku")
+            log_chat(session_id, request.message, result.answer, result.sources, metadata=metadata)
         except Exception as e:
             logger.warning("Chat logging failed: %s", e)
 
-        return ChatResponse(answer=result["answer"], sources=result["sources"])
+        return ChatResponse(**result.to_chatlog_metadata())
+    except SessionLimitExceeded as e:
+        return JSONResponse(status_code=429, content={"detail": str(e)})
+    except BudgetLimitExceeded as e:
+        return JSONResponse(status_code=503, content={"detail": str(e)})
     except RateLimitExceeded:
         return JSONResponse(
             status_code=429,
@@ -228,19 +253,24 @@ async def chat_stream_endpoint(request: ChatRequest):
     #     return StreamingResponse(faq_event_generator(), media_type="text/event-stream")
 
     # Shared state — the generator writes into these, background task reads them
-    stream_state = {"answer": "", "sources": [], "logged": False}
+    stream_state = {"answer": "", "sources": [], "metadata": {}, "logged": False}
 
     async def event_generator():
+        drive_context = None
         try:
             drive_context, upload_chunks = _resolve_chat_context(session_id, request.drive_sku)
-
-            # Ollama always uses single-shot (can't do agentic tool-use)
-            # Anthropic uses single-shot by default, agentic as fallback
-            if LLM_BACKEND == "ollama":
-                stream_fn = single_shot_chat_stream
-            else:
-                stream_fn = single_shot_chat_stream if ENABLE_SINGLE_SHOT else chat_stream
-            for event in stream_fn(request.message, history=history, drive_context=drive_context, uploaded_chunks=upload_chunks):
+            support_request = SupportRequest(
+                message=request.message,
+                session_id=session_id,
+                drive_sku=request.drive_sku,
+                channel=request.channel,
+            )
+            for event in stream_support_request(
+                support_request,
+                history=history,
+                drive_context=drive_context,
+                uploaded_chunks=upload_chunks,
+            ):
                 if event["type"] == "status":
                     yield f"event: status\ndata: {json.dumps(event)}\n\n"
                 elif event["type"] == "token":
@@ -248,6 +278,7 @@ async def chat_stream_endpoint(request: ChatRequest):
                     yield f"event: token\ndata: {json.dumps(event)}\n\n"
                 elif event["type"] == "done":
                     stream_state["sources"] = event.get("sources", [])
+                    stream_state["metadata"] = dict(event)
                     yield f"event: done\ndata: {json.dumps(event)}\n\n"
 
             # Update session history
@@ -255,6 +286,10 @@ async def chat_stream_endpoint(request: ChatRequest):
             history.append({"role": "assistant", "content": stream_state["answer"]})
             sessions[session_id] = history[-MAX_HISTORY:]
 
+        except SessionLimitExceeded as e:
+            yield f"event: error\ndata: {json.dumps({'detail': str(e)})}\n\n"
+        except BudgetLimitExceeded as e:
+            yield f"event: error\ndata: {json.dumps({'detail': str(e)})}\n\n"
         except RateLimitExceeded:
             yield f"event: error\ndata: {json.dumps({'detail': 'The AI service is busy. Please wait a moment and try again.', 'retry_after': 30})}\n\n"
         except Exception as e:
@@ -265,7 +300,15 @@ async def chat_stream_endpoint(request: ChatRequest):
             if stream_state["answer"] and not stream_state["logged"]:
                 stream_state["logged"] = True
                 try:
-                    log_chat(session_id, request.message, stream_state["answer"], stream_state["sources"])
+                    metadata = dict(stream_state["metadata"])
+                    metadata["drive_sku"] = request.drive_sku or (drive_context or {}).get("requested_sku")
+                    log_chat(
+                        session_id,
+                        request.message,
+                        stream_state["answer"],
+                        stream_state["sources"],
+                        metadata=metadata,
+                    )
                     logger.info("Chat logged: %s (%d chars)", request.message[:50], len(stream_state["answer"]))
                 except Exception as e:
                     logger.error("CHAT LOGGING FAILED: %s", e, exc_info=True)
@@ -610,7 +653,7 @@ async def chatlog_page(_: str = Depends(require_admin)):
 async def chatlog_api(_: str = Depends(require_admin)):
     """Return chat log entries as JSON."""
     entries = get_chatlog()
-    return {"entries": entries, "total": len(entries)}
+    return {"entries": entries, "total": len(entries), "summary": summarize_chatlog(entries)}
 
 
 @app.get("/eval")
@@ -622,8 +665,13 @@ async def eval_page(_: str = Depends(require_admin)):
 @app.get("/api/backend")
 async def backend_info():
     """Return current LLM backend info."""
-    info = {"backend": LLM_BACKEND}
-    if LLM_BACKEND == "ollama":
+    info = {
+        "backend": LLM_BACKEND,
+        "answer_provider": ANSWER_PROVIDER,
+        "cheap_task_provider": CHEAP_TASK_PROVIDER,
+        "local_provider": LOCAL_PROVIDER,
+    }
+    if ANSWER_PROVIDER == "ollama":
         from app.ollama_client import is_ollama_available, list_models
         info["model"] = OLLAMA_MODEL
         info["base_url"] = OLLAMA_BASE_URL

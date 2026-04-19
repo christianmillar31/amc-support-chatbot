@@ -10,7 +10,7 @@ pinned: false
 
 # AMC Support Chatbot
 
-RAG chatbot for AMC support engineers. Searches 372 PDF manuals, datasheets, and application notes using a local Ollama model by default, with Anthropic still available as a fallback backend.
+RAG chatbot for AMC support engineers. The pilot runtime is now Claude-first for final answers, with deterministic routing and tight retrieval to control token cost. Ollama stays in the repo for local experiments, offline comparisons, and future helper-task work, but it is no longer the default production answer path.
 
 ## Docs
 

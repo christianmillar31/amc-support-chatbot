@@ -72,7 +72,9 @@ The app remains one FastAPI service, but runtime concerns are separated logicall
 
 - Product lookup and catalog state: `app/drive_lookup.py` + `app/support_catalog.py`
 - Retrieval and routing policy: `app/chat.py`
-- Answer generation policy: `app/chat.py` system prompt plus single-shot/agentic orchestration
+- Provider and answer-model abstraction: `app/model_provider.py`
+- Support-core request/response contract and pilot safeguards: `app/support_core.py`
+- Answer generation policy: `app/chat.py` single-shot orchestration plus provider-specific execution
 - Evaluation and guardrails: `eval/`
 
 Current runtime sequence for drive-aware support:
@@ -81,7 +83,66 @@ Current runtime sequence for drive-aware support:
 2. resolve catalog state before retrieval
 3. determine canonical SKU and datasheet SKU
 4. choose retrieval strategy based on support bucket
-5. generate answer with an explicit support note when coverage is partial
+5. build a compact structured context bundle
+6. generate one final answer call with explicit support-note behavior when coverage is partial
+
+## Claude-First Pilot Defaults
+
+The small pilot now treats Claude as the default answer engine and keeps local models behind an explicit seam instead of letting backend choice leak through the product:
+
+- `answer_provider=anthropic`
+- `cheap_task_provider=anthropic_haiku`
+- `local_provider=ollama`
+
+Key runtime rules:
+
+- FAQ match happens before LLM usage when possible.
+- Final answers stay on the single-shot path by default.
+- Multi-round agentic fallback is disabled for normal pilot traffic and kept as a debug-only option.
+- Retrieval payloads are trimmed before the final model call so Claude sees only the top evidence instead of large text dumps.
+- Coverage notes, support buckets, and routing hints are generated in Python, not by the model.
+
+## Internal Support Contract
+
+The AMC support core now exposes one stable internal request/response shape:
+
+- Request fields:
+  - `message`
+  - `session_id`
+  - `drive_sku`
+  - `channel`
+- Response fields:
+  - `answer`
+  - `sources`
+  - `support_note`
+  - `provider_used`
+  - `model_used`
+  - `latency_ms`
+  - `estimated_cost_usd`
+  - `support_bucket`
+  - `retrieval_chunk_count`
+  - `used_fallback`
+
+The current web UI uses this contract now. Future Copilot or MCP-facing adapters should call the same core instead of duplicating retrieval logic.
+
+## Pilot Cost Controls
+
+Pilot-grade controls now sit above the answer path:
+
+- per-session request cap
+- daily estimated-cost rollup from request logs
+- budget mode switch:
+  - `warn`
+  - `hard_stop`
+  - `local_fallback`
+- per-request telemetry stored with chat logs:
+  - provider
+  - model
+  - latency
+  - estimated cost
+  - support bucket
+  - retrieval chunk count
+  - fallback/broad-retrieval markers
 
 ## Interface Contracts
 
