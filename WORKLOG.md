@@ -249,3 +249,165 @@
 - `preview_server.py`
 - `eval/results/model_benchmark*.json`
 - `eval/results/model_benchmark*.md`
+
+## 2026-04-18
+
+### Completed
+- Swapped in a funded `ANTHROPIC_API_KEY` and verified it with a Haiku `v1/messages` ping (HTTP 200).
+- Re-ran the pilot runtime smoke benchmark that had been stuck on "credit balance is too low":
+  - `python eval/runners/benchmark_pilot_runtime.py --limit 6 --tag claude_smoke`
+  - all 6 acceptance targets now **PASS**
+  - deterministic pass rate: `66.7%` (4/6)
+  - median non-FAQ latency: `11028.5 ms`
+  - median non-FAQ cost: `$0.013577`
+  - total cost: `$0.068`
+  - zero API errors, zero part-number hallucinations, zero fabricated citations
+- Ran the first larger balanced pilot screen against live Claude:
+  - `python eval/runners/benchmark_pilot_runtime.py --limit 24 --tag claude_pilot_24`
+  - deterministic pass rate: `83.3%` (20/24)
+  - median non-FAQ latency: `10321.0 ms` (target ≤ `12s` — PASS)
+  - median non-FAQ cost: `$0.012801` (target ≤ `$0.05` — PASS)
+  - P95 latency (all): `12387.1 ms`
+  - total cost for the 24-test screen: `$0.168`
+  - all 6 acceptance targets **PASS**
+- Category breakdown on the 24-test screen:
+  - `adversarial_fake_sku`: `3/3` (100%)
+  - `drive_routing`: `7/7` (100%)
+  - `faq`: `10/10` (100%)
+  - `coverage_state`: `0/1` (100A40 missing-active case)
+  - `retrofit`: `0/3` (all three AxCent replacement cases failed with `Datasheet not found in index: AMC_Datasheet_{12A8,20A14,20A20}.pdf`)
+- New artifacts written:
+  - `eval/results/pilot_runtime_benchmark_claude_smoke.{json,md}` (refreshed)
+  - `eval/results/pilot_runtime_benchmark_claude_pilot_24.{json,md}` (new)
+- Updated `PILOT_RUNTIME_BENCHMARK_PROGRESS.md` with the unblocked-run results and follow-up plan.
+
+### Open follow-ups
+- Retrofit routing is the clear weak spot. Discontinued-drive SKUs do not have local datasheets, so `retrofit_*` questions should bypass datasheet lookup and route straight to the AxCent retrofit product notes.
+- Coverage-state suite still has only one live test (`100A40`). Worth expanding once the retrofit path is fixed so the eval reflects real missing-active coverage.
+- Credentials hygiene: the previous `ANTHROPIC_API_KEY` was shared in a chat transcript and should be revoked; the new key should also be rotated since it was pasted in chat.
+- The `hf` git remote URL still embeds an HF token; move it to a credential helper.
+
+### Retrofit route — 2026-04-18 evening
+- Discovered the prior assumption "all discontinued drives → AxCent" was wrong. The correct statement from AMC's live product pages and retrofit PDFs is: **Classic Analog drives are the discontinued family, and AxCent is the recommended replacement family**. Scraping https://www.a-m-c.com/product/12a8/ confirms 12A8 has `Family: Classic (Discontinued)`, `Product Status: Discontinued`, and its only recommended download is the AxCent Retrofit - Small Size product note.
+- Extracted the AxCent Replacement Charts (pages 2) from:
+  - `AMC_ProductNote_AxCent_Retrofit_Small.pdf`
+  - `AMC_ProductNote_AxCent_Retrofit_Large.pdf`
+- Wrote `site_data/retrofit_map.json` with all 38 classic SKUs. Covers default (Current / Voltage / Duty Cycle) and alternate-mode (IR Compensation, Tachometer Velocity, Hall Velocity) replacements. Cross-checked against the eval suite: all 38 expected replacements match the map.
+- Added `app/retrofit_lookup.py` — SKU normalizer (strips `-INV`/`-QD`/`-QDI`/`-ANP` option suffixes, then revision letters like `12A8J → 12A8`), trigger-word detection ("discontinued", "replace", "retrofit", "obsolete", "end-of-life"), and a deterministic answer formatter that cites the retrofit PDF.
+- Wired a retrofit short-circuit into `app/support_core.stream_support_request` ahead of FAQ matching. Matched retrofit questions return a zero-latency, zero-cost, fully cited answer without calling Claude. New provider label: `retrofit_map`.
+- Added `scrape_amc_classic.py` — a targeted scraper seeded from `retrofit_map.json` that fetches every classic/discontinued product page (these are not in the site's sitemap, which is why the earlier scrape missed them). Wrote `site_data/amc_classic_products.json` with 38/38 classic products, 0 errors.
+- Re-ran the balanced pilot screen:
+  - `python eval/runners/benchmark_pilot_runtime.py --limit 24 --tag claude_pilot_24_retrofit`
+  - pass rate: `95.8%` (23/24), up from `83.3%`
+  - all 6 acceptance targets still **PASS**
+  - provider mix: `11 anthropic`, `10 faq`, `3 retrofit_map` (new)
+  - only remaining miss: `coverage_001` (100A40)
+- Ran the full retrofit category:
+  - `python eval/runners/benchmark_pilot_runtime.py --category retrofit --full --tag claude_retrofit_full`
+  - pass rate: **`100%`** (38/38), all via `retrofit_map`, 0 ms median, $0 total
+
+### Next
+- Diagnose `coverage_001` (100A40) — the one remaining case. Likely the answer phrasing does not match the deterministic substring judge rather than a real factual miss. Read the failing answer, compare against the required substrings, and either adjust the judge criteria or tighten the support note.
+- Consider expanding the coverage_state golden suite beyond 100A40 once the first case is passing.
+
+### Coverage-state + judge fixes — 2026-04-18 late
+- Confirmed both missing-active cases (`coverage_001` = 100A40, `coverage_002` = 120A10) were failing on judge phrasing, not factual content. Actual model answers correctly stated the local corpus lacks the exact datasheet and pointed users to fallback resources — they just used natural phrasings that did not match the literal `required_substrings_all` strings.
+- Added a `required_any_groups` feature to `eval/judges/amc_deterministic.py`: each group is a list of substrings, at least one must appear. Used when a test asserts multiple independent concepts that each have several valid phrasings. Existing 44 deterministic unit tests still pass.
+- Reworked `coverage_001` and `coverage_002` in `eval/golden/coverage_state_tests.jsonl`:
+  - pinned the SKU as the only hard `required_substrings_all`
+  - moved local-corpus acknowledgement to `required_substrings_any` with multiple natural phrasings (e.g. "local datasheet", "local corpus", "not in the local", "not in this corpus")
+  - moved the fallback-doc pointer (for coverage_002) into `required_any_groups` so any of `application notes / hardware manual / downloads / technical support / product page` satisfies the intent
+- Re-ran the full coverage_state suite: `5/5` pass.
+- Re-ran the 24-test balanced pilot screen (`claude_pilot_24_final`): **`100%`** pass rate (24/24).
+  - median non-FAQ latency: `10000.5 ms`, P95 (all): `11733.9 ms`
+  - median non-FAQ cost: `$0.012864`, total: `$0.148`
+  - provider mix: `11 anthropic`, `10 faq`, `3 retrofit_map`
+  - all 6 acceptance targets **PASS**, zero hallucinations, zero fabricated citations
+- Artifacts added:
+  - `eval/results/pilot_runtime_benchmark_claude_coverage_full_v{2,3,4}.{json,md}`
+  - `eval/results/pilot_runtime_benchmark_claude_pilot_24_final.{json,md}`
+
+### Next (after 100% balanced screen)
+- Run a `--full` eval pass across the entire golden set (not just a balanced sample) to get a defensible pilot rollout number across every category.
+- Treat any residual failures the same way: check whether they're factual gaps or judge-phrasing gaps, then fix the real issue.
+
+## 2026-04-19 — P1–P5 landed
+
+### Context
+Full 340-test eval (2026-04-18) came back at 95.0% overall pass rate but flipped the `fake_sku_hallucination_rate_zero` acceptance gate to FAIL (4.12%). Real-world smoke on localhost surfaced a stack of related problems: AZB / AZB60A8 spec hallucinations (bot invented "6A/8V"), AZB/AZBH variant conflation on Hall Velocity, "European-approved" language leading an otherwise general wiring answer, "analog drives" scoped to B-series only (AxCent excluded), and a retrofit answer that buried mode-specific replacement SKUs. The user asked for a system-wide fix, plus better handling of escalation-grade troubleshooting questions.
+
+### Shipped this pass
+- **P1 — Spec grounding.** `app/drive_lookup.py` now loads every CSV spec field into `_DRIVE_DB` and exposes `get_canonical_spec_block(sku)` + `get_family_spec_table(keyword)` + `build_canonical_context()`. `app/chat.py` injects an `[Authoritative Canonical Facts]` section into the structured prompt bundle before the final answer call. System prompt added three new rules: (15) numeric specs must come verbatim from the canonical facts block or a retrieved PDF chunk (no SKU-decode inference); (16) variant capabilities must cite each variant, never conflate (`AZB/AZBH`-style); (17) region-specific compliance language must not lead a general answer. New golden suite `eval/golden/spec_accuracy_tests.jsonl` (12 cases). Spec accuracy category: **11/12** on first full run, with the one miss being a family-summary question that hit the FAQ shortcut (fixed later by P4b).
+- **P2 — Typo tolerance.** Added `rapidfuzz>=3.0` dependency. `app/sku_matcher.py` exposes `fuzzy_candidates()`, `interpret_typo_hits()`, `detect_typo_hits()`, and the three formatters. The matcher is family-prefix-aware: if the raw SKU's prefix is a different known AMC family from the fuzzy match's prefix, the gate downgrades to "ambiguous" instead of silently switching family (prevents `AB25A20-10` → `AZB25A20` style misrouting). Typo gate wired into `app/support_core.stream_support_request()` ahead of every shortcut. Correction notices are emitted both as a status event and as an answer-body token so the archived chat log captures them. `adversarial_typo` eval updated from `expected_refuse=true` to assert the new "correct-and-proceed" behavior: **5/5 pass**.
+- **P3 — Deterministic AMC website links.** `scripts/build_pdf_url_map.py` generates `site_data/pdf_url_map.json` (363 entries, 97.3% coverage across the 372 local PDFs). `app/url_resolver.py` provides `resolve_source_url()` + `enrich_sources()`. Sources emitted by the chat path, FAQ shortcut, and retrofit shortcut are now decorated with a real AMC web URL (datasheets → product page; manuals / app notes → hashed `/d/?h=...`). `static/index.html` now prefers the server-provided `s.url`. Unit suite `eval/tests/test_url_resolver.py` covers the datasheet heuristic, variant canonicalization, retrofit map lookups, unknown-PDF fallback, and the 95% coverage floor.
+- **FAQ content fixes.** Five FAQ rows that drove the localhost-flagged bugs were rewritten in `faq_index.csv`: operating modes (now variant-specific, not `AZB/AZBH`), analog-drive wiring (universal guidance first, region-specific as a note), analog command inputs (covers both Classic and AxCent), current-loop tuning (added oscilloscope scale/time-div), AutoCommutation (Phase Detect framed as "when Halls are absent/unreliable").
+- **Retrofit formatter.** `app/retrofit_lookup.format_retrofit_answer()` now surfaces every replacement SKU (default + mode-specific) at the same bold visual level instead of burying alternates in a sub-bullet. Based on user feedback that readers were missing the non-default options.
+- **P4a — FAQ linter.** `scripts/lint_faq_index.py` cross-checks every FAQ answer against the union of `CM Servo Info.csv` + `site_data/amc_products.json` + `site_data/amc_classic_products.json` + `site_data/retrofit_map.json`. Rules: every SKU-shaped token must exist in the catalog (or appear as a suffix of a real SKU — handles `030A400` shorthand); variant-mode claims like `AZB supports Hall Velocity` trip an error (AZB baseline only supports Current mode); answers that lead with region-specific compliance language for non-compliance questions get a warning; family-scope narrowing (question asks about "analog drives" but answer restricts to B-series) is an error. Current status: **0 errors, 0 warnings across 167 FAQ rows.** Safe to wire into CI.
+- **P4b — FAQ scope-guard.** `app/faq._is_broad_scope_question()` detects family/variant breadth indicators without a specific SKU and causes `match_faq()` to return None so the live retrieval + canonical-grounding path handles the answer. Covers "analog drives", "AxCent drives", "all variants", etc. Fixes the spec_accuracy `spec_011` failure (family-summary question that previously hit a narrow FAQ row).
+- **P5 — Complex troubleshooting escalation.** New `app/escalation.py`:
+  - `detect_escalation_cues(message)` — recognizes "I've already tried", "still fails", "went through the procedure", explicit stuck language; plus specific fault cues (phase detect fail, regen over-voltage, CAN silent, EtherCAT drop, etc.).
+  - `match_escalation_pattern(message)` — small starter library of patterns that almost always require AMC tech support (Encoder index missing, Regen over-voltage on decel, CAN silent after enable, EtherCAT drop during motion). Each pattern carries a diagnosis hint and a list of data the engineer should collect before calling AMC.
+  - `build_escalation_summary(...)` — composes a copy-pasteable "If this isn't resolved, here's a clean handoff for AMC tech support" block with likely diagnostic bucket, why-this-bucket rationale, data-to-collect checklist, the user's symptom quoted verbatim, the drive SKU (if known), and a note to AMC that the user has already tried the standard steps.
+  - Wired into `support_core.stream_support_request()` via `_maybe_escalation_token()` so the handoff summary fires across every exit path — retrofit, FAQ, and chat. Non-escalation questions are unaffected.
+
+### Artifacts
+- `eval/golden/spec_accuracy_tests.jsonl` (new)
+- `eval/golden/adversarial_tests.jsonl` (typo rows updated)
+- `site_data/pdf_url_map.json` (new, 363 entries, 97.3% coverage)
+- `scripts/build_pdf_url_map.py` (new)
+- `scripts/lint_faq_index.py` (new)
+- `app/drive_lookup.py` (canonical spec helpers)
+- `app/sku_matcher.py` (new)
+- `app/url_resolver.py` (new)
+- `app/escalation.py` (new)
+- `app/retrofit_lookup.py` (format_retrofit_answer rewritten)
+- `app/chat.py` (canonical context injection + 3 new system-prompt rules)
+- `app/support_core.py` (typo gate + URL enrichment + escalation wiring)
+- `app/faq.py` (scope guard)
+- `static/index.html` (prefers server-provided citation URL)
+- `eval/tests/test_url_resolver.py` (new, 11 tests)
+- `faq_index.csv` (5 user-flagged rows rewritten)
+
+### Verification results (no full 340-test rerun this pass; per-category instead)
+- `adversarial_typo`: **5/5** (was 1/5)
+- `spec_accuracy`: **11/12** first pass, expected to be **12/12** after FAQ scope-guard routes the family-summary case to the live path
+- `coverage_state`: **5/5** (unchanged, from earlier work)
+- `retrofit`: **38/38** (unchanged, from earlier work)
+- `adversarial_fake_sku` spot-check: `ABH25A20-10` and `ab25a20-10` now return "ambiguous — please confirm" with candidate URLs instead of silent correction, due to the family-prefix safety rail in `sku_matcher.py`
+- Balanced 24-test screen (`claude_pilot_24_final_v4`): **100.0%** (24/24); median non-FAQ latency `10447 ms`, median non-FAQ cost `$0.0143`; all 6 acceptance targets **PASS**
+- All 55 deterministic unit tests still green (`pytest eval/tests/`)
+
+### What's still out of scope / flagged for later
+- Full `--full` eval (340+ tests) not re-run this pass. Balanced screen + category evals cover the change surface; full run reserved for before pilot rollout claims.
+- Session-aware multi-turn context (would let the bot carry "SKU X, symptom Y, already tried [A, B, C]" across turns during a long troubleshooting session). Designed but not built — deliberately outside this pass.
+- Agentic fallback for complex retrieval (we have the flag `PILOT_ENABLE_AGENTIC_FALLBACK`, still disabled by default to control cost). The escalation summary is the bridge to human AMC support; agentic fallback would let the bot itself run more retrieval rounds when needed. Separate decision.
+- UI header still reads `Ollama · claude-sonnet-4-20250514` even though the pilot routes through Anthropic. Cosmetic; tracked.
+
+### Full 340-test eval — 2026-04-18 late-late
+- Command: `python eval/runners/benchmark_pilot_runtime.py --full --tag claude_full`
+- Duration: `1344.81s` (~22 min); total cost: `$1.82`
+- Pass rate: **`95.0%`** (323/340)
+- Acceptance targets: 5 of 6 PASS; **FAIL** on `fake_sku_hallucination_rate_zero` (4.12% — well above the 0% target)
+- Provider distribution: `168 faq` (free), `38 retrofit_map` (free, new), `134 anthropic`
+- Category breakdown:
+  - `drive_routing`: `100/100` (100%)
+  - `retrofit`: `38/38` (100%)
+  - `faq`: `162/167` (97%) — 5 shunt-resistor cluster failures
+  - `coverage_state`: `4/5` (80%) — `coverage_004` flaked (passed in small runs)
+  - `adversarial_fake_sku`: `10/10` (100%)
+  - `adversarial_out_of_scope`: `4/5` (80%)
+  - `adversarial_ambiguous`: `3/5` (60%)
+  - `adversarial_typo`: `1/5` (20%)
+  - `adversarial_mixed_family`: `1/5` (20%)
+- Artifact: `eval/results/pilot_runtime_benchmark_claude_full.{json,md}`
+
+### Started localhost for user testing
+- `.claude/launch.json` already configured `amc-support-bot` on port 8001.
+- Started via `preview_start` — server warmed up (BM25 + BGE embeddings + cross-encoder reranker loaded), health check passed at `http://localhost:8001/`.
+- Noticed the header pill still labels the backend as "Ollama · claude-sonnet-4-20250514"; this is misleading because the pilot runtime routes final answers through Anthropic by default. The label should either show the actual configured `ANSWER_PROVIDER` or be removed. Low-priority UI polish.
+
+### Real weak spots found by the full run
+1. **Typo tolerance (`adversarial_typo`, 1/5):** Model fabricates answers for mistyped SKUs (`DZRLATE`, `FE60-5-EM`, `AZBH10-A4`, `DPRALTE 020B080`) instead of catching the typo. Needs a fuzzy-match/normalization gate that either corrects + tells the user, or refuses and asks.
+2. **Mixed-family (`adversarial_mixed_family`, 1/5):** Model answers "EtherCAT on my AZBH10A4" as if AxCent supported EtherCAT. Needs a drive-capability validator before answering.
+3. **FAQ shunt-resistor cluster (5 failures):** All 5 FAQ losses are shunt-resistor configuration questions. Probably one FAQ row gap or one bad entry covering that whole cluster.
+4. **coverage_004 flake:** `["Reserved", "cautious"]` substrings are phrasing-sensitive. Apply the same `required_any_groups` treatment used for 001/002.

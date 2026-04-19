@@ -17,8 +17,21 @@ from app.config import (
     PILOT_SESSION_REQUEST_CAP,
 )
 from app.chatlog import get_chatlog
+from app.escalation import (
+    build_escalation_summary,
+    detect_escalation_cues,
+    match_escalation_pattern,
+)
 from app.faq import match_faq
+from app.retrofit_lookup import format_retrofit_answer, is_retrofit_question
+from app.sku_matcher import (
+    format_typo_ambiguous_answer,
+    format_typo_correction_status,
+    format_typo_refusal_answer,
+    interpret_typo_hits,
+)
 from app.support_catalog import build_support_note
+from app.url_resolver import enrich_sources, resolve_source_url
 
 
 class SessionLimitExceeded(Exception):
@@ -116,18 +129,152 @@ def stream_support_request(
     support_bucket = (drive_context or {}).get("support_bucket")
     provider_name, used_fallback, budget_state = _resolve_provider_for_request()
 
-    if FAQ_ENABLED and not uploaded_chunks:
-        faq_result = match_faq(request.message)
-        if faq_result:
+    # Escalation detection runs once up-front against the original user message.
+    # If the message has troubleshooting-escalation cues or matches a known
+    # hard pattern, every exit path (retrofit, FAQ, chat) appends the AMC
+    # tech-support handoff summary as its last token before "done".
+    _escalation_cues = detect_escalation_cues(request.message)
+    _escalation_pattern = match_escalation_pattern(request.message)
+    _escalation_active = _escalation_cues.should_escalate or _escalation_pattern is not None
+
+    def _maybe_escalation_token():
+        if not _escalation_active:
+            return None
+        summary = build_escalation_summary(
+            question=request.message,
+            drive_sku=(
+                request.drive_sku
+                or (drive_context or {}).get("canonical_sku")
+                or (drive_context or {}).get("requested_sku")
+            ),
+            cues=_escalation_cues,
+            pattern=_escalation_pattern,
+        )
+        return {"type": "token", "text": "\n\n" + summary}
+
+    # Typo gate: if the message mentions a SKU-shaped token that's close-but-
+    # not-exact to a known drive, either rewrite the query with the corrected
+    # SKU (status-only), ask the user to disambiguate, or refuse outright.
+    # Runs before retrofit/FAQ so a typo'd classic SKU like "12A9" gets caught.
+    effective_message = request.message
+    if not uploaded_chunks and not request.drive_sku:
+        typo_decision = interpret_typo_hits(request.message)
+        action = typo_decision.get("action")
+        if action == "correct":
+            corrected = typo_decision["corrected"]
+            raw = typo_decision["raw"]
+            correction_notice = format_typo_correction_status(raw, corrected)
+            yield {"type": "status", "text": correction_notice}
+            # Also emit the correction notice as a token so it shows up in the
+            # archived answer body (not just the transient status stream).
+            yield {"type": "token", "text": f"_{correction_notice}_\n\n"}
+            # Replace the raw token with the corrected SKU in the user message
+            # so downstream retrieval and drive lookup use the real part number.
+            effective_message = request.message.replace(raw, corrected)
+        elif action == "ambiguous":
+            raw = typo_decision["raw"]
+            candidates = typo_decision.get("candidates") or []
+            answer_text = format_typo_ambiguous_answer(raw, candidates)
+            yield {"type": "status", "text": "Multiple drives look close to that part number..."}
+            yield {"type": "token", "text": answer_text}
+            yield {
+                "type": "done",
+                "sources": [],
+                "support_note": None,
+                "provider_used": "typo_ambiguous",
+                "model_used": None,
+                "latency_ms": 0,
+                "estimated_cost_usd": 0.0,
+                "support_bucket": None,
+                "retrieval_chunk_count": 0,
+                "used_fallback": used_fallback,
+                "broad_retrieval": False,
+                "channel": request.channel,
+                "session_request_count": request_count,
+                "cost_budget_state": budget_state,
+            }
+            return
+        elif action == "refuse":
+            raw = typo_decision["raw"]
+            answer_text = format_typo_refusal_answer(raw)
+            yield {"type": "status", "text": "No close match found in the AMC product database..."}
+            yield {"type": "token", "text": answer_text}
+            yield {
+                "type": "done",
+                "sources": [],
+                "support_note": None,
+                "provider_used": "typo_refusal",
+                "model_used": None,
+                "latency_ms": 0,
+                "estimated_cost_usd": 0.0,
+                "support_bucket": None,
+                "retrieval_chunk_count": 0,
+                "used_fallback": used_fallback,
+                "broad_retrieval": False,
+                "channel": request.channel,
+                "session_request_count": request_count,
+                "cost_budget_state": budget_state,
+            }
+            return
+
+    if not uploaded_chunks:
+        retrofit_record = is_retrofit_question(effective_message, request.drive_sku)
+        if retrofit_record:
+            answer_text = format_retrofit_answer(retrofit_record)
+            payload = (retrofit_record or {})
+            size = payload.get("size", "small")
+            local_pdf = {
+                "small": "AMC_ProductNote_AxCent_Retrofit_Small.pdf",
+                "large": "AMC_ProductNote_AxCent_Retrofit_Large.pdf",
+            }.get(size, "AMC_ProductNote_AxCent_Retrofit_Small.pdf")
             sources = [{
-                "source": faq_result.get("source", ""),
+                "source": local_pdf,
+                "page": 2,
+                "heading": "AxCent Replacement Chart",
+                "url": resolve_source_url(local_pdf),
+            }]
+            if support_note:
+                yield {"type": "status", "text": support_note}
+            yield {"type": "status", "text": "Found a deterministic retrofit mapping..."}
+            yield {"type": "token", "text": answer_text}
+            esc_tok = _maybe_escalation_token()
+            if esc_tok:
+                yield esc_tok
+            yield {
+                "type": "done",
+                "sources": sources,
+                "support_note": support_note or None,
+                "provider_used": "retrofit_map",
+                "model_used": None,
+                "latency_ms": 0,
+                "estimated_cost_usd": 0.0,
+                "support_bucket": support_bucket,
+                "retrieval_chunk_count": 1,
+                "used_fallback": used_fallback,
+                "broad_retrieval": False,
+                "channel": request.channel,
+                "session_request_count": request_count,
+                "cost_budget_state": budget_state,
+            }
+            return
+
+    if FAQ_ENABLED and not uploaded_chunks:
+        faq_result = match_faq(effective_message)
+        if faq_result:
+            _faq_source = faq_result.get("source", "")
+            sources = [{
+                "source": _faq_source,
                 "page": int(faq_result["page"]) if str(faq_result.get("page", "")).isdigit() else 0,
                 "heading": faq_result.get("section", ""),
+                "url": resolve_source_url(_faq_source) if _faq_source else "",
             }]
             if support_note:
                 yield {"type": "status", "text": support_note}
             yield {"type": "status", "text": "Found a direct FAQ answer..."}
             yield {"type": "token", "text": faq_result.get("answer", "")}
+            esc_tok = _maybe_escalation_token()
+            if esc_tok:
+                yield esc_tok
             yield {
                 "type": "done",
                 "sources": sources,
@@ -147,7 +294,7 @@ def stream_support_request(
             return
 
     for event in single_shot_chat_stream(
-        request.message,
+        effective_message,
         history=history or [],
         drive_context=drive_context,
         uploaded_chunks=uploaded_chunks,
@@ -163,6 +310,15 @@ def stream_support_request(
             event.setdefault("channel", request.channel)
             event.setdefault("session_request_count", request_count)
             event.setdefault("cost_budget_state", budget_state)
+            if _escalation_active:
+                event["escalation_active"] = True
+                if _escalation_pattern:
+                    event["escalation_pattern"] = _escalation_pattern.name
+            # Stream the AMC-handoff block BEFORE the done event so the answer
+            # body (captured for chatlog) includes it too.
+            esc_tok = _maybe_escalation_token()
+            if esc_tok:
+                yield esc_tok
         yield event
 
 

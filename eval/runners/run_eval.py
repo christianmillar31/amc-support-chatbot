@@ -50,6 +50,7 @@ def load_tests(category_filter: Optional[str] = None, limit: Optional[int] = Non
         "coverage_state_tests.jsonl",
         "retrofit_tests.jsonl",
         "adversarial_tests.jsonl",
+        "spec_accuracy_tests.jsonl",
     ]
     tests = []
     for filename in files:

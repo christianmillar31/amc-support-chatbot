@@ -28,11 +28,21 @@ from app.support_catalog import (
 # Column indices in CM Servo Info.csv
 COL_TITLE = 0       # Product name
 COL_SKU = 3         # Part number / SKU
+COL_DC_RANGE = 7    # e.g. "20 - 80" (may be Excel-corrupted like "Oct-36")
+COL_AC_RANGE = 8    # e.g. "90 - 264"
+COL_STATUS = 9      # Active / Reserved / Discontinued
 COL_FAMILY = 10     # FlexPro, DigiFlex Performance, AxCent, Classic
 COL_FORM = 11       # Panel Mount, PCB Mount, Vehicle Mount, Machine Embedded, Development Board
+COL_SERIES = 12     # e.g. "AZ_10V_Brushless"
+COL_CURRENT_CONT = 13  # Continuous current (A)
+COL_CURRENT_PEAK = 14  # Peak current (A)
+COL_CONTROL_CMD = 19   # e.g. "±10 V Analog", "PWM and Direction"
+COL_OPERATING_MODE = 21  # e.g. "Current|Duty Cycle (Open Loop)|Velocity"
+COL_MOTOR_TYPE = 22    # e.g. "Three Phase (Brushless)|Single Phase (Brushed)"
 COL_NETWORK = 25    # EtherCAT, CANopen, Modbus RTU|RS-485/232, etc.
+COL_DC_VDC = 51     # pipe-separated canonical DC list, e.g. "24|36|48|60|72"
 
-# In-memory lookup: sku_upper -> {family, form_factor, network, title}
+# In-memory lookup: sku_upper -> {family, form_factor, network, title, plus spec fields}
 _DRIVE_DB: dict[str, dict] = {}
 def _normalize_family(raw: str) -> str:
     """Strip status suffixes like '(Discontinued)', '(Reserved)'."""
@@ -138,15 +148,44 @@ def _load_csv():
             if not network:
                 network = _infer_network_from_sku(sku, norm_family)
 
+            def _c(i: int) -> str:
+                return row[i].strip() if i < len(row) else ""
+
             _DRIVE_DB[sku.upper()] = {
                 "sku": sku,
                 "title": title,
                 "family": norm_family,
                 "form_factor": form_factor,
                 "network": network,
+                "status": _c(COL_STATUS),
+                "product_series": _c(COL_SERIES),
+                "current_continuous_a": _c(COL_CURRENT_CONT),
+                "current_peak_a": _c(COL_CURRENT_PEAK),
+                "dc_supply_range": _clean_dc_range(_c(COL_DC_RANGE), _c(COL_DC_VDC)),
+                "ac_supply_range": _c(COL_AC_RANGE),
+                "control_command": _c(COL_CONTROL_CMD),
+                "operating_mode": _c(COL_OPERATING_MODE),
+                "motor_type": _c(COL_MOTOR_TYPE),
             }
 
     print(f"Loaded {len(_DRIVE_DB)} drives from CSV.")
+
+
+def _clean_dc_range(raw_range: str, raw_vdc_list: str) -> str:
+    """The CSV 'DC Supply Voltage Range' column can be Excel-corrupted.
+
+    Examples of corruption: '10-36' becomes 'Oct-36', '10-80' becomes 'Oct-80'.
+    Prefer the raw range when it doesn't match those patterns, otherwise
+    reconstruct from the pipe-separated canonical list (e.g. '10|12|24|36' -> '10 - 36').
+    """
+    bad_patterns = ("Oct-", "Nov-", "Sep-", "Dec-", "Jan-", "Feb-", "Mar-", "Apr-", "May-", "Jun-", "Jul-", "Aug-")
+    if raw_range and not raw_range.startswith(bad_patterns):
+        return raw_range
+    if raw_vdc_list:
+        nums = [int(x) for x in raw_vdc_list.split("|") if x.strip().isdigit()]
+        if nums:
+            return f"{min(nums)} - {max(nums)}"
+    return raw_range
 
 # ---------------------------------------------------------------------------
 # Comm manual routing
@@ -543,6 +582,205 @@ def _friendly_network(network: str) -> str:
         "None (analog)": "Analog",
     }
     return mapping.get(network, network)
+
+
+# ---------------------------------------------------------------------------
+# Canonical spec injection (authoritative facts from CSV)
+# ---------------------------------------------------------------------------
+
+def _format_spec_lines(drive: dict) -> list[str]:
+    """Return a stable bulleted block of authoritative facts for one drive row."""
+    sku = drive.get("sku", "")
+    lines = [f"- SKU: {sku}"]
+
+    def _add(label: str, value: str) -> None:
+        value = (value or "").strip()
+        if value:
+            lines.append(f"- {label}: {value.replace('|', ', ')}")
+
+    _add("Family", drive.get("family", ""))
+    _add("Product Series", drive.get("product_series", ""))
+    _add("Form Factor", drive.get("form_factor", ""))
+    _add("Product Status", drive.get("status", ""))
+    _add("Current Continuous (A)", drive.get("current_continuous_a", ""))
+    _add("Current Peak (A)", drive.get("current_peak_a", ""))
+    _add("DC Supply Voltage (VDC)", drive.get("dc_supply_range", ""))
+    _add("AC Supply Voltage (VAC)", drive.get("ac_supply_range", ""))
+    _add("Network Communication", drive.get("network", ""))
+    _add("Control/Command", drive.get("control_command", ""))
+    _add("Operating Mode", drive.get("operating_mode", ""))
+    _add("Motor Type", drive.get("motor_type", ""))
+    return lines
+
+
+def get_canonical_spec_block(sku: str) -> str:
+    """Return an authoritative spec block for a single resolved SKU, or ''.
+
+    Reads the raw _DRIVE_DB row so we keep every spec field, not the trimmed
+    shape returned by lookup_drive/_build_result.
+    """
+    _load_csv()
+    key = (sku or "").strip().upper()
+    drive = _DRIVE_DB.get(key)
+    if not drive:
+        # Try normalized alias (handles -10 variants etc.)
+        alias = normalize_lookup_sku(key)
+        drive = _DRIVE_DB.get(alias)
+        if not drive:
+            return ""
+    lines = _format_spec_lines(drive)
+    header = (
+        f"=== CANONICAL SPEC FOR {drive.get('sku', sku).upper()} "
+        "(authoritative from CM Servo Info.csv; do not paraphrase numeric values) ==="
+    )
+    return header + "\n" + "\n".join(lines)
+
+
+# Family/series match hints — keep narrow so we don't pull 600 rows into every prompt.
+# Order matters: longer/more specific prefixes first.
+_FAMILY_KEYWORDS = [
+    # (keyword, lambda drive -> bool)
+    ("axcent pcb", lambda d: d["family"] == "AxCent" and _effective_form(d["form_factor"]) == "PCB Mount"),
+    ("axcent panel", lambda d: d["family"] == "AxCent" and _effective_form(d["form_factor"]) == "Panel Mount"),
+    ("axcent vehicle", lambda d: d["family"] == "AxCent" and _effective_form(d["form_factor"]) == "Vehicle Mount"),
+    ("azbh", lambda d: d["sku"].upper().startswith("AZBH")),
+    ("azbe", lambda d: d["sku"].upper().startswith("AZBE")),
+    ("azbdc", lambda d: d["sku"].upper().startswith("AZBDC")),
+    ("azbd ", lambda d: d["sku"].upper().startswith("AZBD") and not d["sku"].upper().startswith("AZBDC")),
+    ("azb ", lambda d: d["sku"].upper().startswith("AZB") and not d["sku"].upper().startswith(("AZBH", "AZBE", "AZBD"))),
+    ("flexpro pcb", lambda d: d["family"] == "FlexPro" and _effective_form(d["form_factor"]) == "PCB Mount"),
+    ("flexpro panel", lambda d: d["family"] == "FlexPro" and _effective_form(d["form_factor"]) == "Panel Mount"),
+    ("digiflex panel", lambda d: d["family"] == "DigiFlex Performance" and _effective_form(d["form_factor"]) == "Panel Mount"),
+    ("digiflex pcb", lambda d: d["family"] == "DigiFlex Performance" and _effective_form(d["form_factor"]) == "PCB Mount"),
+    ("classic analog", lambda d: d["family"] == "Classic"),
+    ("analog drive", lambda d: d["family"] in {"Classic", "AxCent"}),
+    ("axcent", lambda d: d["family"] == "AxCent"),
+    ("digiflex", lambda d: d["family"] == "DigiFlex Performance"),
+    ("flexpro", lambda d: d["family"] == "FlexPro"),
+]
+
+# Drop less-specific keywords when a more-specific one is already present to
+# avoid emitting multiple tables that mostly overlap.
+_KEYWORD_SUPERSEDES = {
+    "axcent pcb": {"axcent", "azb ", "azbh", "azbe", "azbd ", "azbdc"},
+    "axcent panel": {"axcent"},
+    "axcent vehicle": {"axcent"},
+    "azbh": {"axcent", "azb "},
+    "azbe": {"axcent", "azb "},
+    "azbd ": {"axcent", "azb "},
+    "azbdc": {"axcent", "azb "},
+    "azb ": {"axcent"},
+    "flexpro pcb": {"flexpro"},
+    "flexpro panel": {"flexpro"},
+    "digiflex panel": {"digiflex"},
+    "digiflex pcb": {"digiflex"},
+    "classic analog": {"analog drive"},
+}
+
+
+def detect_family_keywords(message: str) -> list[str]:
+    """Return family/series keywords mentioned in the message, dropping less-
+    specific ones when a more-specific one already covers them.
+    """
+    text = (message or "").lower()
+    hit: list[str] = []
+    for kw, _ in _FAMILY_KEYWORDS:
+        if kw.strip() in text and kw not in hit:
+            hit.append(kw)
+
+    # Drop superseded keywords
+    superseded: set[str] = set()
+    for specific in hit:
+        for less_specific in _KEYWORD_SUPERSEDES.get(specific, set()):
+            superseded.add(less_specific)
+    return [kw for kw in hit if kw not in superseded]
+
+
+def get_family_spec_table(keyword: str, limit: int = 12) -> str:
+    """Return a compact table of canonical facts for drives matching a family
+    keyword (e.g. "axcent pcb", "azbh", "analog drives"). Capped at `limit` rows
+    to keep the token budget predictable.
+    """
+    _load_csv()
+    predicate = None
+    for kw, pred in _FAMILY_KEYWORDS:
+        if kw == keyword:
+            predicate = pred
+            break
+    if predicate is None:
+        return ""
+
+    matches: list[dict] = []
+    seen: set[str] = set()
+    for sku, drive in _DRIVE_DB.items():
+        if sku in seen:
+            continue
+        try:
+            if predicate(drive):
+                matches.append(drive)
+                seen.add(sku)
+        except KeyError:
+            continue
+
+    if not matches:
+        return ""
+
+    # Prefer Active drives, then alphabetical
+    matches.sort(key=lambda d: (0 if d.get("status", "").lower() == "active" else 1, d.get("sku", "")))
+    rows = matches[:limit]
+
+    header = (
+        f"=== CANONICAL FAMILY TABLE — {keyword.upper()} "
+        f"(showing {len(rows)} of {len(matches)} rows; authoritative from CM Servo Info.csv; "
+        "do not paraphrase numeric values or invent capabilities not listed here) ==="
+    )
+
+    line_headers = ["SKU", "Family", "Form Factor", "Cont (A)", "Peak (A)", "DC Supply (VDC)", "Control", "Operating Mode", "Status"]
+    lines = [" | ".join(line_headers), " | ".join(["---"] * len(line_headers))]
+    for d in rows:
+        lines.append(" | ".join([
+            d.get("sku", ""),
+            d.get("family", ""),
+            d.get("form_factor", ""),
+            d.get("current_continuous_a", "") or "-",
+            d.get("current_peak_a", "") or "-",
+            d.get("dc_supply_range", "") or "-",
+            (d.get("control_command", "") or "-").replace("|", ", "),
+            (d.get("operating_mode", "") or "-").replace("|", ", "),
+            d.get("status", "") or "-",
+        ]))
+    trailing = ""
+    if len(matches) > limit:
+        remaining = [d.get("sku", "") for d in matches[limit:]]
+        trailing = f"\n(Additional {keyword} SKUs not shown in table: {', '.join(remaining[:20])}{'...' if len(remaining) > 20 else ''})"
+    return header + "\n" + "\n".join(lines) + trailing
+
+
+def build_canonical_context(message: str, detected_skus: list[str] | None = None, *, family_limit: int = 12) -> str:
+    """Top-level helper used by chat/support_core.
+
+    Builds the combined canonical spec block for (a) every SKU explicitly detected
+    in the message and (b) every family keyword mentioned. Empty string if nothing
+    matches so callers can safely concatenate.
+    """
+    _load_csv()
+    parts: list[str] = []
+    emitted_skus: set[str] = set()
+    for sku in detected_skus or []:
+        block = get_canonical_spec_block(sku)
+        if block:
+            parts.append(block)
+            # avoid re-listing this exact SKU via family-table too
+            drive = lookup_drive(sku)
+            if drive:
+                emitted_skus.add(drive["sku"].upper())
+
+    for kw in detect_family_keywords(message):
+        table = get_family_spec_table(kw, limit=family_limit)
+        if table:
+            parts.append(table)
+
+    return "\n\n".join(parts)
 
 
 def get_all_drives() -> list[dict]:

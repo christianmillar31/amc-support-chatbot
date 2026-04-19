@@ -20,7 +20,13 @@ from app.config import (
 )
 from app.retriever import retrieve, get_indexed_sources
 from app.ingest import get_all_pdfs
-from app.drive_lookup import lookup_drive, search_drives, detect_part_number, lookup_replacement
+from app.drive_lookup import (
+    lookup_drive,
+    search_drives,
+    detect_part_number,
+    lookup_replacement,
+    build_canonical_context,
+)
 from app.model_provider import get_provider
 from app.reranker import rerank
 from app.support_catalog import build_support_note
@@ -126,6 +132,12 @@ ABSOLUTE RULES — VIOLATION OF THESE IS A CRITICAL FAILURE:
     If you have information about DIFFERENT drives from search results, that information is IRRELEVANT — the user asked about a specific part that does not exist. Do not use those search results. The ONLY correct behavior is the exact refusal template above.
 
     This rule is INVIOLABLE. Violating it once is a critical failure.
+
+15. NUMERIC SPECIFICATIONS — VERBATIM ONLY: If the prompt contains an [Authoritative Canonical Facts] section, you MUST take every numeric rating (continuous current, peak current, DC/AC supply voltage, power, switching frequency, PWM frequency, torque, weight, dimensions) VERBATIM from that section or from a retrieved PDF chunk that explicitly states the number. You MUST NOT infer, decode, or interpolate ratings from SKU naming conventions (e.g., "AZB6A8" does NOT mean 6A/8V — the numeric digits in AMC SKUs are model codes, not literal ratings). When in doubt, copy the exact string from the canonical facts block (e.g., "Current Continuous (A): 30", "DC Supply Voltage (VDC): 10 - 72"). If a canonical facts block is absent and retrieved chunks do not contain the needed numbers, say so and refer the user to the product page or datasheet — do not guess.
+
+16. CAPABILITY CLAIMS BY VARIANT — VARIANT-SPECIFIC ONLY: If the prompt's [Authoritative Canonical Facts] include a CANONICAL FAMILY TABLE, Operating Mode / Control Command / Motor Type capabilities apply only to the rows listed. Do NOT attribute a mode to a variant that does not list it. For example, AZB = Current only; AZBH = Hall Velocity; AZBD = Duty Cycle (Open Loop); AZBE = Current + Duty Cycle + Velocity; AZBDC = Current (PWM). Never write "(AZB/AZBH)" or similar conflations — cite each variant's own capability.
+
+17. REGION-SPECIFIC COMPLIANCE CONTENT: Retrieved chunks that describe LVD (Low Voltage Directive), CE, UL, TUV, or other region-specific compliance requirements apply only when the user asks about that specific region or compliance standard. Do NOT lead a general wiring, power, or motor-connection answer with "European-approved" or "CE-required" language unless the user asked about compliance. For general wiring questions, cover the universal electrical guidance first (wire gauge for the drive's current rating, grounding, shielding, connector pinout) and mention region-specific compliance only as a supplemental note.
 
 OFF-TOPIC / NON-TECHNICAL MESSAGES:
 - If the user sends greetings ("hi", "hello"), respond briefly and ask how you can help with AMC drives.
@@ -662,18 +674,22 @@ def handle_list_available_manuals() -> tuple[str, list[dict]]:
 
 
 def _dedup_sources(all_sources: list[dict]) -> list[dict]:
-    """Deduplicate sources by (source, page) key."""
+    """Deduplicate sources by (source, page) key and enrich with an AMC web URL."""
+    from app.url_resolver import resolve_source_url
+
     sources = []
     seen = set()
     for chunk in all_sources:
         key = (chunk["source"], chunk["page"])
         if key not in seen:
             seen.add(key)
-            sources.append({
+            entry = {
                 "source": chunk["source"],
                 "page": chunk["page"],
                 "heading": chunk.get("heading", ""),
-            })
+            }
+            entry["url"] = resolve_source_url(entry)
+            sources.append(entry)
     return sources
 
 
@@ -772,11 +788,13 @@ def _smart_route(
 
     drive_info = ""
     result = drive_context  # Pre-resolved from frontend selector
+    detected_sku = None
 
     # If no pre-selected drive, detect from message
     if not result:
         part_number = detect_part_number(user_message)
         if part_number:
+            detected_sku = part_number
             result = lookup_drive(part_number)
 
     if result:
@@ -876,6 +894,25 @@ def _smart_route(
     chunks = chunks[:PILOT_RETRIEVAL_TOP_K]
 
     context_text = build_context(chunks)
+
+    # Build authoritative canonical spec context (P1 spec grounding).
+    # Pulls from CM Servo Info.csv so the model cannot fabricate ratings from
+    # SKU naming conventions. Keyed off explicitly detected/resolved SKUs and
+    # family keywords mentioned in the question.
+    canonical_skus: list[str] = []
+    if result:
+        for key in ("canonical_sku", "datasheet_sku", "requested_sku"):
+            val = result.get(key)
+            if val and val not in canonical_skus:
+                canonical_skus.append(val)
+    if detected_sku and detected_sku not in canonical_skus:
+        canonical_skus.insert(0, detected_sku)
+    canonical_context = build_canonical_context(
+        user_message,
+        detected_skus=canonical_skus,
+        family_limit=12,
+    )
+
     if not include_metadata:
         return context_text, chunks, drive_info
 
@@ -891,6 +928,7 @@ def _smart_route(
         "retrieval_chunk_count": len(chunks),
         "broad_retrieval": broad_retrieval,
         "priority_manuals": priority_manuals,
+        "canonical_context": canonical_context,
     }
     return context_text, chunks, drive_info, route_metadata
 
@@ -924,6 +962,10 @@ def _build_structured_context_bundle(
         bundle["hw_manual"] = drive_context.get("hw_manual")
 
     sections = [question, "\n\n[Support Context Bundle]\n" + json.dumps(bundle, indent=2)]
+
+    canonical_context = route_metadata.get("canonical_context")
+    if canonical_context:
+        sections.append("\n\n[Authoritative Canonical Facts]\n" + canonical_context)
 
     support_note = route_metadata.get("support_note")
     if support_note:

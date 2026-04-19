@@ -197,6 +197,15 @@ def judge_deterministic(
             j.failure_reason += "; "
         j.failure_reason += f"Missing all optional required substrings: {required_any}"
 
+    # Each group requires at least one substring present. Useful when a test
+    # asserts multiple independent concepts that each have several valid phrasings.
+    for group in test.get("required_any_groups", []) or []:
+        if group and not any(text.lower() in answer_lower for text in group):
+            j.passed = False
+            if j.failure_reason:
+                j.failure_reason += "; "
+            j.failure_reason += f"Missing at least one from group: {group}"
+
     # --- Expected phrase check (for FAQ / routing tests) ---
     # Lenient matching: normalize punctuation and require 40% of content tokens
     # to appear as substrings in the answer. Handles wording variations like

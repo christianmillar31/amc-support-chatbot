@@ -17,6 +17,24 @@ logger = logging.getLogger(__name__)
 FAQ_FILE = BASE_DIR / "faq_index.csv"
 FAQ_SIMILARITY_THRESHOLD = 0.78  # Lowered from 0.82 to catch more near-matches
 
+# Phrases that indicate the user is asking about a whole family / multiple
+# variants rather than a specific SKU. When the question has one of these
+# indicators AND does not name a specific drive, we skip the FAQ shortcut so
+# the live retrieval + canonical-spec path can answer with per-variant data.
+# This prevents a narrow curated FAQ row (e.g. "Classic B-series only") from
+# being served for a broad question that actually spans multiple families.
+_BROAD_SCOPE_INDICATORS = (
+    "all axcent", "all classic", "all digiflex", "all flexpro", "all amc",
+    "which axcent", "which classic", "which digiflex", "which flexpro",
+    "every axcent", "every classic", "every digiflex", "every flexpro",
+    "all drives", "what drives", "which drives",
+    "which variants", "all variants", "every variant",
+    "analog drives", "axcent drives", "digiflex drives", "flexpro drives",
+    "axcent pcb", "axcent panel", "axcent vehicle",
+    "flexpro pcb", "flexpro panel",
+    "digiflex pcb", "digiflex panel", "digiflex vehicle",
+)
+
 _faq_entries = None
 _faq_embeddings = None
 _embed_model = None
@@ -65,6 +83,24 @@ def _load_faq():
         _faq_embeddings = None
 
 
+def _is_broad_scope_question(user_question: str) -> bool:
+    """Return True when the question spans a whole family / multiple variants
+    and does not name a specific SKU. In that case, a static FAQ row is
+    likely too narrow — defer to the live retrieval path.
+    """
+    text = (user_question or "").lower()
+    if not any(ind in text for ind in _BROAD_SCOPE_INDICATORS):
+        return False
+    # If the user also names a specific SKU, the FAQ route can stay; the
+    # family phrase is likely incidental context. Very cheap check: any
+    # alphanumeric token of length ≥ 5 with both letters and digits.
+    import re
+    for tok in re.findall(r"[A-Z0-9][A-Z0-9-]{4,}", user_question.upper()):
+        if any(ch.isalpha() for ch in tok) and any(ch.isdigit() for ch in tok):
+            return False
+    return True
+
+
 def match_faq(user_question: str, threshold: float = FAQ_SIMILARITY_THRESHOLD) -> dict | None:
     """
     Check if the user's question matches an FAQ entry.
@@ -73,6 +109,12 @@ def match_faq(user_question: str, threshold: float = FAQ_SIMILARITY_THRESHOLD) -
     _load_faq()
 
     if not _faq_entries or _faq_embeddings is None or _embed_model is None:
+        return None
+
+    # Scope guard: broad family/variant questions should go to the live
+    # retrieval path so canonical family tables can ground the answer.
+    if _is_broad_scope_question(user_question):
+        logger.info("FAQ skipped for broad-scope question: %s", user_question[:80])
         return None
 
     try:

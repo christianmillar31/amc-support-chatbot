@@ -13,3 +13,4 @@ huggingface_hub
 python-multipart
 requests
 beautifulsoup4
+rapidfuzz>=3.0
