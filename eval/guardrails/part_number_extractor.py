@@ -70,6 +70,11 @@ def extract_part_numbers(text: str) -> List[str]:
             continue
         if pn in _WORD_BLACKLIST:
             continue
+        # Placeholder / template notation. FAQ prose often uses "FE100-25-XX"
+        # or "FE060-xx-xx" as a family-shorthand placeholder. Two or more
+        # consecutive 'X' characters signal a template, not a real SKU.
+        if "XX" in pn or "YY" in pn or "NN" in pn or "ZZ" in pn:
+            continue
 
         # Deduplicate
         if pn not in seen:

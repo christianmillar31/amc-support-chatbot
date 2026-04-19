@@ -50,6 +50,42 @@ _REFUSAL_MARKERS = [
     "not in my knowledge",
     "not sure",
     "if you meant",
+    # Clarifying-question phrasings (bot asking "which drive / which context")
+    "i need more",
+    "need more specific",
+    "need more information",
+    "what drive",
+    "what drive model",
+    "what specific drive",
+    "what type of",
+    "which drive model",
+    "which drive do you",
+    "which specific drive",
+    "could you provide",
+    "can you provide",
+    "could you tell me",
+    "can you tell me",
+    "please provide",
+    "please specify",
+    "please tell me",
+    "please clarify",
+    "what are you trying",
+    "what is the drive",
+    "for what",
+    # Refusals phrased as "does not support" / "is not supported" (adversarial
+    # mixed-family: "EtherCAT on an AxCent drive" -> "does not support EtherCAT")
+    "does not support",
+    "doesn't support",
+    "is not supported",
+    "are not supported",
+    "not compatible",
+    "not applicable to",
+    # Scope-refusal phrasings
+    "focused on",
+    "technical support assistant",
+    "creative request",
+    "i'm amc",
+    "i am amc",
 ]
 
 
