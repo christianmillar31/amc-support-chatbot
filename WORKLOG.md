@@ -113,6 +113,12 @@
 - Verified with a bounded local monkeypatch test that:
   - `100A40` searches its hardware manual and app notes with a clean manual-first query
   - `AZBH25A20-10` searches `AMC_Datasheet_AZBH25A20.pdf` using both the requested SKU and the base datasheet SKU in the query
+- Added a user-facing support-note path in `app/chat.py` so the answer layer now explicitly surfaces coverage state when relevant.
+- Verified notes:
+  - `100A40` gets an active-but-no-local-datasheet warning
+  - `AZBH25A20-10` gets a base-datasheet routing note
+  - `FE060-25-EM` gets no extra support note because it is a normal covered drive
+- Verified in a bounded stream test that these notes appear as early status updates before answer generation begins.
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.

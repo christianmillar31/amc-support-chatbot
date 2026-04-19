@@ -237,6 +237,18 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - `AZBH25A20-10` targets `AMC_Datasheet_AZBH25A20.pdf` and includes both `AZBH25A20-10` and `AZBH25A20` in the query
 - This is a direct app-quality improvement: the chatbot’s runtime behavior now reflects corpus coverage reality instead of treating all drives as equally covered.
 
+### 19. Answer layer now surfaces coverage state
+- Added a short user-facing support-note path in `app/chat.py`.
+- Practical effect:
+  - `core_drive_missing` users are explicitly told that the exact local datasheet is not in the corpus
+  - variant-match users are explicitly told when the chatbot is routing through a base datasheet SKU
+  - fully covered drives do not get extra noise
+- Verified notes:
+  - `100A40` → active product, no exact local datasheet note
+  - `AZBH25A20-10` → base-datasheet routing note
+  - `FE060-25-EM` → no special note
+- Also verified in a bounded stream test that the support note appears as an early status update before answer generation begins.
+
 ---
 
 ## Currently blocked on

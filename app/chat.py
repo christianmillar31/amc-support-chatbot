@@ -408,6 +408,35 @@ def build_context(chunks: list[dict], max_chunk_chars: int = 1400) -> str:
     return "\n".join(context_parts)
 
 
+def _build_support_note(result: dict) -> str:
+    """Return a short user-facing support coverage note for the current drive."""
+    bucket = result.get("support_bucket")
+    status = result.get("site_status")
+
+    if bucket == "core_drive_missing":
+        return (
+            f"{result['requested_sku']} is an active AMC product, but this local support corpus does not "
+            "currently include its exact datasheet. Answer from the hardware manual, communication manual, "
+            "application notes, and product metadata without implying that the local datasheet exists."
+        )
+    if bucket == "core_drive_reserved_gap":
+        return (
+            f"{result['requested_sku']} is marked Reserved on the AMC product site. Provide cautious support "
+            "guidance and avoid implying full current-product coverage."
+        )
+    if bucket == "core_drive_variant_match":
+        return (
+            f"{result['requested_sku']} routes to the local datasheet for {result['datasheet_sku']}. "
+            "Keep the user's requested SKU visible while using the base datasheet for retrieval."
+        )
+    if status == "Reserved":
+        return (
+            f"{result['requested_sku']} is marked Reserved on the AMC product site. Keep answers concise and "
+            "careful about current-product assumptions."
+        )
+    return ""
+
+
 def _build_drive_search_query(result: dict, user_message: str) -> str:
     """Build a richer drive-aware search query without repeating identical tokens."""
     parts: list[str] = []
@@ -501,6 +530,9 @@ def handle_detect_drive_manual(part_number: str) -> tuple[str, list[dict]]:
             info["support_bucket"] = result["support_bucket"]
         if result.get("site_url"):
             info["product_page"] = result["site_url"]
+        support_note = _build_support_note(result)
+        if support_note:
+            info["support_note"] = support_note
         if result["alias_resolved"]:
             info["alias_resolution"] = (
                 f"'{result['requested_sku']}' maps to the canonical AMC support SKU "
@@ -758,6 +790,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
             result = lookup_drive(part_number)
 
     if result:
+        support_note = _build_support_note(result)
         drive_info = json.dumps({
             "part_number": result["requested_sku"],
             "canonical_part_number": result["canonical_sku"],
@@ -770,6 +803,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
             "product_status": result.get("site_status"),
             "support_bucket": result.get("support_bucket"),
             "product_page": result.get("site_url"),
+            "support_note": support_note,
         }, indent=2)
 
     # Search with query expansion
@@ -864,6 +898,11 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
     context_text, chunks, drive_info = _smart_route(standalone_query, history, drive_context=drive_context)
     all_sources = list(chunks)
 
+    if drive_context:
+        support_note = _build_support_note(drive_context)
+        if support_note:
+            yield {"type": "status", "text": support_note}
+
     # Quality gate: if results are weak, fall back to agentic multi-round search
     # (Only for Anthropic backend — Ollama can't do agentic tool-use)
     using_ollama = _config.LLM_BACKEND == "ollama"
@@ -893,6 +932,10 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
     user_content = standalone_query
     if drive_info:
         user_content += f"\n\n[Drive Info]\n{drive_info}"
+        if drive_context:
+            support_note = _build_support_note(drive_context)
+            if support_note:
+                user_content += f"\n\n[Support Coverage Note]\n{support_note}"
 
     # Inject uploaded PDF content — ranked by semantic relevance to the query
     if uploaded_chunks:
