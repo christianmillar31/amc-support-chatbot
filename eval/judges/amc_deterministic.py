@@ -94,6 +94,7 @@ _API_ERROR_MARKERS = [
     "authentication_error",
     "Insufficient credit",
     "request timed out",
+    "An error occurred generating the answer",
     "An unexpected error occurred",
     "Your credit balance",
 ]

@@ -1,0 +1,1208 @@
+[
+  {
+    "filename": "AMC_CommManual_CANopen.pdf",
+    "title": "DigiFlex Performance CANopen Communication Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "CANopen",
+    "doc_type": "comm",
+    "covers": "Complete CANopen communication reference for DigiFlex Performance servo drives. Covers NMT state machine, SDO/PDO messaging, COB-ID configuration, object dictionary entries, and CiA 402 drive profile including controlword/statusword, homing modes, and interpolated position mode. Includes scaling factors and current limiting appendices.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-5"},
+      {"name": "CANopen Communication Protocol (NMT, SDO, PDO, SYNC, Emergency)", "pages": "6-80"},
+      {"name": "Object Dictionary", "pages": "81-280"},
+      {"name": "Appendix A - Scaling Factors and Current Limiting", "pages": "281-325"}
+    ],
+    "when_to_use": "Search when a user has a DigiFlex drive with CANopen protocol and needs help with CANopen objects, PDO mapping, NMT states, or drive parameters."
+  },
+  {
+    "filename": "AMC_CommManual_EtherCAT.pdf",
+    "title": "DigiFlex Performance EtherCAT Communication Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "EtherCAT",
+    "doc_type": "comm",
+    "covers": "Complete EtherCAT communication reference for DigiFlex Performance servo drives. Covers CoE (CANopen over EtherCAT), SDO/PDO messaging, distributed clocks, object dictionary entries, and CiA 402 drive profile. Includes drive initialization parameters, digital I/O configuration, motion engine states, and fault codes.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-4"},
+      {"name": "EtherCAT Communication Protocol (SDO, PDO, DC, Sync)", "pages": "5-60"},
+      {"name": "Object Dictionary", "pages": "61-220"},
+      {"name": "Appendix A - Scaling Factors and Current Limiting", "pages": "221-255"}
+    ],
+    "when_to_use": "Search when a user has a DigiFlex drive with EtherCAT protocol and needs help with EtherCAT objects, PDO mapping, distributed clocks, or drive parameters."
+  },
+  {
+    "filename": "AMC_CommManual_EthernetIP_FP.pdf",
+    "title": "FlexPro Ethernet/IP Communication Manual",
+    "drive_families": ["FlexPro"],
+    "protocol": "Ethernet/IP",
+    "doc_type": "comm",
+    "covers": "Complete Ethernet/IP communication reference for FlexPro servo drives. Covers CIP protocol, implicit/explicit messaging, assembly instances, command dictionary with instance-based addressing, and drive profile. Includes IP configuration, connection parameters, and Add-On Instruction support for Rockwell PLCs.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-4"},
+      {"name": "Ethernet/IP Communication Protocol (CIP, Assemblies)", "pages": "5-50"},
+      {"name": "Command Dictionary", "pages": "51-200"},
+      {"name": "Appendix A - Scaling Factors and Current Limiting", "pages": "201-238"}
+    ],
+    "when_to_use": "Search when a user has a FlexPro IPM drive using Ethernet/IP and needs help with CIP messaging, assembly configuration, or drive parameters."
+  },
+  {
+    "filename": "AMC_CommManual_Ethernet_DP.pdf",
+    "title": "DigiFlex Performance Ethernet Communication Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "Ethernet/IP",
+    "doc_type": "comm",
+    "covers": "Ethernet/IP communication reference for DigiFlex Performance panel mount drives. Covers serial communication protocol with Ethernet transport, command dictionary with hex index addressing, and drive configuration parameters. Includes scaling factors and current limiting appendices.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-4"},
+      {"name": "Serial Communication Protocol", "pages": "5-30"},
+      {"name": "Command Dictionary", "pages": "31-175"},
+      {"name": "Appendix A - Scaling Factors and Current Limiting", "pages": "176-212"}
+    ],
+    "when_to_use": "Search when a user has a DigiFlex panel mount drive with Ethernet/IP and needs help with command dictionary entries or serial protocol over Ethernet."
+  },
+  {
+    "filename": "AMC_CommManual_FP_CANopen.pdf",
+    "title": "FlexPro CANopen Communication Manual",
+    "drive_families": ["FlexPro"],
+    "protocol": "CANopen",
+    "doc_type": "comm",
+    "covers": "Complete CANopen communication reference for FlexPro servo drives. Covers NMT state machine, SDO/PDO messaging, COB-ID configuration, object dictionary entries, and CiA 402 drive profile. Largest comm manual with extended object dictionary covering FlexPro-specific features including advanced current loop parameters and enhanced I/O.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-5"},
+      {"name": "CANopen Communication Protocol (NMT, SDO, PDO, SYNC, Emergency)", "pages": "6-80"},
+      {"name": "Object Dictionary", "pages": "81-320"},
+      {"name": "Appendix A - Scaling Factors and Current Limiting", "pages": "321-368"}
+    ],
+    "when_to_use": "Search when a user has a FlexPro CM drive using CANopen protocol and needs help with CANopen objects, PDO mapping, or FlexPro-specific parameters."
+  },
+  {
+    "filename": "AMC_CommManual_FP_EtherCAT.pdf",
+    "title": "FlexPro EtherCAT Communication Manual",
+    "drive_families": ["FlexPro"],
+    "protocol": "EtherCAT",
+    "doc_type": "comm",
+    "covers": "Complete EtherCAT communication reference for FlexPro servo drives. Covers CoE (CANopen over EtherCAT), SDO/PDO messaging, distributed clocks, object dictionary entries, and CiA 402 drive profile. Includes FlexPro-specific parameters, charge-based current limiting, and ESI file information.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-4"},
+      {"name": "EtherCAT Communication Protocol (SDO, PDO, DC)", "pages": "5-55"},
+      {"name": "Object Dictionary", "pages": "56-225"},
+      {"name": "Appendix A - Scaling Factors and Current Limiting", "pages": "226-250"},
+      {"name": "Appendix B - ESI File Information", "pages": "251-259"}
+    ],
+    "when_to_use": "Search when a user has a FlexPro EM drive using EtherCAT protocol and needs help with EtherCAT objects, PDO mapping, distributed clocks, or FlexPro-specific parameters."
+  },
+  {
+    "filename": "AMC_CommManual_FP_Serial.pdf",
+    "title": "FlexPro Serial (RS485/RS232) Communication Manual",
+    "drive_families": ["FlexPro"],
+    "protocol": "RS485/RS232",
+    "doc_type": "comm",
+    "covers": "Complete serial communication reference for FlexPro servo drives. Covers RS485/RS232 binary protocol with SOF/address/data/CRC framing, host command structure, object dictionary with hex index addressing, and PVT (position-velocity-time) streaming. Includes scaling factors and current limiting appendices.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-4"},
+      {"name": "Serial Communication Protocol (Framing, Commands, PVT)", "pages": "5-50"},
+      {"name": "Object Dictionary", "pages": "51-235"},
+      {"name": "Appendix A - Scaling Factors and Current Limiting", "pages": "236-274"}
+    ],
+    "when_to_use": "Search when a user has a FlexPro RM drive using RS485 or RS232 serial protocol and needs help with serial commands, packet framing, or drive parameters."
+  },
+  {
+    "filename": "AMC_CommManual_Modbus.pdf",
+    "title": "DigiFlex Performance Modbus RTU Communication Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "Modbus RTU",
+    "doc_type": "comm",
+    "covers": "Modbus RTU communication reference for DigiFlex Performance servo drives with RS485 Modbus interface. Covers Modbus function codes, register mapping, and drive parameter access via Modbus protocol. Smaller manual focused specifically on the Modbus register interface.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Modbus RTU Protocol (Function Codes, Registers)", "pages": "4-40"},
+      {"name": "Register Map / Command Dictionary", "pages": "41-356"}
+    ],
+    "when_to_use": "Search when a user has a DigiFlex RA drive using Modbus RTU protocol and needs help with Modbus registers, function codes, or drive parameter access."
+  },
+  {
+    "filename": "AMC_CommManual_POWERLINK.pdf",
+    "title": "DigiFlex Performance POWERLINK Communication Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "POWERLINK",
+    "doc_type": "comm",
+    "covers": "Complete POWERLINK (Ethernet POWERLINK) communication reference for DigiFlex Performance servo drives. Covers POWERLINK protocol, managing node configuration, object dictionary entries, PDO mapping, and CiA 402 drive profile. Includes scaling factors and current limiting appendices.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-4"},
+      {"name": "POWERLINK Communication Protocol", "pages": "5-55"},
+      {"name": "Object Dictionary", "pages": "56-290"},
+      {"name": "Appendix A - Scaling Factors and Current Limiting", "pages": "291-328"}
+    ],
+    "when_to_use": "Search when a user has a DigiFlex drive with POWERLINK protocol and needs help with POWERLINK objects, PDO mapping, or drive parameters."
+  },
+  {
+    "filename": "AMC_CommManual_RS485.pdf",
+    "title": "DigiFlex Performance RS485/RS232 Communication Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "RS485/RS232",
+    "doc_type": "comm",
+    "covers": "Complete serial communication reference for DigiFlex Performance servo drives. Covers RS485/RS232 binary protocol with SOF/address/data/CRC framing, host command structure, command dictionary with hex index addressing, and PVT streaming. Includes scaling factors and current limiting appendices.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-4"},
+      {"name": "Serial Communication Protocol (Framing, Commands)", "pages": "5-35"},
+      {"name": "Command Dictionary", "pages": "36-200"},
+      {"name": "Appendix A - Scaling Factors and Current Limiting", "pages": "201-244"}
+    ],
+    "when_to_use": "Search when a user has a DigiFlex drive using RS485 or RS232 serial and needs help with serial commands, packet framing, or drive parameters."
+  },
+  {
+    "filename": "AMC_HWManual_FlexPro_PCB.pdf",
+    "title": "FlexPro PCB Mount Hardware Installation Manual",
+    "drive_families": ["FlexPro"],
+    "protocol": null,
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for FlexPro PCB mount servo drives (FE, FM, FD, FX series). Covers product overview, system requirements, connector pinouts, wiring diagrams for power/motor/feedback/I/O, STO (Safe Torque Off) connections, mounting instructions, and interface PCB options. Includes stepper motor wiring and development board assembly.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-20"},
+      {"name": "Integration in the Servo System (Wiring, Connectors, Mounting)", "pages": "21-55"},
+      {"name": "Operation and Features (I/O, STO, LED Codes)", "pages": "56-70"},
+      {"name": "Troubleshooting and Appendices", "pages": "71-76"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount a FlexPro PCB drive (FE, FM, FD, FMP, FX series) and needs connector pinouts, wiring diagrams, or mounting dimensions."
+  },
+  {
+    "filename": "AMC_HWManual_DigiFlex_Panel_EtherCAT.pdf",
+    "title": "DigiFlex Performance Panel Mount EtherCAT Hardware Installation Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "EtherCAT",
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for DigiFlex Performance panel mount EtherCAT drives (DPE series). Covers product models, control module details, connector pinouts for power/feedback/I/O/communication, wiring diagrams, STO connections, mounting instructions, and 24V isolated digital I/O specifications.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-18"},
+      {"name": "Integration in the Servo System (Wiring, Connectors, Mounting)", "pages": "19-45"},
+      {"name": "Operation and Features (I/O, STO, Feedback)", "pages": "46-60"},
+      {"name": "Troubleshooting and Appendices", "pages": "61-66"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount a DigiFlex Performance panel mount EtherCAT drive (DPE series) and needs connector pinouts or wiring diagrams."
+  },
+  {
+    "filename": "AMC_HWManual_DigiFlex_Panel_CANopen.pdf",
+    "title": "DigiFlex Performance Panel Mount CANopen Hardware Installation Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "CANopen",
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for DigiFlex Performance panel mount CANopen drives (DPC series). Covers product models with various feedback options, connector pinouts for power/feedback/I/O/CAN communication, wiring diagrams, STO connections, DIP switch configuration, mounting instructions, and I/O module options.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-20"},
+      {"name": "Integration in the Servo System (Wiring, Connectors, Mounting)", "pages": "21-50"},
+      {"name": "Operation and Features (I/O, STO, Feedback, Modules)", "pages": "51-70"},
+      {"name": "Troubleshooting and Appendices", "pages": "71-76"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount a DigiFlex Performance panel mount CANopen drive (DPC series) and needs connector pinouts, DIP switch settings, or wiring diagrams."
+  },
+  {
+    "filename": "AMC_HWManual_DigiFlex_Panel_RS485-ModbusRTU.pdf",
+    "title": "DigiFlex Performance Panel Mount RS485/Modbus RTU Hardware Installation Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "RS485/Modbus RTU",
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for DigiFlex Performance panel mount RS485 and Modbus RTU drives (DPR series). Covers product models including DPRAHIE, DPRANIE, DPRANIR, DPRALTE, and DPRALTR variants, connector pinouts, wiring diagrams, STO connections, and 24V digital I/O specifications.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-22"},
+      {"name": "Integration in the Servo System (Wiring, Connectors, Mounting)", "pages": "23-55"},
+      {"name": "Operation and Features (I/O, STO, Feedback)", "pages": "56-72"},
+      {"name": "Troubleshooting and Appendices", "pages": "73-78"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount a DigiFlex Performance panel mount RS485 or Modbus drive (DPR series) and needs connector pinouts or wiring diagrams."
+  },
+  {
+    "filename": "AMC_HWManual_DigiFlex_Panel_POWERLINK.pdf",
+    "title": "DigiFlex Performance Panel Mount POWERLINK Hardware Installation Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "POWERLINK",
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for DigiFlex Performance panel mount POWERLINK drives (DPP series). Covers product models, control module details, connector pinouts for power/feedback/I/O/Ethernet communication, wiring diagrams, STO connections, and mounting instructions.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-18"},
+      {"name": "Integration in the Servo System (Wiring, Connectors, Mounting)", "pages": "19-45"},
+      {"name": "Operation and Features (I/O, STO, Feedback)", "pages": "46-60"},
+      {"name": "Troubleshooting and Appendices", "pages": "61-66"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount a DigiFlex Performance panel mount POWERLINK drive (DPP series) and needs connector pinouts or wiring diagrams."
+  },
+  {
+    "filename": "AMC_HWManual_DigiFlex_Panel_ClickMove.pdf",
+    "title": "DigiFlex Performance Panel Mount Click&Move Hardware Installation Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "EtherCAT",
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for DigiFlex Performance panel mount Click&Move drives (DPM series). Covers product models with integrated Click&Move automation, control module with EtherCAT communication, connector pinouts, wiring diagrams, STO connections, and 24V digital I/O specifications.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-18"},
+      {"name": "Integration in the Servo System (Wiring, Connectors, Mounting)", "pages": "19-45"},
+      {"name": "Operation and Features (I/O, STO, Feedback)", "pages": "46-58"},
+      {"name": "Troubleshooting and Appendices", "pages": "59-65"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount a DigiFlex Performance panel mount Click&Move drive (DPM series) and needs connector pinouts or wiring diagrams."
+  },
+  {
+    "filename": "AMC_HWManual_DigiFlex_PCB_CANopen.pdf",
+    "title": "DigiFlex Performance PCB Mount CANopen Hardware Installation Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "CANopen",
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for DigiFlex Performance PCB mount CANopen drives (DZ series with CAN interface). Covers connector pinouts, CAN transceiver wiring, encoder/hall sensor interface, STO connections, RS485/232 configuration, interface PCB options (MC1XDZ), and mounting on carrier boards.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-18"},
+      {"name": "Integration in the Servo System (Wiring, CAN, Mounting)", "pages": "19-50"},
+      {"name": "Operation and Features (I/O, STO, Baud Rate)", "pages": "51-68"},
+      {"name": "Troubleshooting and Appendices", "pages": "69-74"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount a DigiFlex Performance PCB mount CANopen drive (DZ CAN series) and needs connector pinouts, CAN wiring, or carrier board mounting."
+  },
+  {
+    "filename": "AMC_HWManual_DigiFlex_PCB_RS485-ModbusRTU.pdf",
+    "title": "DigiFlex Performance PCB Mount RS485/Modbus RTU Hardware Installation Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "RS485/Modbus RTU",
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for DigiFlex Performance PCB mount RS485 and Modbus RTU drives (DZ series with RS485 interface). Covers connector pinouts, RS485/232 transceiver wiring, encoder/hall sensor interface, STO connections, interface PCB options (MC1XDZ), and carrier board mounting.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-18"},
+      {"name": "Integration in the Servo System (Wiring, RS485, Mounting)", "pages": "19-50"},
+      {"name": "Operation and Features (I/O, STO, Baud Rate)", "pages": "51-68"},
+      {"name": "Troubleshooting and Appendices", "pages": "69-74"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount a DigiFlex Performance PCB mount RS485/Modbus drive (DZ RS485 series) and needs connector pinouts, RS485 wiring, or carrier board mounting."
+  },
+  {
+    "filename": "AMC_HWManual_DigiFlex_PCB_XEnv.pdf",
+    "title": "DigiFlex Performance PCB Mount Extended Environment Hardware Installation Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for DigiFlex Performance PCB mount extended environment drives (DZX series). Covers DZXC (CANopen) and DZXR (RS485) variants, connector pinouts, CAN/RS485 transceiver wiring, encoder/hall sensor interface, carrier board mounting (MC1XDZ), and extended temperature operation.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-16"},
+      {"name": "Integration in the Servo System (Wiring, Mounting)", "pages": "17-48"},
+      {"name": "Operation and Features (I/O, Commutation)", "pages": "49-63"},
+      {"name": "Troubleshooting and Appendices", "pages": "64-69"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount a DigiFlex Performance PCB mount extended environment drive (DZX series) and needs connector pinouts or wiring diagrams."
+  },
+  {
+    "filename": "AMC_HWManual_DigiFlex_Vehicle.pdf",
+    "title": "DigiFlex Performance Vehicle Hardware Installation Manual",
+    "drive_families": ["DigiFlex"],
+    "protocol": "CANopen",
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for DigiFlex Performance vehicle/mobility drives (DVC series). Covers control module with USB interface, power module, AMPSEAL connector pinouts, power supply wiring for vehicular applications, hall sensor connections, and rugged mounting for electric mobility systems.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-16"},
+      {"name": "Integration in the Servo System (Wiring, Connectors, Mounting)", "pages": "17-42"},
+      {"name": "Operation and Features (I/O, Faults)", "pages": "43-58"},
+      {"name": "Troubleshooting and Appendices", "pages": "59-64"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount a DigiFlex Performance vehicle drive (DVC series) for electric mobility applications."
+  },
+  {
+    "filename": "AMC_HWManual_AxCent_Panel.pdf",
+    "title": "AxCent Panel Mount Hardware Installation Manual",
+    "drive_families": ["AxCent"],
+    "protocol": null,
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for AxCent panel mount analog servo drives (AB series). Covers product models, DIP switch configuration for current limits and motor type, connector pinouts, power supply wiring, encoder/hall/tachometer feedback, shunt regulator connections, and through-hole component tuning.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-18"},
+      {"name": "Integration in the Servo System (Wiring, Connectors, Mounting)", "pages": "19-42"},
+      {"name": "Operation and Features (DIP Switches, Tuning)", "pages": "43-62"},
+      {"name": "Troubleshooting and Appendices", "pages": "63-71"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or configure an AxCent panel mount drive (AB series) and needs DIP switch settings, wiring diagrams, or tuning procedures."
+  },
+  {
+    "filename": "AMC_HWManual_AxCent_PCB.pdf",
+    "title": "AxCent PCB Mount Hardware Installation Manual",
+    "drive_families": ["AxCent"],
+    "protocol": null,
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for AxCent PCB mount analog servo drives (AZ series including AZB and AZBD variants). Covers analog command input, PWM current control, connector pinouts, carrier board mounting (MC1XAZ01-HR), encoder/hall/tachometer feedback wiring, and DIP switch configuration.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-20"},
+      {"name": "Integration in the Servo System (Wiring, Carrier Board, Mounting)", "pages": "21-55"},
+      {"name": "Operation and Features (I/O, DIP Switches)", "pages": "56-78"},
+      {"name": "Troubleshooting and Appendices", "pages": "79-86"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount an AxCent PCB mount drive (AZ series) and needs connector pinouts, carrier board info, or configuration."
+  },
+  {
+    "filename": "AMC_HWManual_AxCent_PCB_XEnv.pdf",
+    "title": "AxCent PCB Mount Extended Environment Hardware Installation Manual",
+    "drive_families": ["AxCent"],
+    "protocol": null,
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for AxCent PCB mount extended environment drives (AZX series including AZXBH variants). Covers extended temperature/environment operation, analog command input, connector pinouts, carrier board mounting (MC1XAZ01-HR), encoder/hall feedback wiring, and loop tuning.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-18"},
+      {"name": "Integration in the Servo System (Wiring, Carrier Board)", "pages": "19-48"},
+      {"name": "Operation and Features (Hall Sensors, Tuning)", "pages": "49-65"},
+      {"name": "Troubleshooting and Appendices", "pages": "66-72"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or mount an AxCent PCB mount extended environment drive (AZX series) and needs connector pinouts or carrier board info."
+  },
+  {
+    "filename": "AMC_HWManual_AxCent_Vehicle.pdf",
+    "title": "AxCent Vehicle/Mobility Hardware Installation Manual",
+    "drive_families": ["AxCent"],
+    "protocol": null,
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for AxCent vehicle and electric mobility motor controllers (AVB series). Covers three-phase brushless and brushed motor controllers, differential analog command, DIP switch configuration, power connector wiring for vehicular applications, shunt regulators, and through-hole component tuning.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-18"},
+      {"name": "Integration in the Servo System (Wiring, Connectors)", "pages": "19-42"},
+      {"name": "Operation and Features (DIP Switches, Tuning, Faults)", "pages": "43-62"},
+      {"name": "Troubleshooting and Appendices", "pages": "63-70"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or configure an AxCent vehicle/mobility drive (AVB series) for electric vehicle applications."
+  },
+  {
+    "filename": "AMC_HWManual_AnalogDrives.pdf",
+    "title": "Classic Analog Drives Hardware Installation Manual",
+    "drive_families": ["Classic"],
+    "protocol": null,
+    "doc_type": "hw",
+    "covers": "Hardware installation guide for Classic analog servo drives (B series: B30A40, B30A40AC, B060A400AC, B100A400AC). Covers analog command input, tachometer/encoder feedback, DIP switch settings for current limits, power supply wiring, shunt regulators, potentiometer tuning, and through-hole component adjustments.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-3"},
+      {"name": "Products and System Requirements", "pages": "4-16"},
+      {"name": "Integration in the Servo System (Wiring, Connectors)", "pages": "17-40"},
+      {"name": "Operation (DIP Switches, Potentiometers, Tuning)", "pages": "41-62"},
+      {"name": "Troubleshooting and Appendices", "pages": "63-73"}
+    ],
+    "when_to_use": "Search when a user needs to install, wire, or tune a Classic analog drive (B series) and needs DIP switch settings, potentiometer adjustments, or wiring diagrams."
+  },
+  {
+    "filename": "AMC_SW_Manual_ACE.pdf",
+    "title": "ACE Software User Manual",
+    "drive_families": ["FlexPro", "DigiFlex"],
+    "protocol": null,
+    "doc_type": "sw",
+    "covers": "Complete user guide for ACE (Advanced Configuration Environment) software, used to configure and tune FlexPro and newer DigiFlex drives. Covers software installation, drive connection via RS485/USB/Ethernet, drive configuration wizards, feedback setup, current/velocity/position loop tuning, gain sets, motion tasks (jog, point-to-point, PVT), scope tool, digital I/O configuration, and firmware updates.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-4"},
+      {"name": "Introduction and Installation", "pages": "5-12"},
+      {"name": "Configuring the Drive (Feedback, Limits, I/O, Events)", "pages": "13-70"},
+      {"name": "Tuning and Commutation", "pages": "71-90"},
+      {"name": "Motion Tasks (Jog, PTP, PVT, Homing)", "pages": "91-120"},
+      {"name": "Tools and Functions (Scope, Firmware, Drive Info)", "pages": "121-144"}
+    ],
+    "when_to_use": "Search when a user needs help with ACE software for configuring, tuning, or operating FlexPro or DigiFlex drives."
+  },
+  {
+    "filename": "AMC_SW_Manual_DriveWare.pdf",
+    "title": "DriveWare Software User Manual",
+    "drive_families": ["DigiFlex", "AxCent"],
+    "protocol": null,
+    "doc_type": "sw",
+    "covers": "Complete user guide for DriveWare software, used to configure and tune DigiFlex Performance and some AxCent drives. Covers software installation, drive connection via RS485/RS232/USB, drive configuration wizards, feedback setup, current/velocity/position loop tuning, gain sets, motion tasks, scope tool, and parameter management.",
+    "key_sections": [
+      {"name": "Preface / Changes", "pages": "1-4"},
+      {"name": "Introduction and Installation", "pages": "5-12"},
+      {"name": "Configuring the Drive (Feedback, Limits, I/O, Events)", "pages": "13-65"},
+      {"name": "Tuning and Commutation", "pages": "66-85"},
+      {"name": "Motion Tasks (Jog, PTP, PVT, Homing)", "pages": "86-112"},
+      {"name": "Tools and Functions (Scope, Firmware, Drive Info)", "pages": "113-134"}
+    ],
+    "when_to_use": "Search when a user needs help with DriveWare software for configuring, tuning, or operating DigiFlex Performance drives."
+  },
+  {
+    "filename": "AMC_SW_QuickRef_ACE.pdf",
+    "title": "ACE Software Quick Reference Guide",
+    "drive_families": ["FlexPro", "DigiFlex"],
+    "protocol": null,
+    "doc_type": "sw_ref",
+    "covers": "Quick reference guide for ACE software providing condensed setup instructions. Covers connection procedures, toolbar overview, basic drive configuration steps, and common motion control operations for quick startup.",
+    "key_sections": [
+      {"name": "Connection and Setup", "pages": "1-15"},
+      {"name": "Command Toolbar and Motion Controls", "pages": "16-30"},
+      {"name": "Quick Configuration Steps", "pages": "31-45"}
+    ],
+    "when_to_use": "Search when a user needs quick startup instructions or toolbar reference for ACE software."
+  },
+  {
+    "filename": "AMC_SW_QuickRef_DriveWare.pdf",
+    "title": "DriveWare Software Quick Reference Guide",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "sw_ref",
+    "covers": "Quick reference guide for DriveWare software providing condensed setup instructions. Covers USB and RS485/232 connection procedures, status bar information, toolbar overview, and basic drive configuration steps.",
+    "key_sections": [
+      {"name": "Connection (USB, RS485/232)", "pages": "1-12"},
+      {"name": "Status Bar and Toolbar", "pages": "13-25"},
+      {"name": "Quick Configuration Steps", "pages": "26-37"}
+    ],
+    "when_to_use": "Search when a user needs quick startup instructions or toolbar reference for DriveWare software."
+  },
+  {
+    "filename": "AMC_SW_QuickRef_ClickMove.pdf",
+    "title": "Click&Move Software Quick Reference Guide",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "sw_ref",
+    "covers": "Quick reference guide for Click&Move visual programming automation software. Covers startup guide, project creation, function block programming basics, HMI display features, and attribute configuration for the Click&Move automation solution.",
+    "key_sections": [
+      {"name": "Startup Guide", "pages": "1-15"},
+      {"name": "Display Features and Attributes", "pages": "16-30"},
+      {"name": "General Safety and Reference", "pages": "31-43"}
+    ],
+    "when_to_use": "Search when a user needs quick startup instructions for Click&Move visual programming software."
+  },
+  {
+    "filename": "AMC_AppNote_000.pdf",
+    "title": "AN-000: DriveWare 5.8.5 DLL Registration Error on Windows 7",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Troubleshooting guide for resolving DLL registration errors when installing DriveWare 5.8.5 on Windows 7.",
+    "key_sections": [],
+    "when_to_use": "Search when a user encounters DLL registration errors installing DriveWare on Windows 7."
+  },
+  {
+    "filename": "AMC_AppNote_001.pdf",
+    "title": "AN-001: Communication Protocol Comparison (Cost, Speed, Topology)",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Comparison of AMC communication protocols including CANopen, RS232, RS485, EtherCAT, and POWERLINK. Compares relative cost, speed, and topology for each protocol option.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to compare or choose between communication protocols for AMC drives."
+  },
+  {
+    "filename": "AMC_AppNote_002.pdf",
+    "title": "AN-002: RS485 Communication to DZ Using MC1XDZ Interface",
+    "drive_families": ["DigiFlex"],
+    "protocol": "RS485",
+    "doc_type": "app_note",
+    "covers": "Guide for configuring RS485 communication to DigiFlex DZ PCB drives using the MC1XDZ interface board, including jumper settings.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to set up RS485 communication on a DZ drive using MC1XDZ interface."
+  },
+  {
+    "filename": "AMC_AppNote_003.pdf",
+    "title": "AN-003: DigiFlex Current Foldback Envelope",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Technical explanation of the DigiFlex current foldback envelope behavior, including peak current duration and foldback timing parameters.",
+    "key_sections": [],
+    "when_to_use": "Search when a user has questions about current foldback behavior or peak current duration on DigiFlex drives."
+  },
+  {
+    "filename": "AMC_AppNote_004.pdf",
+    "title": "AN-004: DigiFlex RS232 Serial Communication Pinout",
+    "drive_families": ["DigiFlex"],
+    "protocol": "RS232",
+    "doc_type": "app_note",
+    "covers": "Pinout reference for RS232 serial communication between a 9-pin D-sub connector and DigiFlex drives, including interface access control settings.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs RS232 pinout or wiring details for connecting to a DigiFlex drive."
+  },
+  {
+    "filename": "AMC_AppNote_005.pdf",
+    "title": "AN-005: CAN Bus Wiring and Connector Guide",
+    "drive_families": ["All"],
+    "protocol": "CANopen",
+    "doc_type": "app_note",
+    "covers": "CAN bus wiring guide covering RJ-45 CAN connectors, bus length vs. bit rate specifications, CAN voltage levels, and proper termination.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help with CAN bus wiring, termination, cable length limits, or connector pinouts."
+  },
+  {
+    "filename": "AMC_AppNote_006.pdf",
+    "title": "AN-006: PVT (Position-Velocity-Time) Motion Programming",
+    "drive_families": ["FlexPro", "DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for programming PVT (Position-Velocity-Time) trajectories on AMC drives. Covers PVT point table creation, complex trajectory generation, and object dictionary entries for PVT on FlexPro RS485 drives.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help programming PVT motion trajectories or understanding PVT point tables."
+  },
+  {
+    "filename": "AMC_AppNote_007.pdf",
+    "title": "AN-007: Motor Wiring Connections",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Basic motor wiring guide showing terminal connections for brushed and brushless motors to AMC servo drives.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs basic motor wiring connection guidance."
+  },
+  {
+    "filename": "AMC_AppNote_008.pdf",
+    "title": "AN-008: Recommended Communication Interface Circuits (RS232/485/CAN)",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Reference circuits for RS-232, RS-485, and CAN communication interfaces including transceiver recommendations, isolation circuits, and power considerations.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs recommended interface circuit designs for RS232, RS485, or CAN communication."
+  },
+  {
+    "filename": "AMC_AppNote_009.pdf",
+    "title": "AN-009: Hall Sensor Configuration and Troubleshooting",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for hall sensor configuration including 60-degree and 120-degree commutation patterns, directional inhibits, over/under-voltage behavior, and power-on reset procedures.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help with hall sensor wiring, commutation patterns, or hall sensor troubleshooting."
+  },
+  {
+    "filename": "AMC_AppNote_010.pdf",
+    "title": "AN-010: Motion Profile Time Calculation",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Technical guide for calculating total profile time for trapezoidal motion profiles, including acceleration, deceleration, and velocity segments.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to calculate motion profile timing or understand trapezoidal velocity profiles."
+  },
+  {
+    "filename": "AMC_AppNote_011.pdf",
+    "title": "AN-011: Classic B-Series Drive Configuration (DIP Switches, Tuning)",
+    "drive_families": ["Classic"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Configuration guide for Classic B-series analog drives covering DIP switch settings (SW1-4), peak and continuous current values, inhibit/enable setup, and brushless motor configuration.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help configuring Classic B-series drive DIP switches or current limits."
+  },
+  {
+    "filename": "AMC_AppNote_012.pdf",
+    "title": "AN-012: CANopen TPDO Configuration for PVT Motion",
+    "drive_families": ["DigiFlex", "FlexPro"],
+    "protocol": "CANopen",
+    "doc_type": "app_note",
+    "covers": "Step-by-step guide for configuring TPDOs for PVT motion over CANopen, including 24th TPDO setup, PVT start commands, and scope plot verification.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to configure CANopen TPDOs for PVT motion streaming."
+  },
+  {
+    "filename": "AMC_AppNote_013.pdf",
+    "title": "AN-013: RS485 Scaling Factors and CRC Calculation",
+    "drive_families": ["DigiFlex"],
+    "protocol": "RS485",
+    "doc_type": "app_note",
+    "covers": "Reference for RS485 serial protocol scaling factors (drive units to physical units) and CRC calculation for command packets.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs RS485 scaling factor conversions or CRC calculation details."
+  },
+  {
+    "filename": "AMC_AppNote_014.pdf",
+    "title": "AN-014: Motor Phasing Diagram",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Motor phasing reference showing voltage waveforms (Vab, Vbc, Vca) and phase relationships for brushless motor commutation.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs motor phasing diagrams or commutation waveform references."
+  },
+  {
+    "filename": "AMC_AppNote_015.pdf",
+    "title": "AN-015: Servo Loop Tuning Guide",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Comprehensive servo loop tuning guide covering current loop setup, velocity loop proportional and integral gain tuning, analog servo probe usage, and safety considerations during tuning.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help with servo loop tuning, gain adjustment, or tuning procedures."
+  },
+  {
+    "filename": "AMC_AppNote_016.pdf",
+    "title": "AN-016: Velocity Control Modes",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Overview of velocity control modes available on AMC servo drives.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs information about velocity control mode options."
+  },
+  {
+    "filename": "AMC_AppNote_017.pdf",
+    "title": "AN-017: TPDO Configuration Using DriveWare",
+    "drive_families": ["DigiFlex"],
+    "protocol": "CANopen",
+    "doc_type": "app_note",
+    "covers": "Guide for configuring TPDOs using DriveWare software, including XML configuration file syntax and object dictionary references.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to configure CANopen TPDOs through DriveWare software."
+  },
+  {
+    "filename": "AMC_AppNote_018.pdf",
+    "title": "AN-018: Power Supply Selection for AMC Drives",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for selecting and sizing power supplies for AMC servo drives. Covers supply voltage selection, supply current calculation, isolation requirements, and battery vs. AC rectified supply considerations.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help selecting or sizing a power supply for their servo drive system."
+  },
+  {
+    "filename": "AMC_AppNote_023.pdf",
+    "title": "AN-023: EMI Ferrite Selection Guide",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for selecting and installing ferrite cores for EMI suppression on servo drive systems, including dimensions, impedance specifications, and frequency ranges.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help with EMI filtering or ferrite core selection."
+  },
+  {
+    "filename": "AMC_AppNote_024.pdf",
+    "title": "AN-024: Multi-Axis EtherCAT Configuration Using TwinCAT",
+    "drive_families": ["DigiFlex"],
+    "protocol": "EtherCAT",
+    "doc_type": "app_note",
+    "covers": "Guide for configuring multi-axis drive systems using TwinCAT EtherCAT master, including advanced EtherCAT settings and 4-axis drive configuration.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help configuring AMC EtherCAT drives with Beckhoff TwinCAT."
+  },
+  {
+    "filename": "AMC_AppNote_026.pdf",
+    "title": "AN-026: RS485 Scaling Factors Reference",
+    "drive_families": ["DigiFlex"],
+    "protocol": "RS485",
+    "doc_type": "app_note",
+    "covers": "Detailed scaling factor reference for RS485 serial protocol, converting between drive units and physical units, with CRC calculation examples.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs RS485 unit conversion scaling factors."
+  },
+  {
+    "filename": "AMC_AppNote_027.pdf",
+    "title": "AN-027: Motion Engine Programming (Start-Up, Network Commands, Status)",
+    "drive_families": ["DigiFlex", "FlexPro"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for programming the drive motion engine including start-up motion configuration, motion engine enable/mode settings, network command sequences, and motion engine status interpretation.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help with motion engine programming, start-up motion, or motion engine status codes."
+  },
+  {
+    "filename": "AMC_AppNote_028.pdf",
+    "title": "AN-028: Active Configuration (Start-Up Parameters) for RS485 and CANopen",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for configuring drive start-up parameters (active configuration) via both RS485/232 and CANopen protocols, with index cross-references.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help with drive start-up configuration or active configuration parameters."
+  },
+  {
+    "filename": "AMC_AppNote_029.pdf",
+    "title": "AN-029: Network Digital Output Configuration",
+    "drive_families": ["DigiFlex", "FlexPro"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for configuring network-controlled digital outputs on AMC drives, including index references for both RS485 and CANopen protocols.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to configure digital outputs controlled via network commands."
+  },
+  {
+    "filename": "AMC_AppNote_030.pdf",
+    "title": "AN-030: AC Induction Motor Setup with DriveWare",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Step-by-step guide for configuring AC induction motors with DriveWare, covering motor data input, drive limits, torque/flux loop tuning, and current loop optimization.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to set up an AC induction motor with a DigiFlex drive using DriveWare."
+  },
+  {
+    "filename": "AMC_AppNote_034.pdf",
+    "title": "AN-034: Programmable Limit Switch (PLS) Configuration",
+    "drive_families": ["DigiFlex", "FlexPro"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for configuring programmable limit switch (PLS) digital outputs in DriveWare, including rising/falling edge positions, direction-dependent behavior, and scope verification.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to configure programmable limit switch outputs on their drive."
+  },
+  {
+    "filename": "AMC_AppNote_035.pdf",
+    "title": "AN-035: Motion Sequencing with Break Points",
+    "drive_families": ["DigiFlex", "FlexPro"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for creating motion sequences using break points including home, index, and wait-for-input operations. Includes a screen printing sequence example.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to program motion sequences or use break point functionality."
+  },
+  {
+    "filename": "AMC_AppNote_036.pdf",
+    "title": "AN-036: Docklight RS485 Communication Tutorial",
+    "drive_families": ["DigiFlex", "FlexPro"],
+    "protocol": "RS485",
+    "doc_type": "app_note",
+    "covers": "Tutorial for using Docklight software to communicate with AMC drives via RS485 serial protocol, including packet framing (SOF, address, CRC) and DriveWare verification.",
+    "key_sections": [],
+    "when_to_use": "Search when a user wants to use Docklight for RS485 serial communication debugging with AMC drives."
+  },
+  {
+    "filename": "AMC_AppNote_037.pdf",
+    "title": "AN-037: Stepper Motor Setup Process",
+    "drive_families": ["DigiFlex", "FlexPro"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Step-by-step guide for configuring stepper motors with AMC drives, including commutation setup, velocity loop tuning, and measured value verification.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to configure a stepper motor with an AMC drive."
+  },
+  {
+    "filename": "AMC_AppNote_038.pdf",
+    "title": "AN-038: Multi-Dimensional Motion Trajectories in Click&Move",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for programming multi-dimensional motion trajectories using Click&Move, including XDB text database files, path select functions, and G-code editor.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to program multi-axis trajectories using Click&Move software."
+  },
+  {
+    "filename": "AMC_AppNote_039.pdf",
+    "title": "AN-039: Dynomotion KFLOP Integration",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Integration guide for connecting AMC drives to Dynomotion KFLOP controllers, covering step/direction, analog command, and encoder interface connections.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to integrate AMC drives with a Dynomotion KFLOP motion controller."
+  },
+  {
+    "filename": "AMC_AppNote_040.pdf",
+    "title": "AN-040: Feedback Encoder Resolution and Interface Types",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for understanding encoder resolution specifications, sin/cos encoder cycles, and supported feedback interfaces including EnDat 2.1/2.2, Hiperface, and incremental encoders.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help with encoder resolution, feedback type selection, or EnDat/Hiperface/sin-cos encoder configuration."
+  },
+  {
+    "filename": "AMC_AppNote_041.pdf",
+    "title": "AN-041: High-Speed Commutation and Ripple Error",
+    "drive_families": ["DigiFlex", "FlexPro"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Technical guide on high-speed motor operation covering commutation requirements, ripple error specifications, and sinusoidal commutation for high RPM applications.",
+    "key_sections": [],
+    "when_to_use": "Search when a user has questions about high-speed motor operation, commutation ripple, or sinusoidal commutation requirements."
+  },
+  {
+    "filename": "AMC_AppNote_042.pdf",
+    "title": "AN-042: Click&Move Function Blocks Reference",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Comprehensive reference for Click&Move function blocks used in visual programming, including library help, pin descriptions, and function block usage patterns.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs reference information about Click&Move function blocks."
+  },
+  {
+    "filename": "AMC_AppNote_043.pdf",
+    "title": "AN-043: Click&Move Two-Axis Virtual Project Tutorial",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Tutorial for creating a two-axis virtual motion project in Click&Move, covering project creation, build, and virtual axis testing.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to create a Click&Move two-axis virtual project."
+  },
+  {
+    "filename": "AMC_AppNote_044.pdf",
+    "title": "AN-044: Click&Move Two-Axis Real Project Tutorial",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Tutorial for converting a Click&Move two-axis virtual project to real axes with actual drives, covering axis property configuration and real hardware setup.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to connect a Click&Move project to real drive hardware."
+  },
+  {
+    "filename": "AMC_AppNote_045.pdf",
+    "title": "AN-045: Click&Move Two-Axis Coordinated Motion Tutorial",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Tutorial for creating coordinated multi-axis motion in Click&Move, covering coordinate systems (PCS, MCS, ACS), circular motion, and virtual axis testing.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to program coordinated multi-axis motion in Click&Move."
+  },
+  {
+    "filename": "AMC_AppNote_046.pdf",
+    "title": "AN-046: Click&Move Packaged Release Deployment",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for creating and deploying packaged Click&Move releases, including HMI full-screen operation and machine deployment procedures.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to package and deploy a Click&Move project."
+  },
+  {
+    "filename": "AMC_AppNote_047.pdf",
+    "title": "AN-047: MACC Controller with PC-Based HMI",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for running Click&Move projects on the MACC (Motion Automation Control Card) with a PC-based HMI, covering network setup, gateway configuration, and project deployment.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to set up a MACC controller with a PC-based HMI for Click&Move."
+  },
+  {
+    "filename": "AMC_AppNote_048.pdf",
+    "title": "AN-048: Click&Move C++ Function Block Programming",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Tutorial for creating custom C++ function blocks in Click&Move, including project setup, weighted average calculation example, and schematic integration.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to create custom C++ function blocks in Click&Move."
+  },
+  {
+    "filename": "AMC_AppNote_049.pdf",
+    "title": "AN-049: Downloading Click&Move Applications to Servo Drives",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for downloading Click&Move applications to servo drives via Ethernet, including IP address configuration.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to download a Click&Move application to a drive."
+  },
+  {
+    "filename": "AMC_AppNote_050.pdf",
+    "title": "AN-050: USB-to-Serial Adapter Compatibility and Troubleshooting",
+    "drive_families": ["All"],
+    "protocol": "RS485/RS232",
+    "doc_type": "app_note",
+    "covers": "Guide for USB-to-serial adapter compatibility with AMC drives, including tested adapter models, counterfeit chip warnings, driver installation, and DB-9 pinout reference.",
+    "key_sections": [],
+    "when_to_use": "Search when a user has USB-to-serial adapter connection issues or needs adapter recommendations."
+  },
+  {
+    "filename": "AMC_AppNote_051.pdf",
+    "title": "AN-051: AxCent AB15A100 Setup and Configuration",
+    "drive_families": ["AxCent"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Setup guide for AxCent AB15A100 drive covering current settings, drive enabling, and commutation verification procedures.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help setting up an AxCent AB15A100 drive."
+  },
+  {
+    "filename": "AMC_AppNote_052.pdf",
+    "title": "AN-052: G-Code Motion Programming (Canned Cycles, Coordinate Transforms)",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Comprehensive G-code reference for Click&Move including transition modes, coordinate rotation (G68), canned drilling cycles (G81+), and multi-axis coordinated motion programming.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs G-code programming reference for Click&Move motion applications."
+  },
+  {
+    "filename": "AMC_AppNote_053.pdf",
+    "title": "AN-053: Click&Move Library Loading and Usage",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for loading and using function block libraries in Click&Move, including library element management and program execution.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help loading or using Click&Move function block libraries."
+  },
+  {
+    "filename": "AMC_AppNote_054.pdf",
+    "title": "AN-054: Linux System Preparation for Click&Move",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for preparing a Linux system for Click&Move compatibility, including project setup and configuration.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to run Click&Move on a Linux system."
+  },
+  {
+    "filename": "AMC_AppNote_055.pdf",
+    "title": "AN-055: AxCent RE43 Expansion Location Guide",
+    "drive_families": ["AxCent"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Reference for locating RE43 and RE43 expanded components on AxCent drive models.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to locate RE43 components on AxCent drives."
+  },
+  {
+    "filename": "AMC_AppNote_056.pdf",
+    "title": "AN-056: DriveLibrary Drive Configuration Features",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Overview of DriveLibrary features for storing and loading drive configuration parameters.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help with DriveLibrary drive configuration save/load features."
+  },
+  {
+    "filename": "AMC_AppNote_057.pdf",
+    "title": "AN-057: Two-Axis EtherCAT MACC Tutorial",
+    "drive_families": ["DigiFlex"],
+    "protocol": "EtherCAT",
+    "doc_type": "app_note",
+    "covers": "Tutorial for setting up a two-axis EtherCAT fieldbus project on MACC controller using Click&Move, including target properties and multi-program execution.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to set up EtherCAT drives on a MACC controller with Click&Move."
+  },
+  {
+    "filename": "AMC_AppNote_058.pdf",
+    "title": "AN-058: Inrush Current Protection on AMC Drives",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Technical guide on inrush current protection methods used in AMC drives, including NTC thermistors, current limiting status, and dangers of inrush current with different supply types.",
+    "key_sections": [],
+    "when_to_use": "Search when a user has questions about inrush current protection, NTC thermistors, or current limiting at power-on."
+  },
+  {
+    "filename": "AMC_AppNote_059.pdf",
+    "title": "AN-059: High-Speed Capture (Registration, Conveyors)",
+    "drive_families": ["FlexPro", "DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for using high-speed capture functionality including capture signals, PWM/direction inputs, and conveyor positioning applications.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to configure high-speed position capture or registration for conveyor applications."
+  },
+  {
+    "filename": "AMC_AppNote_060.pdf",
+    "title": "AN-060: ACE FlexPro Serial Communication Programming",
+    "drive_families": ["FlexPro"],
+    "protocol": "RS485",
+    "doc_type": "app_note",
+    "covers": "Programming guide for FlexPro drives via serial protocol using ACE, covering index offsets, scaling factors, CRC calculation, and command/status register mapping.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to program FlexPro drives via serial RS485 protocol using ACE software."
+  },
+  {
+    "filename": "AMC_AppNote_061.pdf",
+    "title": "AN-061: Click&Move EtherCAT Runtime Optimization",
+    "drive_families": ["DigiFlex"],
+    "protocol": "EtherCAT",
+    "doc_type": "app_note",
+    "covers": "Guide for optimizing Click&Move runtime performance with EtherCAT, including CPU affinity configuration, EfChannel property files, and runtime preparations.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to optimize Click&Move EtherCAT runtime performance."
+  },
+  {
+    "filename": "AMC_AppNote_062.pdf",
+    "title": "AN-062: Home to Hard Stop Procedure",
+    "drive_families": ["FlexPro", "DigiFlex"],
+    "protocol": null,
+    "doc_type": "app_note",
+    "covers": "Guide for configuring and executing a home-to-hard-stop routine, covering home position definition, detection configuration, network commands, and motion engine sequencing.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to configure a homing routine that homes to a mechanical hard stop."
+  },
+  {
+    "filename": "AMC_ProductNote_AxCent_Retrofit_Large.pdf",
+    "title": "AxCent Large Size Retrofit Guide",
+    "drive_families": ["AxCent"],
+    "protocol": null,
+    "doc_type": "product_note",
+    "covers": "Retrofit guide for replacing older large-size analog drives with AxCent panel mount drives (AB30A200AC, AB50A200 series). Includes replacement charts, PE connection terminal locations, and feedback connector pinout cross-references.",
+    "key_sections": [
+      {"name": "Replacement Charts", "pages": "1-30"},
+      {"name": "Wiring and Connector Cross-Reference", "pages": "31-70"},
+      {"name": "Feedback Connector Pinouts", "pages": "71-92"}
+    ],
+    "when_to_use": "Search when a user needs to retrofit or replace an older large analog drive with an AxCent drive."
+  },
+  {
+    "filename": "AMC_ProductNote_AxCent_Retrofit_Small.pdf",
+    "title": "AxCent Small Size Retrofit Guide",
+    "drive_families": ["AxCent"],
+    "protocol": null,
+    "doc_type": "product_note",
+    "covers": "Retrofit guide for replacing older small-size analog drives with AxCent panel mount drives (AB20A200 series). Includes replacement charts, DIP switch configuration, and tuning DIP switch settings.",
+    "key_sections": [
+      {"name": "Replacement Charts", "pages": "1-15"},
+      {"name": "Wiring and Configuration", "pages": "16-35"},
+      {"name": "DIP Switch Configuration", "pages": "36-48"}
+    ],
+    "when_to_use": "Search when a user needs to retrofit or replace an older small analog drive with an AxCent drive."
+  },
+  {
+    "filename": "AMC_ProductNote_FlexPro_EthernetIP_AOI.pdf",
+    "title": "FlexPro Ethernet/IP Add-On Instruction (AOI) Guide",
+    "drive_families": ["FlexPro"],
+    "protocol": "Ethernet/IP",
+    "doc_type": "product_note",
+    "covers": "Guide for using FlexPro Ethernet/IP Add-On Instructions (AOI) with Rockwell/Allen-Bradley PLCs, including SINT[14] read/write message configuration and import procedures.",
+    "key_sections": [
+      {"name": "SINT Message Configuration", "pages": "1-5"},
+      {"name": "AOI Import and Setup", "pages": "6-14"}
+    ],
+    "when_to_use": "Search when a user needs to integrate FlexPro Ethernet/IP drives with Allen-Bradley PLCs using Add-On Instructions."
+  },
+  {
+    "filename": "AMC_ProductNote_FlexPro_Wiring.pdf",
+    "title": "FlexPro Power Source Wiring Guide",
+    "drive_families": ["FlexPro"],
+    "protocol": null,
+    "doc_type": "product_note",
+    "covers": "Wiring guide for FlexPro drives covering source configurations for battery, AC rectified, and switching power supplies. Includes external capacitance recommendations and dual battery wiring diagrams.",
+    "key_sections": [
+      {"name": "Source Configurations and Capacitance", "pages": "1-8"},
+      {"name": "Wiring Diagrams", "pages": "9-12"}
+    ],
+    "when_to_use": "Search when a user needs power supply wiring guidance or external capacitance values for FlexPro drives."
+  },
+  {
+    "filename": "AMC_ProductNote_Heatsink.pdf",
+    "title": "AB30A200AC External Heat Sink Installation Instructions",
+    "drive_families": ["AxCent"],
+    "protocol": null,
+    "doc_type": "product_note",
+    "covers": "Instructions for installing an external heat sink on the AB30A200AC drive, with warranty modification warnings.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs to install an external heat sink on an AB30A200AC drive."
+  },
+  {
+    "filename": "AMC_ProductNote_Product_Identification.pdf",
+    "title": "AMC Product Identification Label Guide",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "product_note",
+    "covers": "Guide for reading and interpreting AMC product identification labels including part numbers, serial numbers, and prototype designations.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs help reading or interpreting an AMC product label or part number."
+  },
+  {
+    "filename": "AMC_WhitePaper_EtherCAT.pdf",
+    "title": "White Paper: Motion Control with EtherCAT Technology",
+    "drive_families": ["All"],
+    "protocol": "EtherCAT",
+    "doc_type": "white_paper",
+    "covers": "Technical white paper on EtherCAT motion control system options, covering solution types, system architecture, and advantages of EtherCAT for servo drive applications.",
+    "key_sections": [
+      {"name": "Overview and Solution Types", "pages": "1-7"},
+      {"name": "System Architecture", "pages": "8-13"}
+    ],
+    "when_to_use": "Search when a user wants general information about EtherCAT technology and its benefits for motion control."
+  },
+  {
+    "filename": "AMC_WhitePaper_Visual_Programming.pdf",
+    "title": "White Paper: Visual Programming of Logic, Motion, and Robotics",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "white_paper",
+    "covers": "Technical white paper on visual programming using function blocks for logic, motion control, and robotics applications. Covers function block concepts, state machines, and logic libraries.",
+    "key_sections": [
+      {"name": "Overview and Function Block Concepts", "pages": "1-6"},
+      {"name": "State Machines and Logic Library", "pages": "7-12"}
+    ],
+    "when_to_use": "Search when a user wants information about visual programming approaches for motion control using function blocks."
+  },
+  {
+    "filename": "AMC_SW_ReleaseNotes_ACE.pdf",
+    "title": "ACE Software Release Notes",
+    "drive_families": ["FlexPro", "DigiFlex"],
+    "protocol": null,
+    "doc_type": "sw",
+    "covers": "Release notes for ACE software including bug fixes and firmware update information for the latest ACE version.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs information about ACE software version changes, bug fixes, or firmware compatibility."
+  },
+  {
+    "filename": "AMC_Compliance_CE.pdf",
+    "title": "CE Declaration of Conformity",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "other",
+    "covers": "EU Declaration of Conformity documents for AMC servo drive products, listing compliant model numbers and applicable directives.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs CE compliance information or declaration of conformity documents."
+  },
+  {
+    "filename": "AMC_Compliance_UL.pdf",
+    "title": "UL Listing - Power Conversion Equipment",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "other",
+    "covers": "UL product listing for AMC servo drives under Power Conversion Equipment - Component category, listing certified model numbers for AZ, DZ, AB, AVB, B, DP, FE, FM, FD, and FX series.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs UL certification information for AMC drives."
+  },
+  {
+    "filename": "AMC_Compliance_FuncSafety_FlexPro.pdf",
+    "title": "FlexPro Functional Safety (STO) Certificate",
+    "drive_families": ["FlexPro"],
+    "protocol": null,
+    "doc_type": "other",
+    "covers": "Functional safety certificate for Safe Torque Off (STO) function on FlexPro drives.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs STO functional safety certification details for FlexPro drives."
+  },
+  {
+    "filename": "AMC_Compliance_FuncSafety_DigiFlex.pdf",
+    "title": "DigiFlex Functional Safety (STO) Certificate",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "other",
+    "covers": "Functional safety certificate for Safe Torque Off (STO) function on DigiFlex Performance drives.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs STO functional safety certification details for DigiFlex drives."
+  },
+  {
+    "filename": "AMC_Compliance_FuncSafety_Vehicle.pdf",
+    "title": "Vehicle Drive Functional Safety (STO) Certificate",
+    "drive_families": ["DigiFlex"],
+    "protocol": null,
+    "doc_type": "other",
+    "covers": "Functional safety certificate for Safe Torque Off (STO) function on DigiFlex Performance vehicle drives.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs STO functional safety certification for vehicle/mobility drives."
+  },
+  {
+    "filename": "AMC_Compliance_RoHS.pdf",
+    "title": "RoHS Compliance Declaration",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "other",
+    "covers": "RoHS compliance declaration listing maximum concentration values for restricted substances including cadmium, lead, mercury, and other regulated materials.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs RoHS compliance information for AMC products."
+  },
+  {
+    "filename": "AMC_Compliance_REACh.pdf",
+    "title": "REACh Compliance Supplier Declaration",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "other",
+    "covers": "REACh regulation compliance supplier declaration for substances and preparations used in AMC products.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs REACh chemical compliance information for AMC products."
+  },
+  {
+    "filename": "AMC_Compliance_ISO9001.pdf",
+    "title": "ISO 9001:2015 Quality Certification",
+    "drive_families": ["All"],
+    "protocol": null,
+    "doc_type": "other",
+    "covers": "ISO 9001:2015 quality management system certification for Advanced Motion Controls, issued by DQS Inc.",
+    "key_sections": [],
+    "when_to_use": "Search when a user needs ISO 9001 quality certification information."
+  }
+]

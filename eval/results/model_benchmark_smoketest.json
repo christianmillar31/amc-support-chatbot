@@ -1,0 +1,74 @@
+{
+  "models": [
+    {
+      "model": "llama3.2:3b",
+      "completed": 10,
+      "errors": 0,
+      "duration_seconds": 69415.59,
+      "avg_seconds_per_q": 6941.558999999999,
+      "pass_rate": 0.9,
+      "part_number_hallucination_rate": 0.0,
+      "fabricated_citation_rate": 0.0,
+      "refusal_rate": 1.0,
+      "by_category": {
+        "faq": {
+          "pass_rate": 1.0,
+          "passed": 5,
+          "total": 5
+        },
+        "drive_routing": {
+          "pass_rate": 1.0,
+          "passed": 3,
+          "total": 3
+        },
+        "retrofit": {
+          "pass_rate": 0.0,
+          "passed": 0,
+          "total": 1
+        },
+        "adversarial_fake_sku": {
+          "pass_rate": 1.0,
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "error": null
+    },
+    {
+      "model": "qwen3:8b",
+      "completed": 10,
+      "errors": 0,
+      "duration_seconds": 59921.1,
+      "avg_seconds_per_q": 5992.11,
+      "pass_rate": 0.4,
+      "part_number_hallucination_rate": 0.0,
+      "fabricated_citation_rate": 0.0,
+      "refusal_rate": 0.0,
+      "by_category": {
+        "faq": {
+          "pass_rate": 0.6,
+          "passed": 3,
+          "total": 5
+        },
+        "drive_routing": {
+          "pass_rate": 0.3333,
+          "passed": 1,
+          "total": 3
+        },
+        "retrofit": {
+          "pass_rate": 0.0,
+          "passed": 0,
+          "total": 1
+        },
+        "adversarial_fake_sku": {
+          "pass_rate": 0.0,
+          "passed": 0,
+          "total": 1
+        }
+      },
+      "error": null
+    }
+  ],
+  "full": false,
+  "limit": 10
+}

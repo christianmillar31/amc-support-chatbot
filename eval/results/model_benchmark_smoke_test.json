@@ -1,0 +1,30 @@
+{
+  "models": [
+    {
+      "model": "qwen3:8b",
+      "completed": 2,
+      "errors": 0,
+      "duration_seconds": 0.12621116638183594,
+      "avg_seconds_per_q": 0.06310558319091797,
+      "pass_rate": 1.0,
+      "part_number_hallucination_rate": 0.0,
+      "fabricated_citation_rate": 0.0,
+      "refusal_rate": null,
+      "by_category": {
+        "faq": {
+          "pass_rate": 1.0,
+          "passed": 1,
+          "total": 1
+        },
+        "drive_routing": {
+          "pass_rate": 1.0,
+          "passed": 1,
+          "total": 1
+        }
+      },
+      "error": null
+    }
+  ],
+  "full": false,
+  "limit": 2
+}

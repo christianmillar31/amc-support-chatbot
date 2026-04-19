@@ -1,0 +1,293 @@
+{
+  "provider": "anthropic",
+  "cheap_task_provider": "anthropic_haiku",
+  "local_provider": "ollama",
+  "full": false,
+  "limit": 6,
+  "total_tests": 6,
+  "completed": 6,
+  "errors": 0,
+  "duration_seconds": 511.09,
+  "deterministic_summary": {
+    "total_tests": 6,
+    "valid_tests": 6,
+    "api_errors": 0,
+    "passed": 2,
+    "failed": 4,
+    "pass_rate": 0.3333,
+    "part_number_hallucinations": 0,
+    "part_number_hallucination_rate": 0.0,
+    "fabricated_citations": 0,
+    "fabricated_citation_rate": 0.0,
+    "refusal_tests": 1,
+    "refusal_correct": 0,
+    "refusal_rate": 0.0,
+    "by_category": {
+      "adversarial_fake_sku": {
+        "total": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      },
+      "coverage_state": {
+        "total": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      },
+      "drive_routing": {
+        "total": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      },
+      "faq": {
+        "total": 2,
+        "passed": 2,
+        "pass_rate": 1.0
+      },
+      "retrofit": {
+        "total": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      }
+    }
+  },
+  "provider_counts": {
+    "anthropic": 4,
+    "faq": 2
+  },
+  "support_bucket_counts": {
+    "none": 4,
+    "core_drive_missing": 1,
+    "core_drive_covered": 1
+  },
+  "median_latency_ms": 14034.0,
+  "p95_latency_ms": 199964.5,
+  "median_latency_ms_nonfaq": 20152.0,
+  "median_cost_usd": 0.0,
+  "median_cost_usd_nonfaq": 0.0,
+  "total_estimated_cost_usd": 0.0,
+  "avg_retrieval_chunk_count": 4.17,
+  "fallback_rate": 0.0,
+  "broad_retrieval_rate": 0.1667,
+  "target_checks": {
+    "single_provider_call_default": true,
+    "median_latency_target_met": false,
+    "median_cost_target_met": true,
+    "fake_sku_hallucination_rate_zero": true,
+    "fabricated_citation_rate_zero": true
+  },
+  "cases": [
+    {
+      "test_id": "adv_fake_01",
+      "category": "adversarial_fake_sku",
+      "question": "Tell me about the ABH25A20-10 drive.",
+      "answer": "An error occurred generating the answer. Please try again.",
+      "passed": false,
+      "failure_reason": "Expected refusal but bot answered confidently",
+      "provider_used": "anthropic",
+      "model_used": "claude-sonnet-4-20250514",
+      "latency_ms": 258069,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": null,
+      "retrieval_chunk_count": 6,
+      "used_fallback": false,
+      "broad_retrieval": true,
+      "sources": [
+        {
+          "source": "AMC_Datasheet_AZBH25A20.pdf",
+          "page": 8,
+          "heading": "MC1XAZ01 > Drive(s)"
+        },
+        {
+          "source": "AMC_Datasheet_AZB25A20.pdf",
+          "page": 7,
+          "heading": "MC1XAZ01 > Drive(s)"
+        },
+        {
+          "source": "AMC_Datasheet_AZBH25A20.pdf",
+          "page": 3,
+          "heading": "SPECIFICATIONS > Notes"
+        },
+        {
+          "source": "AMC_Datasheet_AZBE25A20.pdf",
+          "page": 8,
+          "heading": "MC1XAZ01 > Drive(s)"
+        },
+        {
+          "source": "AMC_Datasheet_AZB25A20.pdf",
+          "page": 3,
+          "heading": "SPECIFICATIONS > Notes"
+        },
+        {
+          "source": "AMC_Datasheet_AZBDC25A20.pdf",
+          "page": 3,
+          "heading": "SPECIFICATIONS > Notes"
+        }
+      ]
+    },
+    {
+      "test_id": "coverage_001",
+      "category": "coverage_state",
+      "question": "I need support for the 100A40 drive. Be explicit about whether the exact local datasheet is in the corpus, and tell me what AMC docs I should rely on instead.",
+      "answer": "An error occurred generating the answer. Please try again.",
+      "passed": false,
+      "failure_reason": "Missing required substrings: ['100A40', 'exact datasheet', 'hardware manual']",
+      "provider_used": "anthropic",
+      "model_used": "claude-sonnet-4-20250514",
+      "latency_ms": 14653,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": "core_drive_missing",
+      "retrieval_chunk_count": 6,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": [
+        {
+          "source": "AMC_HWManual_AnalogDrives.pdf",
+          "page": 12,
+          "heading": "Products and System Requirements > (Arms)"
+        },
+        {
+          "source": "AMC_HWManual_AnalogDrives.pdf",
+          "page": 57,
+          "heading": "TABLE 4.2 > \u2014"
+        },
+        {
+          "source": "AMC_HWManual_AnalogDrives.pdf",
+          "page": 53,
+          "heading": "TABLE 4.2 > Example"
+        },
+        {
+          "source": "AMC_HWManual_AnalogDrives.pdf",
+          "page": 38,
+          "heading": "FIGURE 3.1 > Hand Crimp Tool Manufacturer and Part Number"
+        }
+      ]
+    },
+    {
+      "test_id": "drive_0",
+      "category": "drive_routing",
+      "question": "I need info about the FXM060-5-CM drive. What family is it, and which manual should I look at?",
+      "answer": "An error occurred generating the answer. Please try again.",
+      "passed": false,
+      "failure_reason": "Expected answer to contain keywords from 'FXM060-5-CM' (matched 0/1)",
+      "provider_used": "anthropic",
+      "model_used": "claude-sonnet-4-20250514",
+      "latency_ms": 25651,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": "core_drive_covered",
+      "retrieval_chunk_count": 6,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": [
+        {
+          "source": "AMC_Datasheet_FXM060-5-CM.pdf",
+          "page": 1,
+          "heading": "FEATURES > Approvals"
+        },
+        {
+          "source": "AMC_Datasheet_FXM060-5-CM.pdf",
+          "page": 7,
+          "heading": "BOARD CONFIGURATION > Mating Connector Kit"
+        },
+        {
+          "source": "AMC_Datasheet_FXM060-5-CM.pdf",
+          "page": 9,
+          "heading": "100A > Available Accessories"
+        },
+        {
+          "source": "AMC_Datasheet_FXM060-5-CM.pdf",
+          "page": 4,
+          "heading": "PIN FUNCTIONS > Mating Connector Included"
+        }
+      ]
+    },
+    {
+      "test_id": "faq_0",
+      "category": "faq",
+      "question": "How do I set up EtherCAT communication on a FlexPro drive?",
+      "answer": "The FlexPro EtherCAT communication manual covers the protocol setup including ESI file installation, state machine transitions, and object dictionary configuration for FE-series drives. Key addresses: 1000, 6010. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+      "passed": true,
+      "failure_reason": "",
+      "provider_used": "faq",
+      "model_used": null,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": null,
+      "retrieval_chunk_count": 1,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": [
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 11,
+          "heading": "Communication Manual / Introduction"
+        }
+      ]
+    },
+    {
+      "test_id": "faq_1",
+      "category": "faq",
+      "question": "What is the difference between SDO and PDO messages in EtherCAT?",
+      "answer": "SDO (Service Data Object) messages are used for non-cyclic parameter read/write access, while PDO (Process Data Object) messages provide real-time cyclic data exchange for control and monitoring. Key addresses: 2065, 60C2, 1A00, 1600. For the full guide, download \"AMC_CommManual_FP_EtherCAT.pdf\" from a-m-c.com > Support > Downloads > Communication Manuals.",
+      "passed": true,
+      "failure_reason": "",
+      "provider_used": "faq",
+      "model_used": null,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": null,
+      "retrieval_chunk_count": 1,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": [
+        {
+          "source": "AMC_CommManual_FP_EtherCAT.pdf",
+          "page": 15,
+          "heading": "Communication Manual / SDO vs. PDO Messages"
+        }
+      ]
+    },
+    {
+      "test_id": "retrofit_0",
+      "category": "retrofit",
+      "question": "My 12A8 drive is discontinued. What AxCent drive replaces it?",
+      "answer": "An error occurred generating the answer. Please try again.",
+      "passed": false,
+      "failure_reason": "Expected answer to contain keywords from 'AB15A100' (matched 0/1)",
+      "provider_used": "anthropic",
+      "model_used": "claude-sonnet-4-20250514",
+      "latency_ms": 13415,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": null,
+      "retrieval_chunk_count": 5,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": [
+        {
+          "source": "AMC_AppNote_043.pdf",
+          "page": 9,
+          "heading": "collection > PCW)."
+        },
+        {
+          "source": "AMC_AppNote_051.pdf",
+          "page": 1,
+          "heading": "AB15A100 > possibilities."
+        },
+        {
+          "source": "AMC_AppNote_055.pdf",
+          "page": 1,
+          "heading": "AN-055 > Figure 1b RE43 Expanded Location"
+        },
+        {
+          "source": "AMC_AppNote_055.pdf",
+          "page": 2,
+          "heading": "AN-055 > Figure 3b RE43 Expanded Location"
+        },
+        {
+          "source": "AMC_AppNote_059.pdf",
+          "page": 2,
+          "heading": "AN-059 > Figure 3 PWM and Direction Inputs"
+        }
+      ]
+    }
+  ]
+}

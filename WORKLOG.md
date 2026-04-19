@@ -3,6 +3,42 @@
 ## 2026-04-17
 
 ### Completed
+- Added `eval/runners/benchmark_pilot_runtime.py` so the repo can benchmark the real Claude-first support-core path instead of only the older Ollama-only eval flow.
+- The new pilot benchmark records:
+  - deterministic quality metrics
+  - provider distribution
+  - median / p95 latency
+  - estimated cost
+  - retrieval chunk counts
+  - fallback / broad-retrieval rates
+- Added `PILOT_RUNTIME_BENCHMARK_PROGRESS.md` as the running Markdown log for Claude-first pilot benchmark work.
+- Added `eval/tests/test_pilot_runtime_benchmark.py` to lock in the benchmark summary math and acceptance-gate logic.
+- Improved deterministic eval accounting so the generic runtime fallback string `An error occurred generating the answer. Please try again.` is treated as an API/infrastructure error and excluded from quality scoring.
+- Ran the new benchmark harness in dry-run mode:
+  - `python eval/runners/benchmark_pilot_runtime.py --dry-run --limit 6 --tag smoke_test`
+  - confirmed artifact generation for `pilot_runtime_benchmark_smoke_test.{json,md}`
+- Ran a real Claude-first smoke benchmark on a 6-test balanced slice:
+  - `python eval/runners/benchmark_pilot_runtime.py --limit 6 --tag claude_smoke`
+  - artifact outputs:
+    - `eval/results/pilot_runtime_benchmark_claude_smoke.json`
+    - `eval/results/pilot_runtime_benchmark_claude_smoke.md`
+- Current measured smoke outcome:
+  - `6` total tests
+  - `2` valid quality-scored tests
+  - `4` API/provider failures excluded from quality
+  - provider mix: `4 anthropic`, `2 faq`
+  - deterministic pass rate on valid tests: `100%`
+  - median non-FAQ latency observed before failure: about `1765 ms`
+- Important blocker discovered:
+  - Anthropic returned `Your credit balance is too low to access the Anthropic API.`
+  - So the new benchmark path is working, but successful non-FAQ Claude answer cost/latency cannot be measured until the Anthropic account has credits again.
+- Re-ran the same `claude_smoke` benchmark after the Anthropic account was reportedly topped up.
+- The blocker persisted unchanged:
+  - Anthropic still returned `Your credit balance is too low to access the Anthropic API.`
+  - refreshed smoke snapshot remained `6` total tests / `2` valid / `4` API errors
+  - median non-FAQ failure-time latency was about `1880.5 ms`
+- Practical interpretation:
+  - the app is almost certainly still using an API key tied to an unfunded Anthropic workspace/project, or the billing change has not propagated to that key yet.
 - Reworked the runtime toward a Claude-first pilot path instead of a backend toggle:
   - added `app/model_provider.py` with a real `ModelProvider` abstraction
   - default final-answer path is now `anthropic`

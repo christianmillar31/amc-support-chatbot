@@ -1,0 +1,179 @@
+{
+  "provider": "anthropic",
+  "cheap_task_provider": "anthropic_haiku",
+  "local_provider": "ollama",
+  "full": false,
+  "limit": 6,
+  "total_tests": 6,
+  "completed": 6,
+  "errors": 0,
+  "duration_seconds": 0.12,
+  "deterministic_summary": {
+    "total_tests": 6,
+    "valid_tests": 6,
+    "api_errors": 0,
+    "passed": 2,
+    "failed": 4,
+    "pass_rate": 0.3333,
+    "part_number_hallucinations": 0,
+    "part_number_hallucination_rate": 0.0,
+    "fabricated_citations": 0,
+    "fabricated_citation_rate": 0.0,
+    "refusal_tests": 1,
+    "refusal_correct": 0,
+    "refusal_rate": 0.0,
+    "by_category": {
+      "adversarial_fake_sku": {
+        "total": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      },
+      "coverage_state": {
+        "total": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      },
+      "drive_routing": {
+        "total": 1,
+        "passed": 1,
+        "pass_rate": 1.0
+      },
+      "faq": {
+        "total": 2,
+        "passed": 1,
+        "pass_rate": 0.5
+      },
+      "retrofit": {
+        "total": 1,
+        "passed": 0,
+        "pass_rate": 0.0
+      }
+    }
+  },
+  "provider_counts": {
+    "dry_run": 6
+  },
+  "support_bucket_counts": {
+    "none": 6
+  },
+  "median_latency_ms": 0.0,
+  "p95_latency_ms": 0.0,
+  "median_latency_ms_nonfaq": 0.0,
+  "median_cost_usd": 0.0,
+  "median_cost_usd_nonfaq": 0.0,
+  "total_estimated_cost_usd": 0.0,
+  "avg_retrieval_chunk_count": 0.0,
+  "fallback_rate": 0.0,
+  "broad_retrieval_rate": 0.0,
+  "target_checks": {
+    "single_provider_call_default": true,
+    "median_latency_target_met": true,
+    "median_cost_target_met": true,
+    "fake_sku_hallucination_rate_zero": true,
+    "fabricated_citation_rate_zero": true
+  },
+  "cases": [
+    {
+      "test_id": "adv_fake_01",
+      "category": "adversarial_fake_sku",
+      "question": "Tell me about the ABH25A20-10 drive.",
+      "answer": "[DRY RUN] placeholder answer for: Tell me about the ABH25A20-10 drive.",
+      "passed": false,
+      "failure_reason": "Expected refusal but bot answered confidently",
+      "provider_used": "dry_run",
+      "model_used": null,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": null,
+      "retrieval_chunk_count": 0,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": []
+    },
+    {
+      "test_id": "coverage_001",
+      "category": "coverage_state",
+      "question": "I need support for the 100A40 drive. Be explicit about whether the exact local datasheet is in the corpus, and tell me what AMC docs I should rely on instead.",
+      "answer": "[DRY RUN] placeholder answer for: I need support for the 100A40 drive. Be explicit about whether the exact local d",
+      "passed": false,
+      "failure_reason": "Missing required substrings: ['exact datasheet', 'hardware manual']",
+      "provider_used": "dry_run",
+      "model_used": null,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": null,
+      "retrieval_chunk_count": 0,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": []
+    },
+    {
+      "test_id": "drive_0",
+      "category": "drive_routing",
+      "question": "I need info about the FXM060-5-CM drive. What family is it, and which manual should I look at?",
+      "answer": "[DRY RUN] placeholder answer for: I need info about the FXM060-5-CM drive. What family is it, and which manual sho",
+      "passed": true,
+      "failure_reason": "",
+      "provider_used": "dry_run",
+      "model_used": null,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": null,
+      "retrieval_chunk_count": 0,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": []
+    },
+    {
+      "test_id": "faq_0",
+      "category": "faq",
+      "question": "How do I set up EtherCAT communication on a FlexPro drive?",
+      "answer": "[DRY RUN] placeholder answer for: How do I set up EtherCAT communication on a FlexPro drive?",
+      "passed": true,
+      "failure_reason": "",
+      "provider_used": "dry_run",
+      "model_used": null,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": null,
+      "retrieval_chunk_count": 0,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": []
+    },
+    {
+      "test_id": "faq_1",
+      "category": "faq",
+      "question": "What is the difference between SDO and PDO messages in EtherCAT?",
+      "answer": "[DRY RUN] placeholder answer for: What is the difference between SDO and PDO messages in EtherCAT?",
+      "passed": false,
+      "failure_reason": "Expected answer to contain keywords from '(Service Data Object) messages used non-cyclic' (matched 1/6)",
+      "provider_used": "dry_run",
+      "model_used": null,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": null,
+      "retrieval_chunk_count": 0,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": []
+    },
+    {
+      "test_id": "retrofit_0",
+      "category": "retrofit",
+      "question": "My 12A8 drive is discontinued. What AxCent drive replaces it?",
+      "answer": "[DRY RUN] placeholder answer for: My 12A8 drive is discontinued. What AxCent drive replaces it?",
+      "passed": false,
+      "failure_reason": "Expected answer to contain keywords from 'AB15A100' (matched 0/1)",
+      "provider_used": "dry_run",
+      "model_used": null,
+      "latency_ms": 0,
+      "estimated_cost_usd": 0.0,
+      "support_bucket": null,
+      "retrieval_chunk_count": 0,
+      "used_fallback": false,
+      "broad_retrieval": false,
+      "sources": []
+    }
+  ]
+}

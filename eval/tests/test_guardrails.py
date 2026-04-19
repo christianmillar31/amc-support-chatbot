@@ -150,6 +150,13 @@ def test_verify_fake_citation():
     assert cites[0].is_fabricated is True
 
 
+def test_deterministic_treats_generic_generation_error_as_api_error():
+    test = {"id": "api_err_1", "category": "faq", "question": "test"}
+    judgment = judge_deterministic(test, "An error occurred generating the answer. Please try again.")
+    assert judgment.is_api_error is True
+    assert judgment.passed is False
+
+
 # ============================================================
 # Eval harness extension tests
 # ============================================================
