@@ -148,6 +148,13 @@
   - coverage-aware drive selector metadata
   - routing behavior for missing and variant drives
 - This is the first repo pass that puts the “support catalog as backbone” idea on stable rails instead of leaving it as analysis-only scaffolding.
+- Added `eval/golden/coverage_state_tests.jsonl` as the first explicit golden suite for:
+  - missing-active drive behavior
+  - reserved/variant drive behavior
+  - covered-drive control behavior
+- Extended the deterministic eval judge with `required_substrings_all` / `required_substrings_any` so coverage-state expectations can be expressed without relying only on fuzzy phrase matching.
+- Updated the main eval loader so coverage-state tests now run alongside FAQ, drive-routing, retrofit, and adversarial suites.
+- Added regression checks proving the new coverage-state suite loads and the deterministic substring requirements behave as intended.
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.

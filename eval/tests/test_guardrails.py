@@ -12,6 +12,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from eval.guardrails.part_number_extractor import extract_part_numbers, is_valid_sku_format
 from eval.guardrails.part_number_verifier import verify_part_numbers, hallucinated_skus, load_valid_skus
 from eval.guardrails.citation_verifier import extract_citations, verify_citations
+from eval.judges.amc_deterministic import judge_deterministic
+from eval.runners.run_eval import load_tests
 
 
 # ============================================================
@@ -146,6 +148,39 @@ def test_verify_fake_citation():
     cites = verify_citations("See [Source: FAKE_MANUAL_NOT_REAL.pdf, Page 999]")
     assert len(cites) == 1
     assert cites[0].is_fabricated is True
+
+
+# ============================================================
+# Eval harness extension tests
+# ============================================================
+
+def test_deterministic_required_substrings_all_passes():
+    test = {
+        "id": "coverage_stub_pass",
+        "category": "coverage_state",
+        "required_substrings_all": ["100A40", "exact datasheet", "hardware manual"],
+    }
+    answer = "100A40 does not have its exact datasheet locally, so start with the hardware manual."
+    judgment = judge_deterministic(test, answer)
+    assert judgment.passed is True
+
+
+def test_deterministic_required_substrings_all_fails():
+    test = {
+        "id": "coverage_stub_fail",
+        "category": "coverage_state",
+        "required_substrings_all": ["AZBH25A20-10", "Reserved", "cautious"],
+    }
+    answer = "AZBH25A20-10 should use the base datasheet."
+    judgment = judge_deterministic(test, answer)
+    assert judgment.passed is False
+    assert "Missing required substrings" in judgment.failure_reason
+
+
+def test_load_tests_includes_coverage_state_suite():
+    tests = load_tests(category_filter="coverage_state")
+    assert tests, "Expected coverage_state tests to load"
+    assert all(test["category"] == "coverage_state" for test in tests)
 
 
 # ============================================================

@@ -177,6 +177,25 @@ def judge_deterministic(
                 j.failure_reason += "; "
             j.failure_reason += f"Contains forbidden claims: {found}"
 
+    # --- Required substring checks (coverage-state / routing nuance) ---
+    answer_lower = answer.lower()
+
+    required_all = test.get("required_substrings_all", [])
+    if required_all:
+        missing = [text for text in required_all if text.lower() not in answer_lower]
+        if missing:
+            j.passed = False
+            if j.failure_reason:
+                j.failure_reason += "; "
+            j.failure_reason += f"Missing required substrings: {missing}"
+
+    required_any = test.get("required_substrings_any", [])
+    if required_any and not any(text.lower() in answer_lower for text in required_any):
+        j.passed = False
+        if j.failure_reason:
+            j.failure_reason += "; "
+        j.failure_reason += f"Missing all optional required substrings: {required_any}"
+
     # --- Expected phrase check (for FAQ / routing tests) ---
     # Lenient matching: normalize punctuation and require 40% of content tokens
     # to appear as substrings in the answer. Handles wording variations like

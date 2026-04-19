@@ -240,7 +240,16 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
 - Added `eval/tests/test_support_catalog_runtime.py` so the catalog-defined behavior is now regression-tested, not just described in notes.
 - This keeps future model benchmarking subordinate to product correctness: routing and coverage behavior now have a clearer contract to measure against.
 
-### 19. Runtime search strategy now uses coverage state
+### 19. Coverage-state behavior is now a first-class eval target
+- Added `eval/golden/coverage_state_tests.jsonl` to measure the behaviors that matter most for the new support-catalog architecture:
+  - active drives with missing local datasheets
+  - reserved / variant routing behavior
+  - covered-drive control behavior
+- Extended the deterministic judge with exact required-substring checks so these nuanced support behaviors can be measured more reliably than with fuzzy keyword coverage alone.
+- Updated the main eval loader so coverage-state cases participate in the same harness as FAQ, drive-routing, retrofit, and adversarial tests.
+- This is the right order of operations for model work: define the product behavior first, then benchmark models against that behavior.
+
+### 20. Runtime search strategy now uses coverage state
 - Refined `app/chat.py` so the runtime search path consumes the support bucket, not just the manual filenames.
 - New behavior:
   - `core_drive_missing` drives use a manual-first fallback path and do not behave as though a local datasheet is available
@@ -250,7 +259,7 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - `AZBH25A20-10` targets `AMC_Datasheet_AZBH25A20.pdf` and includes both `AZBH25A20-10` and `AZBH25A20` in the query
 - This is a direct app-quality improvement: the chatbot’s runtime behavior now reflects corpus coverage reality instead of treating all drives as equally covered.
 
-### 20. Answer layer now surfaces coverage state
+### 21. Answer layer now surfaces coverage state
 - Added a short user-facing support-note path in `app/chat.py`.
 - Practical effect:
   - `core_drive_missing` users are explicitly told that the exact local datasheet is not in the corpus
