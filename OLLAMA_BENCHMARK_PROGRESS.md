@@ -227,7 +227,20 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - active uncovered drives can explicitly fall back to hardware/manual metadata without pretending a local datasheet exists
   - reserved and variant drives can route more cautiously and with better provenance
 
-### 18. Runtime search strategy now uses coverage state
+### 18. Reliability work now has a durable architecture layer
+- Added `app/support_catalog.py` so coverage metadata, datasheet alias routing, and support-note behavior are shared runtime concerns instead of duplicated helper logic.
+- Expanded `/api/drives` into a coverage-aware selector contract that carries canonical SKU, datasheet SKU, status, support bucket, recommended action, and product URL.
+- Added a read-only `/api/support-catalog/summary` endpoint for internal reporting surfaces and future UI coverage views.
+- Added `ARCHITECTURE.md` to document:
+  - support-catalog build flow
+  - coverage states
+  - runtime layering
+  - ingestion priorities
+  - evaluation gates
+- Added `eval/tests/test_support_catalog_runtime.py` so the catalog-defined behavior is now regression-tested, not just described in notes.
+- This keeps future model benchmarking subordinate to product correctness: routing and coverage behavior now have a clearer contract to measure against.
+
+### 19. Runtime search strategy now uses coverage state
 - Refined `app/chat.py` so the runtime search path consumes the support bucket, not just the manual filenames.
 - New behavior:
   - `core_drive_missing` drives use a manual-first fallback path and do not behave as though a local datasheet is available
@@ -237,7 +250,7 @@ Ran `python eval/runners/benchmark_ollama.py --dry-run --skip-pull --models qwen
   - `AZBH25A20-10` targets `AMC_Datasheet_AZBH25A20.pdf` and includes both `AZBH25A20-10` and `AZBH25A20` in the query
 - This is a direct app-quality improvement: the chatbot’s runtime behavior now reflects corpus coverage reality instead of treating all drives as equally covered.
 
-### 19. Answer layer now surfaces coverage state
+### 20. Answer layer now surfaces coverage state
 - Added a short user-facing support-note path in `app/chat.py`.
 - Practical effect:
   - `core_drive_missing` users are explicitly told that the exact local datasheet is not in the corpus

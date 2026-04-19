@@ -22,6 +22,7 @@ from app.feedback import log_feedback
 from app.chatlog import log_chat, get_chatlog, update_rating
 from app.faq import match_faq
 from app.drive_lookup import get_all_drives, lookup_drive
+from app.support_catalog import get_support_catalog_summary
 
 logger = logging.getLogger(__name__)
 admin_security = HTTPBasic(auto_error=False)
@@ -130,9 +131,16 @@ async def index():
 
 @app.get("/api/drives")
 async def drives_endpoint():
-    """Return all drives for the frontend autocomplete selector."""
+    """Return coverage-aware drive selector data for the frontend."""
     drives = get_all_drives()
     return {"drives": drives, "total": len(drives)}
+
+
+@app.get("/api/support-catalog/summary")
+async def support_catalog_summary_endpoint():
+    """Read-only internal support catalog summary derived from the generated source-of-truth asset."""
+    summary = get_support_catalog_summary()
+    return summary or {"detail": "Support catalog not available"}
 
 
 @app.post("/chat", response_model=ChatResponse)

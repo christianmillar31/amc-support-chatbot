@@ -119,6 +119,35 @@
   - `AZBH25A20-10` gets a base-datasheet routing note
   - `FE060-25-EM` gets no extra support note because it is a normal covered drive
 - Verified in a bounded stream test that these notes appear as early status updates before answer generation begins.
+- Added `app/support_catalog.py` as the shared runtime layer for:
+  - support catalog loading
+  - conservative SKU normalization
+  - datasheet SKU resolution
+  - shared support-note formatting
+- This removes the most important coverage-state duplication between `app/drive_lookup.py`, `app/chat.py`, and API consumers.
+- Expanded `/api/drives` into a coverage-aware selector payload with:
+  - canonical SKU
+  - datasheet SKU
+  - product title
+  - site category
+  - support bucket
+  - recommended next action
+  - product page URL
+- Added a read-only `/api/support-catalog/summary` endpoint derived directly from the generated support catalog.
+- Added `ARCHITECTURE.md` as the durable planning/architecture document for:
+  - product scope
+  - support catalog build flow
+  - coverage states
+  - runtime architecture
+  - content roadmap
+  - eval gates
+- Added `eval/tests/test_support_catalog_runtime.py` to lock in:
+  - covered drive lookup
+  - missing-active drive lookup
+  - reserved variant/base-datasheet routing
+  - coverage-aware drive selector metadata
+  - routing behavior for missing and variant drives
+- This is the first repo pass that puts the “support catalog as backbone” idea on stable rails instead of leaving it as analysis-only scaffolding.
 
 ### Current repo hygiene decisions
 - Commit code and source-of-truth data that the app actually consumes.

@@ -17,6 +17,7 @@ from app.retriever import retrieve, get_indexed_sources
 from app.ingest import get_all_pdfs
 from app.drive_lookup import lookup_drive, search_drives, detect_part_number, lookup_replacement
 from app.reranker import rerank
+from app.support_catalog import build_support_note
 
 logger = logging.getLogger(__name__)
 
@@ -408,35 +409,6 @@ def build_context(chunks: list[dict], max_chunk_chars: int = 1400) -> str:
     return "\n".join(context_parts)
 
 
-def _build_support_note(result: dict) -> str:
-    """Return a short user-facing support coverage note for the current drive."""
-    bucket = result.get("support_bucket")
-    status = result.get("site_status")
-
-    if bucket == "core_drive_missing":
-        return (
-            f"{result['requested_sku']} is an active AMC product, but this local support corpus does not "
-            "currently include its exact datasheet. Answer from the hardware manual, communication manual, "
-            "application notes, and product metadata without implying that the local datasheet exists."
-        )
-    if bucket == "core_drive_reserved_gap":
-        return (
-            f"{result['requested_sku']} is marked Reserved on the AMC product site. Provide cautious support "
-            "guidance and avoid implying full current-product coverage."
-        )
-    if bucket == "core_drive_variant_match":
-        return (
-            f"{result['requested_sku']} routes to the local datasheet for {result['datasheet_sku']}. "
-            "Keep the user's requested SKU visible while using the base datasheet for retrieval."
-        )
-    if status == "Reserved":
-        return (
-            f"{result['requested_sku']} is marked Reserved on the AMC product site. Keep answers concise and "
-            "careful about current-product assumptions."
-        )
-    return ""
-
-
 def _build_drive_search_query(result: dict, user_message: str) -> str:
     """Build a richer drive-aware search query without repeating identical tokens."""
     parts: list[str] = []
@@ -530,7 +502,7 @@ def handle_detect_drive_manual(part_number: str) -> tuple[str, list[dict]]:
             info["support_bucket"] = result["support_bucket"]
         if result.get("site_url"):
             info["product_page"] = result["site_url"]
-        support_note = _build_support_note(result)
+        support_note = build_support_note(result)
         if support_note:
             info["support_note"] = support_note
         if result["alias_resolved"]:
@@ -790,7 +762,7 @@ def _smart_route(user_message: str, history: list[dict] = None, drive_context: d
             result = lookup_drive(part_number)
 
     if result:
-        support_note = _build_support_note(result)
+        support_note = build_support_note(result)
         drive_info = json.dumps({
             "part_number": result["requested_sku"],
             "canonical_part_number": result["canonical_sku"],
@@ -899,7 +871,7 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
     all_sources = list(chunks)
 
     if drive_context:
-        support_note = _build_support_note(drive_context)
+        support_note = build_support_note(drive_context)
         if support_note:
             yield {"type": "status", "text": support_note}
 
@@ -933,7 +905,7 @@ def single_shot_chat_stream(user_message: str, history: list[dict] = None, drive
     if drive_info:
         user_content += f"\n\n[Drive Info]\n{drive_info}"
         if drive_context:
-            support_note = _build_support_note(drive_context)
+            support_note = build_support_note(drive_context)
             if support_note:
                 user_content += f"\n\n[Support Coverage Note]\n{support_note}"
 

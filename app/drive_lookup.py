@@ -11,10 +11,14 @@ Maps any AMC drive part number (SKU) to:
 """
 
 import csv
-import json
 import re
-from pathlib import Path
 from app.config import BASE_DIR
+from app.support_catalog import (
+    get_support_catalog_row,
+    load_support_catalog,
+    normalize_lookup_sku,
+    resolve_datasheet_sku,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -30,51 +34,12 @@ COL_NETWORK = 25    # EtherCAT, CANopen, Modbus RTU|RS-485/232, etc.
 
 # In-memory lookup: sku_upper -> {family, form_factor, network, title}
 _DRIVE_DB: dict[str, dict] = {}
-_SUPPORT_CATALOG: dict[str, dict] = {}
-
-
 def _normalize_family(raw: str) -> str:
     """Strip status suffixes like '(Discontinued)', '(Reserved)'."""
     raw = raw.strip()
     for suffix in ["(Discontinued)", "(Reserved)"]:
         raw = raw.replace(suffix, "").strip()
     return raw
-
-
-def _normalize_lookup_sku(raw: str) -> str:
-    """Normalize a small set of known SKU variant forms for lookup only.
-
-    This is intentionally conservative. We only normalize punctuation/spacing
-    and the `-10` suffix seen on a few AMC site product pages that map back to
-    existing local datasheets and CSV rows.
-    """
-    sku = raw.strip().upper()
-    sku = sku.replace("–", "-").replace("—", "-")
-    sku = re.sub(r"\s+", "", sku)
-    sku = re.sub(r"-{2,}", "-", sku)
-    if sku.endswith("-10"):
-        sku = sku[:-3]
-    return sku
-
-
-def _resolve_datasheet_sku(sku: str) -> str:
-    """Choose the best local datasheet SKU for a looked-up drive.
-
-    Some AMC site/CSV part numbers include a `-10` suffix while the local PDF
-    corpus stores the datasheet under the base SKU. Prefer the exact datasheet
-    filename when present; otherwise fall back to the normalized base SKU.
-    """
-    exact_name = BASE_DIR / f"AMC_Datasheet_{sku}.pdf"
-    if exact_name.exists():
-        return sku
-
-    normalized = _normalize_lookup_sku(sku)
-    normalized_name = BASE_DIR / f"AMC_Datasheet_{normalized}.pdf"
-    if normalized != sku and normalized_name.exists():
-        return normalized
-
-    return sku
-
 
 def _infer_network_from_sku(sku: str, family: str) -> str:
     """Infer network protocol from SKU naming convention when CSV field is empty.
@@ -182,30 +147,6 @@ def _load_csv():
             }
 
     print(f"Loaded {len(_DRIVE_DB)} drives from CSV.")
-
-
-def _load_support_catalog():
-    """Load support catalog rows keyed by SKU when available."""
-    global _SUPPORT_CATALOG
-    if _SUPPORT_CATALOG:
-        return
-
-    catalog_path = BASE_DIR / "site_data" / "support_catalog.json"
-    if not catalog_path.exists():
-        return
-
-    try:
-        with open(catalog_path, "r", encoding="utf-8") as f:
-            payload = json.load(f)
-    except Exception as exc:
-        print(f"WARNING: Failed to load support catalog: {exc}")
-        return
-
-    for row in payload.get("products", []):
-        sku = (row.get("sku") or "").strip().upper()
-        if sku:
-            _SUPPORT_CATALOG[sku] = row
-
 
 # ---------------------------------------------------------------------------
 # Comm manual routing
@@ -365,7 +306,7 @@ def lookup_drive(part_number: str) -> dict | None:
     If the user has a typo, they must fix it — we won't guess.
     """
     _load_csv()
-    _load_support_catalog()
+    load_support_catalog()
     requested = part_number.strip().upper()
 
     # Exact match only
@@ -373,7 +314,7 @@ def lookup_drive(part_number: str) -> dict | None:
         drive = _DRIVE_DB[requested]
         return _build_result(drive, requested_sku=requested, match_strategy="exact")
 
-    normalized = _normalize_lookup_sku(requested)
+    normalized = normalize_lookup_sku(requested)
     if normalized != requested and normalized in _DRIVE_DB:
         drive = _DRIVE_DB[normalized]
         return _build_result(drive, requested_sku=requested, match_strategy="normalized_variant")
@@ -390,13 +331,14 @@ def _build_result(drive: dict, requested_sku: str | None = None, match_strategy:
 
     comm_info = _get_comm_manual(family, network)
     hw_manual = _get_hw_manual(family, form_factor, network)
-    support = _SUPPORT_CATALOG.get(drive["sku"].upper(), {})
+    support = get_support_catalog_row(drive["sku"])
 
     return {
         "sku": drive["sku"],
         "requested_sku": requested_sku,
         "canonical_sku": drive["sku"],
-        "datasheet_sku": _resolve_datasheet_sku(drive["sku"]),
+        "normalized_sku": support.get("normalized_sku") or normalize_lookup_sku(drive["sku"]),
+        "datasheet_sku": resolve_datasheet_sku(drive["sku"]),
         "alias_resolved": requested_sku != drive["sku"],
         "match_strategy": match_strategy,
         "title": drive["title"],
@@ -606,21 +548,28 @@ def _friendly_network(network: str) -> str:
 def get_all_drives() -> list[dict]:
     """Return all unique drives from the CSV for the frontend autocomplete dropdown."""
     _load_csv()
-    _load_support_catalog()
+    load_support_catalog()
     drives = []
     seen = set()
     for sku, drive in _DRIVE_DB.items():
         if sku in seen:
             continue
         seen.add(sku)
-        support = _SUPPORT_CATALOG.get(sku, {})
+        support = get_support_catalog_row(sku)
         drives.append({
             "sku": sku,
+            "canonical_sku": sku,
+            "normalized_sku": support.get("normalized_sku") or normalize_lookup_sku(sku),
+            "datasheet_sku": resolve_datasheet_sku(sku),
+            "title": drive["title"],
             "family": drive["family"],
             "form_factor": drive["form_factor"],
             "network": _friendly_network(drive["network"]),
+            "site_category": support.get("category"),
             "site_status": support.get("site_status"),
             "support_bucket": support.get("support_bucket"),
+            "recommended_next_action": support.get("recommended_next_action"),
+            "site_url": support.get("url"),
         })
     # Sort by family then SKU
     drives.sort(key=lambda d: (d["family"], d["sku"]))
