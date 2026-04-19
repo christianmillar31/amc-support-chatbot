@@ -19,6 +19,7 @@ COPY amclogo.png ./amclogo.png
 COPY AMC-Logo-Long.jpg ./AMC-Logo-Long.jpg
 COPY ["CM Servo Info.csv", "./CM Servo Info.csv"]
 COPY faq_index.csv ./faq_index.csv
+COPY site_data/ ./site_data/
 
 # Set model cache to writable location
 ENV TRANSFORMERS_CACHE=/home/user/.cache/huggingface
