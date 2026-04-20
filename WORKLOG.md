@@ -425,6 +425,14 @@ Still red on `main` (pre-existing, since last 3+ commits). Root cause: the `ANTH
 ### Recommendation
 All five of the user's flagged accuracy complaints are factually fixed on localhost (AZB6A8/AZB60A8 specs, `(AZB/AZBH)` conflation, European-leading wiring, B-series-only command inputs, current-loop scale/time-div, AutoCommutation Phase Detect). The 99.42% rejudged pass rate and the 0% hallucination rate clear every acceptance gate that's actually under our control. HF push is safe to trigger when the user is ready; rolling back is a single `git revert` + `git push hf main`.
 
+### HF deploy — 2026-04-20 UTC
+- Pushed `414e20c` → `8959e19` to `hf` remote. HF Space rebuilt in ~90 s (cache-warm build — `rapidfuzz` wheel downloaded, no model re-pull).
+- First live probe caught a gap: `/api/support-catalog/summary` returned `{"detail":"Support catalog not available"}`. Root cause: `site_data/support_catalog.json` was still gitignored, so the 237 KB catalog wasn't in the image. Degraded drive-selector metadata and coverage-hint paths on the Space even though localhost was fine.
+- Committed `5e1b920` — whitelisted `site_data/support_catalog.json` in `.gitignore` and committed the current catalog. Pushed to origin + hf. Rebuild completed in another ~90 s.
+- Post-rebuild probe: `/api/support-catalog/summary` now returns the full payload with `site_product_count: 359` and populated `priority_examples`. Catalog is live.
+- Live chat smoke: asked "What are the current ratings for the AZB60A8?" against the HF `/chat` endpoint. Answer: "Continuous Current: 30 A, Peak Current: 60 A, DC supply 10-80 VDC" — matches localhost exactly. Sources decorated with real AMC URLs (product page for datasheet, `/d/?h=...` for HW manual). Provider `anthropic`, model `claude-sonnet-4-20250514`, 17 s latency, $0.022.
+- Rollback path if anything surfaces: `git revert 5e1b920 8959e19 08223e5 7b1bafd 785c1b0 && git push hf main`. 2–3 min rebuild back to `414e20c`.
+
 ### Full 340-test eval — 2026-04-18 late-late
 - Command: `python eval/runners/benchmark_pilot_runtime.py --full --tag claude_full`
 - Duration: `1344.81s` (~22 min); total cost: `$1.82`
