@@ -17,6 +17,7 @@ site_data/*.json
 !site_data/retrofit_map.json
 !site_data/pdf_url_map.json
 !site_data/amc_classic_products.json
+!site_data/support_catalog.json
 
 # Python bytecode
 __pycache__/
