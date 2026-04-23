@@ -24,6 +24,12 @@ from app.escalation import (
 )
 from app.ambiguity_gate import REFUSAL_MESSAGE as AMBIGUITY_REFUSAL
 from app.ambiguity_gate import is_ambiguous_question
+from app.competitor_lookup import (
+    detect_competitor,
+    find_amc_matches,
+    format_competitor_answer,
+    parse_competitor_specs,
+)
 from app.faq import match_faq
 from app.retrofit_lookup import format_retrofit_answer, is_retrofit_question
 from app.sku_matcher import (
@@ -160,11 +166,55 @@ def stream_support_request(
         )
         return {"type": "token", "text": "\n\n" + summary}
 
+    effective_message = request.message
+
+    # Competitor gate: if the user mentions a competitor brand (Elmo,
+    # Kollmorgen, Copley, Yaskawa, Beckhoff, ...), don't let the typo gate
+    # below treat the competitor SKU as an unknown AMC part. Instead, parse
+    # any spec shorthand (Elmo "18/400" style), match against AMC's CSV by
+    # current + bus voltage, and return a cross-reference shortlist. Support
+    # engineers frequently field migration questions from customers leaving
+    # competitors; the generic "couldn't find that SKU" refusal was useless.
+    if not uploaded_chunks and not request.drive_sku:
+        competitor = detect_competitor(request.message)
+        if competitor:
+            specs = parse_competitor_specs(request.message, competitor["brand"])
+            matches = find_amc_matches(specs["continuous_a"], specs["voltage_dc"]) if specs else []
+            answer_text = format_competitor_answer(
+                competitor["brand"], specs, matches, request.message
+            )
+            if support_note:
+                yield {"type": "status", "text": support_note}
+            yield {
+                "type": "status",
+                "text": f"Recognized {competitor['brand']} as a competitor — cross-referencing AMC options...",
+            }
+            yield {"type": "token", "text": answer_text}
+            esc_tok = _maybe_escalation_token()
+            if esc_tok:
+                yield esc_tok
+            yield {
+                "type": "done",
+                "sources": [],
+                "support_note": support_note or None,
+                "provider_used": "competitor_cross_reference",
+                "model_used": None,
+                "latency_ms": 0,
+                "estimated_cost_usd": 0.0,
+                "support_bucket": support_bucket,
+                "retrieval_chunk_count": len(matches),
+                "used_fallback": used_fallback,
+                "broad_retrieval": False,
+                "channel": request.channel,
+                "session_request_count": request_count,
+                "cost_budget_state": budget_state,
+            }
+            return
+
     # Typo gate: if the message mentions a SKU-shaped token that's close-but-
     # not-exact to a known drive, either rewrite the query with the corrected
     # SKU (status-only), ask the user to disambiguate, or refuse outright.
     # Runs before retrofit/FAQ so a typo'd classic SKU like "12A9" gets caught.
-    effective_message = request.message
     if not uploaded_chunks and not request.drive_sku:
         typo_decision = interpret_typo_hits(request.message)
         action = typo_decision.get("action")
