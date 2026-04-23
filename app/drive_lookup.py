@@ -601,6 +601,8 @@ def _friendly_network(network: str) -> str:
 
 def _format_spec_lines(drive: dict) -> list[str]:
     """Return a stable bulleted block of authoritative facts for one drive row."""
+    from app.form_factor_info import describe_form_factor
+
     sku = drive.get("sku", "")
     lines = [f"- SKU: {sku}"]
 
@@ -611,7 +613,15 @@ def _format_spec_lines(drive: dict) -> list[str]:
 
     _add("Family", drive.get("family", ""))
     _add("Product Series", drive.get("product_series", ""))
-    _add("Form Factor", drive.get("form_factor", ""))
+    form = drive.get("form_factor", "")
+    _add("Form Factor", form)
+    form_desc = describe_form_factor(form)
+    if form_desc:
+        # Use the AMC-authoritative description so rule 15 binds Claude to
+        # the right customer-facing description (e.g. FM = Machine Embedded
+        # compact card with pre-built connectors, NOT Panel Mount; FE =
+        # bare PCB, NO pre-built connectors — customer builds interface).
+        _add("Form Factor Description", form_desc)
     _add("Product Status", drive.get("status", ""))
     _add("Current Continuous (A)", drive.get("current_continuous_a", ""))
     _add("Current Peak (A)", drive.get("current_peak_a", ""))
