@@ -394,6 +394,17 @@ def _build_result(drive: dict, requested_sku: str | None = None, match_strategy:
         "support_bucket": support.get("support_bucket"),
         "recommended_next_action": support.get("recommended_next_action"),
         "site_url": support.get("url"),
+        # Canonical spec fields from the CSV — used by the spec validator to
+        # short-circuit direct-spec questions without calling the model.
+        "status": drive.get("status", ""),
+        "product_series": drive.get("product_series", ""),
+        "current_continuous_a": drive.get("current_continuous_a", ""),
+        "current_peak_a": drive.get("current_peak_a", ""),
+        "dc_supply_range": drive.get("dc_supply_range", ""),
+        "ac_supply_range": drive.get("ac_supply_range", ""),
+        "control_command": drive.get("control_command", ""),
+        "operating_mode": drive.get("operating_mode", ""),
+        "motor_type": drive.get("motor_type", ""),
     }
 
 

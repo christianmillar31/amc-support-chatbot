@@ -22,13 +22,21 @@ from app.escalation import (
     detect_escalation_cues,
     match_escalation_pattern,
 )
+from app.ambiguity_gate import REFUSAL_MESSAGE as AMBIGUITY_REFUSAL
+from app.ambiguity_gate import is_ambiguous_question
 from app.faq import match_faq
 from app.retrofit_lookup import format_retrofit_answer, is_retrofit_question
 from app.sku_matcher import (
+    candidate_sku_tokens,
     format_typo_ambiguous_answer,
     format_typo_correction_status,
     format_typo_refusal_answer,
     interpret_typo_hits,
+)
+from app.spec_validator import (
+    detect_impossible_combo,
+    resolve_drive_from_message,
+    try_spec_answer,
 )
 from app.support_catalog import build_support_note
 from app.url_resolver import enrich_sources, resolve_source_url
@@ -258,6 +266,66 @@ def stream_support_request(
             }
             return
 
+    # Spec/capability validator: if a SKU resolves and the question is either a
+    # direct canonical-spec ask or an impossible protocol/family combination,
+    # short-circuit with a model-free answer or refusal. Failures fall through
+    # to FAQ → single-shot, so nothing is masked.
+    if not uploaded_chunks:
+        resolved_drive = resolve_drive_from_message(effective_message, drive_context)
+        if resolved_drive:
+            combo_refusal = detect_impossible_combo(effective_message, resolved_drive)
+            if combo_refusal:
+                if support_note:
+                    yield {"type": "status", "text": support_note}
+                yield {"type": "status", "text": "That protocol isn't supported on that drive — here's what the canonical product table says."}
+                yield {"type": "token", "text": combo_refusal["answer"]}
+                esc_tok = _maybe_escalation_token()
+                if esc_tok:
+                    yield esc_tok
+                yield {
+                    "type": "done",
+                    "sources": [],
+                    "support_note": support_note or None,
+                    "provider_used": combo_refusal.get("provider_used", "impossible_combo_refusal"),
+                    "model_used": None,
+                    "latency_ms": 0,
+                    "estimated_cost_usd": 0.0,
+                    "support_bucket": support_bucket,
+                    "retrieval_chunk_count": 0,
+                    "used_fallback": used_fallback,
+                    "broad_retrieval": False,
+                    "channel": request.channel,
+                    "session_request_count": request_count,
+                    "cost_budget_state": budget_state,
+                }
+                return
+            spec_result = try_spec_answer(effective_message, resolved_drive)
+            if spec_result:
+                if support_note:
+                    yield {"type": "status", "text": support_note}
+                yield {"type": "status", "text": "Answering from the canonical product table..."}
+                yield {"type": "token", "text": spec_result["answer"]}
+                esc_tok = _maybe_escalation_token()
+                if esc_tok:
+                    yield esc_tok
+                yield {
+                    "type": "done",
+                    "sources": spec_result.get("sources", []),
+                    "support_note": support_note or None,
+                    "provider_used": spec_result.get("provider_used", "canonical_spec"),
+                    "model_used": None,
+                    "latency_ms": 0,
+                    "estimated_cost_usd": 0.0,
+                    "support_bucket": support_bucket,
+                    "retrieval_chunk_count": 1,
+                    "used_fallback": used_fallback,
+                    "broad_retrieval": False,
+                    "channel": request.channel,
+                    "session_request_count": request_count,
+                    "cost_budget_state": budget_state,
+                }
+                return
+
     if FAQ_ENABLED and not uploaded_chunks:
         faq_result = match_faq(effective_message)
         if faq_result:
@@ -285,6 +353,39 @@ def stream_support_request(
                 "estimated_cost_usd": 0.0,
                 "support_bucket": support_bucket,
                 "retrieval_chunk_count": 1,
+                "used_fallback": used_fallback,
+                "broad_retrieval": False,
+                "channel": request.channel,
+                "session_request_count": request_count,
+                "cost_budget_state": budget_state,
+            }
+            return
+
+    # Ambiguity gate: message has no SKU, no family keyword, no tool keyword,
+    # no UI-preselected drive, and hits one of a short list of vague-referent
+    # phrases or short imperative forms. Emit a "which drive?" refusal rather
+    # than letting the single-shot model improvise.
+    if not uploaded_chunks:
+        has_sku = bool(candidate_sku_tokens(effective_message))
+        has_drive_context = bool(drive_context)
+        if is_ambiguous_question(effective_message, has_sku, has_drive_context):
+            if support_note:
+                yield {"type": "status", "text": support_note}
+            yield {"type": "status", "text": "The question is a bit open-ended — asking for specifics."}
+            yield {"type": "token", "text": AMBIGUITY_REFUSAL}
+            esc_tok = _maybe_escalation_token()
+            if esc_tok:
+                yield esc_tok
+            yield {
+                "type": "done",
+                "sources": [],
+                "support_note": support_note or None,
+                "provider_used": "ambiguous_refusal",
+                "model_used": None,
+                "latency_ms": 0,
+                "estimated_cost_usd": 0.0,
+                "support_bucket": support_bucket,
+                "retrieval_chunk_count": 0,
                 "used_fallback": used_fallback,
                 "broad_retrieval": False,
                 "channel": request.channel,

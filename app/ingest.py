@@ -175,8 +175,15 @@ def smart_chunk_text(text: str, heading: str = "", source: str = "",
 
 
 def _classify_doc_type(filename: str) -> str:
-    """Derive document type from PDF filename pattern."""
+    """Derive document type from PDF filename pattern.
+
+    Order matters: more-specific patterns must come before broad ones. For
+    example, ``SW_RELEASENOTES`` must win over ``SW_``-anything ambiguity,
+    and ``INDUSTRYFLYER`` / ``PRODUCTFLYER`` are matched before the plain
+    ``FLYER`` hint.
+    """
     name = filename.upper()
+    # Technical reference (highest retrieval priority) -----------------------
     if "COMMMANUAL" in name:
         return "comm"
     elif "HWMANUAL" in name:
@@ -185,6 +192,8 @@ def _classify_doc_type(filename: str) -> str:
         return "sw"
     elif "SW_QUICKREF" in name or "SW_QUICKREFERENCE" in name:
         return "sw_ref"
+    elif "SW_RELEASENOTES" in name or "READMEZ" in name or name.startswith("AMC_README"):
+        return "sw_release"
     elif "DATASHEET" in name:
         return "datasheet"
     elif "APPNOTE" in name:
@@ -193,6 +202,18 @@ def _classify_doc_type(filename: str) -> str:
         return "product_note"
     elif "WHITEPAPER" in name:
         return "white_paper"
+    # Non-reference categories (excluded from default retrieval) -------------
+    elif "BROCHURE" in name or "INDUSTRYFLYER" in name or "PRODUCTFLYER" in name \
+            or "PRESENTATION_" in name or "RBR50" in name:
+        # Sales/marketing material — narrative, not technical reference.
+        return "marketing"
+    elif "COMPLIANCE" in name:
+        # UL / CE / REACH / STO certification docs — only relevant to
+        # region/compliance queries, not general troubleshooting.
+        return "compliance"
+    elif "RMA_" in name or "_RMA" in name:
+        # RMA / returns process docs.
+        return "rma"
     return "other"
 
 

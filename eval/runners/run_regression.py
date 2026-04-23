@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -104,6 +105,13 @@ def main():
     parser.add_argument("--limit", type=int, default=65, help="Max tests to run (default: 65)")
     parser.add_argument("--verbose", "-v", action="store_true")
     args = parser.parse_args()
+
+    if args.no_llm:
+        # --no-llm must be truly token-free. The cheap-task query-expansion
+        # path was silently calling Haiku on every retrieval; force it off so
+        # CI runs stay clean when the ANTHROPIC_API_KEY secret is unset.
+        os.environ["DISABLE_QUERY_EXPANSION"] = "true"
+
     plan = build_regression_plan(args.limit)
 
     print("Running regression eval...")

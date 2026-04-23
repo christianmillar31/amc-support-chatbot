@@ -15,6 +15,10 @@ INGEST_API_KEY = os.getenv("INGEST_API_KEY", "")  # Empty = dev mode (no auth re
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-20250514")
 QUERY_EXPANSION_MODEL = os.getenv("QUERY_EXPANSION_MODEL", "claude-haiku-4-5-20251001")
 ENABLE_QUERY_EXPANSION = True
+# Hard-disable the cheap-task query expansion path entirely. Used by --no-llm
+# regression to guarantee zero cloud-model calls; also honored in prod as an
+# escape hatch if the expansion model ever becomes a reliability problem.
+DISABLE_QUERY_EXPANSION = os.getenv("DISABLE_QUERY_EXPANSION", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 # Chunking
 CHUNK_SIZE = 1500  # characters — larger chunks keep more context together

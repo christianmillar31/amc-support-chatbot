@@ -128,6 +128,9 @@ def _candidate_tokens(message: str) -> list[str]:
     return candidates
 
 
+candidate_sku_tokens = _candidate_tokens
+
+
 def fuzzy_candidates(
     raw_sku: str,
     *,

@@ -30,6 +30,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: FAQ index lint
+        run: |
+          python scripts/lint_faq_index.py
+        timeout-minutes: 2
+
       - name: Run deterministic regression
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

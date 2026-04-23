@@ -12,6 +12,7 @@ from app.config import (
     ANSWER_PROVIDER,
     CHEAP_TASK_PROVIDER,
     CLAUDE_MODEL, QUERY_EXPANSION_MODEL, ENABLE_QUERY_EXPANSION,
+    DISABLE_QUERY_EXPANSION,
     MAX_TOOL_ROUNDS, BASE_DIR, EMBEDDING_MODEL, EMBEDDING_QUERY_PREFIX,
     ENABLE_RERANKING, PILOT_CONTEXT_MAX_CHARS, PILOT_ENABLE_AGENTIC_FALLBACK,
     PILOT_RETRIEVAL_TOP_K, RERANK_CANDIDATES, RERANK_TOP_K, TOP_K,
@@ -87,7 +88,7 @@ SYSTEM_PROMPT = """You are AMC's technical support assistant. Be direct, concise
 
 TOOLS: search_manuals (search 372 PDFs), detect_drive_manual (part number → manual routing), find_replacement_drive (discontinued → AxCent replacement), list_available_manuals.
 
-DOC TYPES: comm (protocols/registers), hw (wiring/connectors/pinouts), sw/sw_ref (ACE/DriveWare/ClickMove), app_note (procedures/tuning), datasheet (specs per drive), product_note (retrofits).
+DOC TYPES: comm (protocols/registers), hw (wiring/connectors/pinouts), sw/sw_ref (ACE/DriveWare/ClickMove/DriveLibrary), sw_release (release notes), app_note (procedures/tuning), datasheet (specs per drive), product_note (retrofits), compliance (UL/CE/REACH/STO — only when user asks about certifications/region). Marketing brochures and RMA docs are indexed but OFF by default — do not request them unless the user explicitly asks about use-cases, industry flyers, or RMA process.
 
 STRATEGY:
 1. Part number mentioned → call detect_drive_manual FIRST, BEFORE any other tool. This is MANDATORY. If it returns PART_NUMBER_NOT_FOUND, STOP and ask the user to verify (see rule 14). NEVER skip detect_drive_manual and go straight to search_manuals or find_replacement_drive when the user has mentioned a part number — doing so risks surfacing irrelevant chunks for a drive that does not exist.
@@ -133,7 +134,7 @@ ABSOLUTE RULES — VIOLATION OF THESE IS A CRITICAL FAILURE:
 
     This rule is INVIOLABLE. Violating it once is a critical failure.
 
-15. NUMERIC SPECIFICATIONS — VERBATIM ONLY: If the prompt contains an [Authoritative Canonical Facts] section, you MUST take every numeric rating (continuous current, peak current, DC/AC supply voltage, power, switching frequency, PWM frequency, torque, weight, dimensions) VERBATIM from that section or from a retrieved PDF chunk that explicitly states the number. You MUST NOT infer, decode, or interpolate ratings from SKU naming conventions (e.g., "AZB6A8" does NOT mean 6A/8V — the numeric digits in AMC SKUs are model codes, not literal ratings). When in doubt, copy the exact string from the canonical facts block (e.g., "Current Continuous (A): 30", "DC Supply Voltage (VDC): 10 - 72"). If a canonical facts block is absent and retrieved chunks do not contain the needed numbers, say so and refer the user to the product page or datasheet — do not guess.
+15. NUMERIC SPECIFICATIONS — VERBATIM ONLY: If the prompt contains an [Authoritative Canonical Facts] section, you MUST take every numeric rating (continuous current, peak current, DC/AC supply voltage, power, switching frequency, PWM frequency, torque, weight, dimensions) VERBATIM from that section or from a retrieved PDF chunk that explicitly states the number. You MUST NOT infer, decode, or interpolate ratings from SKU naming conventions (e.g., "AZB6A8" does NOT mean 6A/8V — the numeric digits in AMC SKUs are model codes, not literal ratings). When in doubt, copy the exact string from the canonical facts block (e.g., "Current Continuous (A): 30", "DC Supply Voltage (VDC): 10 - 72"). If a canonical facts block is absent and retrieved chunks do not contain the needed numbers, say so and refer the user to the product page or datasheet — do not guess. If no [Authoritative Canonical Facts] block is present (for example, no SKU was detected in the question), EVERY numeric value in your answer MUST be accompanied by a [Source: filename, Page X] citation pointing at a retrieved chunk that contains that exact number. Do not emit any numeric value without either a canonical-facts anchor or a retrieved-evidence citation.
 
 16. CAPABILITY CLAIMS BY VARIANT — VARIANT-SPECIFIC ONLY: If the prompt's [Authoritative Canonical Facts] include a CANONICAL FAMILY TABLE, Operating Mode / Control Command / Motor Type capabilities apply only to the rows listed. Do NOT attribute a mode to a variant that does not list it. For example, AZB = Current only; AZBH = Hall Velocity; AZBD = Duty Cycle (Open Loop); AZBE = Current + Duty Cycle + Velocity; AZBDC = Current (PWM). Never write "(AZB/AZBH)" or similar conflations — cite each variant's own capability.
 
@@ -188,8 +189,12 @@ TOOLS = [
                 },
                 "doc_type": {
                     "type": "string",
-                    "enum": ["comm", "hw", "sw", "sw_ref", "app_note", "product_note", "datasheet"],
-                    "description": "Optional: filter by document type. 'comm' = communication manuals, 'hw' = hardware installation manuals, 'sw' = software manuals, 'sw_ref' = software quick references, 'app_note' = application notes (detailed how-to guides), 'product_note' = product notes (retrofit guides, wiring recommendations), 'datasheet' = per-drive datasheets with specifications, current ratings, voltages, dimensions, weight, pinouts. Use when you want all manuals of a type without specifying a filename.",
+                    "enum": [
+                        "comm", "hw", "sw", "sw_ref", "sw_release",
+                        "app_note", "product_note", "datasheet",
+                        "compliance", "marketing", "rma",
+                    ],
+                    "description": "Optional: filter by document type. 'comm' = communication manuals, 'hw' = hardware installation manuals, 'sw' = software manuals (ACE, DriveWare, DriveLibrary), 'sw_ref' = software quick references, 'sw_release' = software release notes / readmes, 'app_note' = application notes (detailed how-to guides), 'product_note' = product notes (retrofit guides, wiring recommendations), 'datasheet' = per-drive datasheets with specifications, current ratings, voltages, dimensions, weight, pinouts, 'compliance' = UL/CE/REACH/RoHS/STO/functional-safety certifications (use ONLY when the user asks about compliance or a specific region/standard), 'marketing' = brochures, industry flyers, product flyers, presentations (OFF by default; request explicitly only for industry/use-case questions), 'rma' = RMA / product-return process docs. Use when you want all manuals of a type without specifying a filename.",
                 },
             },
             "required": ["query"],
@@ -297,9 +302,20 @@ from cachetools import TTLCache
 _expansion_cache: TTLCache = TTLCache(maxsize=500, ttl=3600)
 
 
+def _runtime_disable_expansion() -> bool:
+    """Re-check the DISABLE_QUERY_EXPANSION flag at call time.
+
+    Needed because entry points like ``eval/runners/run_regression.py --no-llm``
+    set the env var after ``app.config`` has already been imported. A runtime
+    check keeps the flag effective regardless of import order.
+    """
+    import os  # local import keeps module load light; this is a hot-path helper
+    return DISABLE_QUERY_EXPANSION or os.getenv("DISABLE_QUERY_EXPANSION", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def expand_query(user_message: str, context: str = "", provider_name: str | None = None) -> str:
     """Use the configured cheap-task provider to generate better search terms."""
-    if not ENABLE_QUERY_EXPANSION:
+    if not ENABLE_QUERY_EXPANSION or _runtime_disable_expansion():
         return user_message
 
     try:
@@ -333,6 +349,26 @@ def expand_query(user_message: str, context: str = "", provider_name: str | None
     except Exception as e:
         logger.warning("Query expansion failed: %s", e)
         return user_message
+
+
+def _should_expand_query(drive_result: dict | None, detected_sku: str | None) -> bool:
+    """Gate the Haiku query-expansion call.
+
+    Skip expansion when:
+    - ``DISABLE_QUERY_EXPANSION`` env flag is set (escape hatch; ``--no-llm``
+      regression also sets this to guarantee zero cloud-model calls).
+    - Global ``ENABLE_QUERY_EXPANSION`` is False.
+    - A drive has already been resolved (either UI-preselected or detected by
+      SKU). In those cases ``_smart_route`` has narrowed retrieval to the
+      drive's priority manuals and expansion tends to pull noisy neighbors.
+    """
+    if _runtime_disable_expansion():
+        return False
+    if not ENABLE_QUERY_EXPANSION:
+        return False
+    if drive_result or detected_sku:
+        return False
+    return True
 
 
 def _expand_query_cached(query: str, cache: dict, context: str = "", provider_name: str | None = None) -> str:
@@ -750,6 +786,24 @@ def _classify_query_type(message: str) -> str:
     appnote_keywords = ['pvt', 'trajectory', 'current loop', 'stepper', 'twincat',
                         'sequencing', 'g-code', 'gcode', 'mode switch', 'inrush',
                         'ferrite', 'power supply sizing']
+    compliance_keywords = ['ul-listed', 'ul listed', 'ul certif', 'ce mark', 'ce certif',
+                           'reach', 'rohs', 'iso 9001', 'iso9001', 'functional safety',
+                           'func safety', 'sto (safe torque', 'safe torque off',
+                           'compliance', 'certification', 'certified', 'regulatory']
+    marketing_keywords = ['industry flyer', 'brochure', 'use case', 'use-case',
+                          'case study', 'applications brochure', 'marketing material']
+    rma_keywords = ['rma', 'return authorization', 'beyond repair', 'return for repair',
+                    'return process']
+
+    # Check compliance / marketing / rma BEFORE the technical categories so a
+    # question like "is the FE060-25-EM UL-certified?" routes to compliance
+    # rather than to datasheet (which would miss the certification PDFs).
+    if any(kw in msg_lower for kw in compliance_keywords):
+        return 'compliance'
+    if any(kw in msg_lower for kw in marketing_keywords):
+        return 'marketing'
+    if any(kw in msg_lower for kw in rma_keywords):
+        return 'rma'
 
     if any(kw in msg_lower for kw in spec_keywords):
         return 'datasheet'
@@ -814,13 +868,20 @@ def _smart_route(
             "support_note": support_note,
         }, indent=2)
 
-    # Search with query expansion
-    expanded_query = _expand_query_cached(
-        user_message,
-        expansion_cache,
-        context=conv_context,
-        provider_name=cheap_task_provider_name,
-    )
+    # Search with query expansion. Skip expansion when we already have strong
+    # routing signal — an exact SKU resolved (drive_context or detected_sku),
+    # in which case _smart_route has already narrowed retrieval to priority
+    # manuals and expansion tends to pull noisy neighbors. Also skip when the
+    # DISABLE_QUERY_EXPANSION escape hatch is set (e.g. --no-llm regression).
+    if _should_expand_query(result, detected_sku):
+        expanded_query = _expand_query_cached(
+            user_message,
+            expansion_cache,
+            context=conv_context,
+            provider_name=cheap_task_provider_name,
+        )
+    else:
+        expanded_query = None
     fetch_k = RERANK_CANDIDATES if ENABLE_RERANKING else TOP_K
     broad_retrieval = False
     priority_manuals: list[str] = []
@@ -888,8 +949,11 @@ def _smart_route(
         broad_retrieval = doc_type is None
         chunks = retrieve(user_message, top_k=fetch_k, doc_type_filter=doc_type, expanded_query=expanded_query)
 
-    # Rerank
-    if ENABLE_RERANKING and len(chunks) > RERANK_TOP_K:
+    # Rerank. Previously gated on len(chunks) > RERANK_TOP_K, which meant that
+    # filter-narrowed retrieval (the common case) bypassed reranking entirely
+    # and synthesis saw raw RRF order. The cross-encoder handles small pools
+    # correctly, so run it whenever we have at least two candidates.
+    if ENABLE_RERANKING and len(chunks) >= 2:
         chunks = rerank(user_message, chunks, top_k=RERANK_TOP_K)
     chunks = chunks[:PILOT_RETRIEVAL_TOP_K]
 

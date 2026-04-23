@@ -7,6 +7,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from app.config import INDEX_DIR, TOP_K, MIN_RELEVANCE_SCORE, EMBEDDING_MODEL, EMBEDDING_QUERY_PREFIX
 
+
+# Doc types that are OFF by default: not included in retrieval unless the
+# caller explicitly passes ``doc_type_filter="marketing"`` (etc). These are
+# indexed so they can be surfaced by opt-in queries, but kept out of the
+# default top-K to avoid polluting technical-support answers with
+# sales/marketing or RMA-process material.
+OFF_BY_DEFAULT_DOC_TYPES: frozenset[str] = frozenset({"marketing", "rma"})
+
 logger = logging.getLogger(__name__)
 
 # Module-level cache
@@ -190,8 +198,14 @@ def retrieve(query: str, top_k: int = TOP_K, source_filter: str = None,
                 continue
 
         # Doc type filtering
+        chunk_doc_type = _metadatas[idx].get("doc_type", "")
         if doc_type_filter:
-            if _metadatas[idx].get("doc_type", "") != doc_type_filter:
+            if chunk_doc_type != doc_type_filter:
+                continue
+        else:
+            # No explicit doc_type asked for — drop types flagged as off-by-default
+            # (marketing, rma). They can still be reached via explicit filter.
+            if chunk_doc_type in OFF_BY_DEFAULT_DOC_TYPES:
                 continue
 
         # Deduplication (hash-based on full text)
