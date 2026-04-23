@@ -492,8 +492,26 @@ const TROUBLESHOOT_TREES = {
         options: [
           { label: "Low speed (slow motion is rough)", next: "a_low_speed_cogging" },
           { label: "High speed (smooth at low speed, rough when fast)", next: "a_high_speed" },
-          { label: "All speeds", next: "a_velocity_loop" },
+          { label: "All speeds — physical vibration or buzz", next: "a_velocity_loop" },
+          { label: "All speeds — scope shows bad tracking but motion feels smooth", next: "q_scope_tracking_shape" },
         ]
+      },
+      q_scope_tracking_shape: {
+        question: "On the scope (velocity command vs velocity feedback), what does the error look like?",
+        options: [
+          { label: "Feedback lags command — slow rise time, can't keep up", next: "a_tracking_underpowered" },
+          { label: "Constant offset — feedback runs parallel to command but never reaches it", next: "a_tracking_steady_state" },
+          { label: "Overshoot and ringing at each step", next: "a_velocity_loop" },
+          { label: "Feedback line is noisy/jagged (even though motor feels OK)", next: "a_encoder_noise" },
+        ]
+      },
+      a_tracking_underpowered: {
+        answer: "**Smooth but sluggish = velocity loop gains too LOW, or the drive is saturating.**\n\nThis is the OPPOSITE of the jerky case — your feedback can't keep up.\n\n**Fix (in order):**\n1. **Increase velocity Kp** (proportional gain) in small steps until rise time is acceptable. Opposite direction from the jerky-case advice.\n2. **Increase velocity Ki** for steady-state accuracy.\n3. **Check for saturation** — in ACE's scope, monitor commanded current. If it's pegged at the current limit during acceleration, the drive is delivering everything it has and physics won't let it track faster. Either raise the current limit (if safe for the motor) or reduce acceleration.\n4. **Check bus voltage** — at the saturating speed, back-EMF may be eating all the headroom. Bus voltage must be > motor Ke × speed + IR drop.\n5. **Verify the current loop is tuned FIRST** — an under-tuned current loop makes velocity loop gains look ineffective.",
+        source: "AMC_AppNote_015.pdf, AMC_SW_Manual_ACE.pdf"
+      },
+      a_tracking_steady_state: {
+        answer: "**Constant offset from command = missing or insufficient integral action.**\n\nProportional gain alone can't drive steady-state error to zero. You need Ki.\n\n**Fix:**\n1. **Increase velocity Ki** (integral gain) — start by doubling the current value\n2. Watch for oscillation as Ki climbs — if it starts ringing, back off 20%\n3. If Ki is already high and error persists, check for **feed-forward** (some drives have a velocity or acceleration feed-forward term that pre-compensates the command)\n4. For position loops: a steady-state following error during constant velocity is normal — it scales with velocity / Kp. This is called **following error** and is usually expected; only worry if the error exceeds your position-error-limit fault threshold.\n5. Check that the motor isn't **current-limited** in the direction of the error — a drive capped at low current will look like steady-state offset.",
+        source: "AMC_AppNote_015.pdf, AMC_SW_Manual_ACE.pdf"
       },
       a_low_speed_cogging: {
         answer: "**Rough motion at low speed** is usually caused by:\n\n1. **Motor cogging** — permanent magnet motors have inherent cogging torque at low speeds. This is normal but can be reduced by:\n   - Increasing encoder resolution (more counts per rev)\n   - Using sinusoidal commutation instead of trapezoidal\n   - Reducing current loop bandwidth slightly\n2. **Low encoder resolution** — fewer counts per rev means the servo loop has coarser position feedback at low speeds\n3. **Velocity loop gains too high** — reduce velocity Kp at low speeds\n4. **Friction** — check mechanical system for stiction (static friction higher than dynamic friction)",
@@ -504,8 +522,8 @@ const TROUBLESHOOT_TREES = {
         source: "AMC_AppNote_015.pdf, AMC_AppNote_041.pdf"
       },
       a_velocity_loop: {
-        answer: "**Rough at all speeds = velocity loop tuning issue.**\n\n**Fix:**\n1. **Reduce velocity Kp** (proportional gain) — cut by 50%\n2. Gradually increase until motion is smooth but responsive\n3. Target velocity loop bandwidth: **50-200 Hz** (much lower than current loop)\n4. **Increase velocity Ki** (integral) for steady-state accuracy, but too high causes oscillation\n5. Use ACE's **Auto-Tune** which tunes both current and velocity loops\n6. Check that current loop is tuned FIRST — the velocity loop sits on top of it",
-        source: "AMC_AppNote_015.pdf p.1"
+        answer: "**Rough at all speeds (physical vibration/buzz) = velocity loop gains too HIGH.**\n\nThe loop is oscillating around the setpoint — that's the jerk you feel.\n\n**Fix (in order):**\n1. **Reduce velocity Kp** (proportional gain) — cut by 50%\n2. Gradually increase until motion is smooth but responsive\n3. Target velocity loop bandwidth: **50-200 Hz** (much lower than current loop)\n4. **Reduce velocity Ki** (integral) if a constant buzz persists at standstill — that's an integrator limit-cycle\n5. If smooth motion requires very low gains, your **current loop may need tuning first** — an under-tuned current loop forces the velocity loop to compensate and adds jitter\n6. Use ACE's **Auto-Tune** which tunes both current and velocity loops in sequence\n\n**⚠ Don't confuse this with the opposite case:** if your scope shows the feedback smoothly LAGGING the command (no ringing), that's gains too LOW, not high. Go back one step and pick \"scope shows bad tracking but motion feels smooth\" instead.",
+        source: "AMC_AppNote_015.pdf p.1, AMC_AppNote_037.pdf"
       },
       a_accel_jerk: {
         answer: "**Rough only during acceleration/deceleration:**\n\n1. **Acceleration rate too high** — the motor can't follow the commanded ramp. Reduce acceleration value.\n2. **S-curve profiling** — enable jerk limiting (S-curve) instead of trapezoidal profiles. This smooths the transitions.\n3. **Current limit hit** — during acceleration, current demand spikes. If it hits the limit, motion jerks. Increase peak current limit or reduce accel rate.\n4. **Mechanical coupling** — flexible couplings or belts can cause resonance during acceleration. Check for backlash.",
@@ -514,6 +532,421 @@ const TROUBLESHOOT_TREES = {
       a_encoder_issue: {
         answer: "**Rough at specific positions = encoder or mechanical issue.**\n\n1. **Encoder defect** — if the encoder has a damaged track, it will misread at specific positions. Test by moving the motor slowly through the problem area while watching position in ACE scope.\n2. **Motor cogging** — some motors have stronger cogging at certain positions (near pole transitions)\n3. **Mechanical interference** — check for something physically contacting the motor or load at those positions\n4. **Hall sensor issue** — if using Hall+encoder, the Hall transitions at 6 positions/rev can cause bumps if commutation offset is wrong. Run auto-commutation.",
         source: "AMC_AppNote_040.pdf, AMC_AppNote_014.pdf"
+      },
+    }
+  },
+
+  // =========================================================================
+  // TREE 5: SCOPE TUNING GUIDE (current / velocity / position loops)
+  // Sources: AppNote 015 (current loop tuning), AppNote 037 (current tuning
+  // for DigiFlex), ACE Manual (scope/tuning), AppNote 011 (analog setup).
+  // =========================================================================
+  scope_tuning: {
+    title: "Tuning a Loop on the Oscilloscope",
+    trigger_keywords: [
+      "tune loop", "tuning", "loop tuning", "current loop", "velocity loop",
+      "position loop", "auto tune", "auto-tune", "autotune",
+      "loop gains", "kp", "ki", "kd", "bandwidth", "step response",
+      "scope tuning", "scope shows", "bad tracking", "tracking error",
+      "following error", "overshoot", "undershoot",
+    ],
+    root: "q_tune_which_loop",
+    nodes: {
+      q_tune_which_loop: {
+        question: "Which loop are you tuning? (Loops nest outside-in — position wraps velocity, velocity wraps current. Tune the innermost loop first.)",
+        options: [
+          { label: "Current loop (torque loop) — innermost", next: "q_tune_current_step" },
+          { label: "Velocity loop — wraps current loop", next: "q_tune_velocity_step" },
+          { label: "Position loop — outermost", next: "q_tune_position_step" },
+          { label: "Not sure / I just want auto-tune", next: "a_tune_autotune" },
+        ]
+      },
+
+      // --- Current loop ---
+      q_tune_current_step: {
+        question: "Current-loop step response shows:",
+        options: [
+          { label: "Ringing / overshoot then oscillation", next: "a_current_too_hot" },
+          { label: "Slow rise time, never catches up", next: "a_current_too_cold" },
+          { label: "Clean step but small steady-state error", next: "a_current_needs_ki" },
+          { label: "Ran auto-tune and it failed", next: "a_current_autotune_fail" },
+          { label: "Not sure what I'm looking at", next: "a_current_how_to_scope" },
+        ]
+      },
+      a_current_how_to_scope: {
+        answer: "**How to scope the current loop** (ACE / DriveWare):\n\n1. Open the **Scope/Tuning** window.\n2. Set the **Waveform Generator** to inject a **100 Hz square wave** into the **current command** input. Start with a small amplitude (~10–20% of the drive's continuous current rating).\n3. It may be necessary to **clamp the rotor** — an unloaded motor will move during tuning.\n4. Plot **Current Command** and **Current Feedback** on the scope.\n5. A well-tuned current loop has: **fast rise time, <20% overshoot, <2 ms settling, no sustained ringing**. Typical bandwidth target: **1–3 kHz**.\n6. Adjust **Kp first** (fastest response without ringing), then increase **Ki** to drive steady-state error to zero without causing oscillation.",
+        source: "AMC_AppNote_015.pdf p.1-2, AMC_AppNote_037.pdf p.1"
+      },
+      a_current_too_hot: {
+        answer: "**Ringing on current step = current-loop Kp is too high.**\n\n**Fix:**\n1. **Reduce Kp** in 25% steps until the ringing stops and the step looks critically damped (fast rise, minimal overshoot).\n2. If Kp is already small and ringing continues, reduce **Ki** as well — an aggressive integrator also causes oscillation.\n3. Verify **motor inductance (Ls) and resistance (Rs)** are set correctly in the motor parameters; wrong values push Kp into the unstable region.\n4. Check that the **PWM / switching frequency** is appropriate for the motor's electrical time constant (L/R). Low-inductance motors need higher switching frequencies.",
+        source: "AMC_AppNote_015.pdf p.2, AMC_AppNote_037.pdf"
+      },
+      a_current_too_cold: {
+        answer: "**Slow rise time = current-loop Kp is too low** (under-damped toward critically-damped).\n\n**Fix:**\n1. **Increase Kp** in 25% steps until the feedback catches the command cleanly. Stop just before ringing starts — then back off 10–20%.\n2. Check that you're actually **applying enough current command** — a tiny step signal will produce a tiny response. Scale the square-wave amplitude up.\n3. Verify motor parameters (Ls, Rs). Wrong values make the loop look sluggish.\n4. For AMC analog drives: check DIP switch configuration — the current-limit setting caps the achievable rate of change.",
+        source: "AMC_AppNote_015.pdf p.2, AMC_AppNote_037.pdf"
+      },
+      a_current_needs_ki: {
+        answer: "**Clean step + steady-state error = need more Ki.**\n\n**Fix:**\n1. **Increase Ki** in 25% steps. The integrator drives residual error to zero.\n2. Watch for oscillation as Ki climbs; stop at the first sign and back off 20%.\n3. The current loop is usually dominated by Kp — Ki tends to be small. If Ki already looks big, the issue may be a **DC offset in the current sensor** or a **misconfigured motor resistance (Rs)** rather than a tuning problem.",
+        source: "AMC_AppNote_015.pdf p.2"
+      },
+      a_current_autotune_fail: {
+        answer: "**Auto-tune failure** on the current loop usually means the drive can't meet its sanity checks. Common causes:\n\n1. **Motor won't turn** — is it clamped to ground or jammed? Auto-tune must be able to inject a small current and observe the response.\n2. **Missing motor parameters** — motor Ls (inductance), Rs (resistance), and pole count must be entered before auto-tune.\n3. **Feedback not configured** — auto-tune reads current sensors but also needs the encoder or Hall sensors to identify motor constants.\n4. **Fault present** — if the drive is already in an overtemp / overvoltage / Hall-fault state, auto-tune aborts.\n5. **Wrong commutation** — if motor phase order is wrong, auto-tune sees non-sensical responses. Try manual commutation first (see AN-014).\n\nAfter fixing the blocker, re-run auto-tune. If it still fails, fall back to manual tuning per AN-015.",
+        source: "AMC_AppNote_014.pdf, AMC_AppNote_015.pdf, AMC_SW_Manual_ACE.pdf"
+      },
+
+      // --- Velocity loop ---
+      q_tune_velocity_step: {
+        question: "Velocity-loop step response shows:",
+        options: [
+          { label: "Overshoot + ringing on each step", next: "a_vel_too_hot" },
+          { label: "Sluggish / lags command (smooth but slow)", next: "a_tracking_underpowered" },
+          { label: "Reaches command but with steady offset", next: "a_tracking_steady_state" },
+          { label: "Buzzing/oscillating at standstill", next: "a_vel_standstill_hunt" },
+          { label: "Not sure what I'm looking at", next: "a_vel_how_to_scope" },
+        ]
+      },
+      a_vel_how_to_scope: {
+        answer: "**How to scope the velocity loop** (prerequisite: current loop already tuned).\n\n1. **Scope/Tuning** window → **Waveform Generator** → inject a **velocity step command** (e.g. 10% of rated speed) at a frequency low enough to see the whole transient (~5–10 Hz square wave).\n2. Plot **Velocity Command** and **Velocity Feedback**.\n3. A well-tuned velocity loop: **fast rise (2–10 ms), minimal overshoot, <1% steady-state error, no sustained oscillation**. Target bandwidth: **50–200 Hz** (much lower than the current loop).\n4. Tune **Kp first**, then add **Ki** for zero steady-state error. If the drive exposes a feed-forward term, add it last to improve response without reducing stability margin.",
+        source: "AMC_AppNote_015.pdf p.1, AMC_SW_Manual_ACE.pdf"
+      },
+      a_vel_too_hot: {
+        answer: "**Overshoot + ringing = velocity Kp is too high.**\n\nSame fix as the jerky-motion tree's velocity case: reduce Kp 50%, step up until just-smooth, then back off 20%. See also: verify the current loop is solid first (velocity loop sits on top of it — a shaky current loop makes the velocity loop look untunable).",
+        source: "AMC_AppNote_015.pdf p.1"
+      },
+      a_vel_standstill_hunt: {
+        answer: "**Buzzing at zero velocity = integrator limit cycle.**\n\nAt rest the commanded velocity is zero, but any friction or cogging keeps the feedback slightly off. The integrator keeps accumulating error until it overshoots, then unwinds, causing a slow hunt.\n\n**Fix:**\n1. **Reduce velocity Ki** — the integrator is too aggressive for your friction level.\n2. Add a small **dead-band** around zero if your drive supports it.\n3. Check for **mechanical stiction** — if the system is sticky, the loop fights it. Greasing or realigning can help.\n4. Verify the velocity feedback isn't quantized (low encoder resolution + high Kp causes discrete hunting).",
+        source: "AMC_AppNote_015.pdf"
+      },
+
+      // --- Position loop ---
+      q_tune_position_step: {
+        question: "Position-loop response shows:",
+        options: [
+          { label: "Overshoot past target, then corrects back", next: "a_pos_too_hot" },
+          { label: "Reaches target slowly, large following error", next: "a_pos_too_cold" },
+          { label: "Oscillates around target and can't settle", next: "a_pos_oscillates" },
+          { label: "Position-error fault trips during moves", next: "a_pos_error_fault" },
+        ]
+      },
+      a_pos_too_hot: {
+        answer: "**Position overshoot = position Kp too high, or derivative (Kd) too low to damp it.**\n\n**Fix:**\n1. **Reduce position Kp** first.\n2. **Add or increase Kd** (derivative gain) to damp overshoot without lowering bandwidth. Typical ratio: Kd ≈ Kp / (20–40).\n3. Enable **S-curve profiling** on position moves — a trapezoidal profile has infinite jerk at the corners which loads overshoot into the position loop.\n4. Verify **velocity loop is solid** — a resonant velocity loop causes visible overshoot in the position loop above it.",
+        source: "AMC_SW_Manual_ACE.pdf, AMC_AppNote_015.pdf"
+      },
+      a_pos_too_cold: {
+        answer: "**Slow response + large following error = gains too low, or current limit saturation.**\n\n**Fix:**\n1. **Increase position Kp** in 25% steps.\n2. If increasing Kp causes oscillation in the velocity loop, **tune velocity loop tighter first** — the position loop is wrapped around it.\n3. **Check current limit** — if the drive is current-saturated during motion, no amount of position-loop gain helps. Look at the current trace in the scope.\n4. For long moves at constant velocity, some **following error is normal** and scales with velocity ÷ Kp. Only fault if it exceeds the configured position-error limit.",
+        source: "AMC_SW_Manual_ACE.pdf, AMC_AppNote_015.pdf"
+      },
+      a_pos_oscillates: {
+        answer: "**Position oscillation around target = velocity loop is marginally stable, or integrator wind-up.**\n\n**Fix:**\n1. Drop out of position loop and **tune the velocity loop alone** using a scope step. If the velocity loop rings, the position loop will inherit that behavior amplified.\n2. Reduce **position Ki** — positional integrators are often unnecessary if velocity Ki already handles steady-state. Turn position Ki to zero and re-test.\n3. Check for **mechanical backlash** — gear or belt slop creates a dead zone the position loop fights, producing hunting.\n4. Verify **encoder resolution** is high enough for your target precision. Sub-count oscillation is inevitable if you're asking for resolution below encoder LSB.",
+        source: "AMC_SW_Manual_ACE.pdf, AMC_AppNote_015.pdf"
+      },
+      a_pos_error_fault: {
+        answer: "**Position-error fault during moves = motor can't follow the command.**\n\n**Fix:**\n1. Check the scope: is the **actual velocity saturated** during the move (flat-top at max velocity)? If yes, either raise the velocity limit or reduce commanded velocity.\n2. Check **current limit** during acceleration — current-saturation causes lag that accumulates into a position-error trip.\n3. Increase the **position-error fault threshold** if the current value is too strict for your application (some users use it more as a monitor than a hard fault).\n4. If the fault only trips on long moves, look at **following error = velocity ÷ Kp** — raise Kp or enable velocity feed-forward to reduce it.\n5. Verify **load inertia ratio** — reflected load >10× motor inertia will always lag unless gains are aggressive.",
+        source: "AMC_SW_Manual_ACE.pdf, AMC_AppNote_015.pdf"
+      },
+
+      // --- Auto-tune shortcut ---
+      a_tune_autotune: {
+        answer: "**Auto-Tune workflow in ACE / DriveWare:**\n\n1. **Connect to the drive** and verify it's enabled without faults.\n2. **Enter motor parameters** — resistance (Rs), inductance (Ls), pole count, rated current, rated speed. Auto-tune reads these.\n3. **Clamp the rotor** for safety — auto-tune injects small current pulses that can cause unintended motion.\n4. Open **Tuning → Auto-Tune** (or \"Calculate Gains\" in some UIs).\n5. Run the current-loop tune first, verify the step response in the scope, then velocity, then position.\n6. **Save the gains to NVM** (Non-Volatile Memory) so they survive a power cycle.\n\nIf auto-tune fails, the blocker is usually: missing motor parameters, wrong commutation, an active fault, or a jammed rotor. See the individual loop branches for symptom-driven fixes.",
+        source: "AMC_SW_Manual_ACE.pdf, AMC_AppNote_015.pdf, AMC_AppNote_014.pdf"
+      },
+    }
+  },
+
+  // =========================================================================
+  // TREE 6: HOMING PROBLEMS
+  // Sources: AppNote 062 (Hard Stop Homing, FlexPro CANOpen/Serial),
+  // ACE Manual (homing methods), DigiFlex Serial comm manual (homing objects).
+  // =========================================================================
+  homing: {
+    title: "Homing Problems",
+    trigger_keywords: [
+      "homing", "home position", "home switch", "hard stop home",
+      "index pulse", "home offset", "home not found", "homing failed",
+      "won't home", "can't home", "home timeout",
+    ],
+    root: "q_homing_method",
+    nodes: {
+      q_homing_method: {
+        question: "Which homing method are you using?",
+        options: [
+          { label: "Home to hard stop (no switch or sensor)", next: "q_hardstop_symptom" },
+          { label: "Home to a switch / limit input", next: "q_switch_home_symptom" },
+          { label: "Home to index pulse (encoder Z)", next: "q_index_home_symptom" },
+          { label: "Not sure which method — how do I pick?", next: "a_homing_method_picker" },
+        ]
+      },
+      a_homing_method_picker: {
+        answer: "**Picking a homing method** (CiA 402 / DS-402 standard):\n\n- **Hard Stop Home** — motor drives into a mechanical stop, current builds up past a threshold, drive calls that position home. Simple wiring, no sensor needed. Best for rigid stops; not safe for delicate mechanisms. See AN-062.\n- **Switch Home** (limit switch / proximity) — motor moves until a digital input fires. Fast and repeatable; requires wiring the switch.\n- **Index Home** — uses the encoder's Z / index pulse (one per revolution). Highest accuracy, but only works if your encoder has an index channel.\n- **Combo** — most applications use switch-to-approach + index-to-latch for both speed and precision.\n\nCiA 402 defines ~35 standard homing methods (negative/positive direction, switch + index, hard-stop + index, etc.). Your drive exposes them via object 0x6098 (Homing Method).",
+        source: "AMC_AppNote_062.pdf, AMC_CommManual_FP_CANopen.pdf, AMC_CommManual_CANopen.pdf"
+      },
+
+      // --- Hard stop ---
+      q_hardstop_symptom: {
+        question: "What's happening with hard-stop homing?",
+        options: [
+          { label: "Drive never detects the stop — keeps pushing forever", next: "a_hardstop_threshold" },
+          { label: "Faults with over-current before reaching the stop", next: "a_hardstop_overcurrent" },
+          { label: "Detects stop but home position is off by random amount", next: "a_hardstop_offset" },
+        ]
+      },
+      a_hardstop_threshold: {
+        answer: "**Hard stop never detected = current threshold too high, or homing current limit too low.**\n\nHard-stop homing works by watching the current build up when the motor presses into the stop. If the threshold isn't met, the drive assumes it's still moving.\n\n**Fix (per AN-062):**\n1. **Lower the Homing Current Threshold** parameter until current while pressing reliably exceeds it. Start at 30–50% of continuous current rating.\n2. **Raise the Homing Current Limit** — if current is capped too low, the motor can't build enough torque to trip the threshold.\n3. **Increase the Homing Timeout** so the drive waits long enough for the current to ramp up against the stop.\n4. Scope **Current Feedback vs. Current Threshold** during the homing attempt to verify the curve actually crosses the threshold.\n5. Ensure the motor is **in velocity or current mode during homing**, not trying to track a position setpoint past the stop (which triggers a position-error fault first).",
+        source: "AMC_AppNote_062.pdf p.2-4"
+      },
+      a_hardstop_overcurrent: {
+        answer: "**Over-current fault before stop detection = homing profile is too aggressive for the mechanism.**\n\n**Fix:**\n1. **Reduce Homing Velocity** so the motor isn't slamming into the stop.\n2. **Reduce Homing Current Limit** so it caps below the drive's fault threshold (give yourself headroom).\n3. **Add a soft-stop deceleration** near the expected hard-stop position if your application allows approximating where the stop is.\n4. Check that the motor's **I²t thermal model** isn't tripping — long dwell at high current against a stop can trip the thermal fault even if you're below the peak current limit.",
+        source: "AMC_AppNote_062.pdf, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_hardstop_offset: {
+        answer: "**Home position drifts on hard stops = compliance or backlash in the mechanism.**\n\nEven a perfectly-working homing routine is only as accurate as the stop itself. If the stop flexes under load, every home is slightly different.\n\n**Fix:**\n1. **Back off and re-approach slowly** — most drives support a two-stage home: fast initial approach, then a slow final approach at lower current. Configure **Homing Offset** / **Homing Speed 2**.\n2. **Add an encoder index pulse** to the homing method — approach to hard-stop, then back off and latch on the next Z pulse. This removes hard-stop compliance from the final position.\n3. Check for **mechanical play / backlash** between the motor and the stop (couplings, belts, gears). A stiff coupling is worth the money here.\n4. Verify the **Homing Current Threshold** isn't so low that the motor is latching on friction rather than the stop itself.",
+        source: "AMC_AppNote_062.pdf"
+      },
+
+      // --- Switch home ---
+      q_switch_home_symptom: {
+        question: "What's happening with switch homing?",
+        options: [
+          { label: "Drive doesn't see the switch (never homes)", next: "a_switch_not_seen" },
+          { label: "Drive sees switch but homes to wrong side", next: "a_switch_wrong_side" },
+          { label: "Homes OK but with variable accuracy", next: "a_switch_flakey" },
+        ]
+      },
+      a_switch_not_seen: {
+        answer: "**Drive doesn't detect the home switch.**\n\n**Fix:**\n1. **Verify the digital input is configured for Home** — in ACE / DriveWare, map the physical input pin to the Homing function. Unmapped inputs are ignored by the homing state machine.\n2. **Measure the input voltage** when the switch is pressed — it must swing above the drive's logic threshold (typically 10V for 24V-logic inputs). Check with a multimeter at the drive's I/O connector.\n3. Check **active-high vs active-low** configuration. An NPN sensor with the drive configured for PNP will look dead.\n4. Verify **input polarity / inversion** parameter.\n5. Test the input independently: in ACE, monitor the digital input state on the scope while you manually trip the switch. No state change = wiring/sensor problem, not a homing problem.",
+        source: "AMC_SW_Manual_ACE.pdf, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_switch_wrong_side: {
+        answer: "**Drive sees the switch but homes the wrong direction or side.**\n\nHoming methods in CiA 402 have direction and edge (rising/falling) encoded. Getting them wrong lands you on the opposite edge.\n\n**Fix:**\n1. **Check the Homing Method (object 0x6098)** against the CiA 402 table. Methods 1–14 differ in approach direction and which edge of the switch is used.\n2. If using a limit-switch-style method, verify your switch is actually a LIMIT switch (at travel end) vs a HOME switch (somewhere in middle of travel) — they use different methods.\n3. **Test direction in jog** before engaging the homer: if positive command drives the motor the wrong way, swap motor phases (or use the drive's direction-invert parameter) first.",
+        source: "AMC_CommManual_FP_CANopen.pdf, AMC_AppNote_062.pdf"
+      },
+      a_switch_flakey: {
+        answer: "**Homes OK but repeatability is poor = switch timing / hysteresis issue.**\n\n**Fix:**\n1. **Combine switch + index** — use a CiA 402 method that approaches the switch fast, then backs off and latches on the next encoder index pulse. The switch gets you close; the index pulse nails the position.\n2. **Slow down the final approach** — at high speed, switch debounce time + processor latency add ±several encoder counts of jitter.\n3. **Clean/replace mechanical switches** — contact bounce is a classic source of variable home position. Use a Hall-effect or optical proximity sensor for better repeatability.\n4. Check **switch mount rigidity** — a switch that flexes under impact moves the apparent home.",
+        source: "AMC_AppNote_062.pdf, AMC_CommManual_CANopen.pdf"
+      },
+
+      // --- Index home ---
+      q_index_home_symptom: {
+        question: "What's happening with index-pulse homing?",
+        options: [
+          { label: "Never sees an index pulse", next: "a_index_not_seen" },
+          { label: "Sees multiple index pulses, latches wrong one", next: "a_index_wrong_one" },
+        ]
+      },
+      a_index_not_seen: {
+        answer: "**No index pulse detected.**\n\n**Fix:**\n1. Confirm your encoder actually HAS an index (Z) channel — not all encoders do. Check the encoder datasheet and the drive's wiring diagram.\n2. Verify **Z+ / Z−** differential pair is wired to the drive's encoder connector (single-ended index lines often tie Z− to ground at the drive).\n3. In ACE, **scope the index signal** — one pulse per mechanical revolution. No pulse = wiring fault, damaged encoder, or encoder model without a Z channel.\n4. Some encoder modes (e.g., \"quadrature with commutation\" Hall-only mode) ignore the Z channel. Check **feedback configuration** — must be set to quadrature-with-index.\n5. If your motor makes >1 revolution before homing times out, there's no way the index is missing — it's either wired wrong or the feedback mode is wrong.",
+        source: "AMC_AppNote_040.pdf, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_index_wrong_one: {
+        answer: "**Multiple revolutions see multiple index pulses — which one is \"home\"?**\n\nWith an incremental encoder, every revolution produces one Z pulse. If your home range is >1 revolution, you need to pair index with a switch.\n\n**Fix:**\n1. Use a **home switch + index** combo homing method. The switch narrows down the region; the next index after the switch edge is the home.\n2. If you only have an index, restrict **travel to <1 revolution between power-on and home** — guarantees only one pulse will be seen.\n3. Consider switching to an **absolute encoder** (multi-turn or single-turn) if your application can't tolerate this limitation. See AN-040.",
+        source: "AMC_AppNote_040.pdf, AMC_AppNote_062.pdf"
+      },
+    }
+  },
+
+  // =========================================================================
+  // TREE 7: DRIVE WON'T CONNECT TO DRIVEWARE / ACE
+  // Sources: ACE Manual, DriveWare Manual, AppNote 000 (DLL registration),
+  // AppNote 001 (RS485 921K baud), AppNote 008 (RS232/485 interface).
+  // =========================================================================
+  software_connection: {
+    title: "Drive Won't Connect to DriveWare / ACE / DriveLibrary",
+    trigger_keywords: [
+      "can't connect", "won't connect", "connection failed", "no connection",
+      "driveware", "ace won't", "ace error", "dll registration",
+      "com port", "usb not recognized", "driver", "firmware mismatch",
+      "communication timeout", "drive not found", "drive not detected",
+    ],
+    root: "q_sw_symptom",
+    nodes: {
+      q_sw_symptom: {
+        question: "How does the connection fail?",
+        options: [
+          { label: "Software can't find the COM / USB port at all", next: "a_sw_port_missing" },
+          { label: "Finds port but 'drive not responding' / timeout", next: "q_sw_timeout_interface" },
+          { label: "Connects then disconnects randomly", next: "a_sw_flaky" },
+          { label: "'DLL registration' error dialog on startup", next: "a_sw_dll" },
+          { label: "Firmware version mismatch warning", next: "a_sw_firmware" },
+        ]
+      },
+      a_sw_port_missing: {
+        answer: "**Software doesn't see the COM port.**\n\n**Fix:**\n1. **Windows Device Manager → Ports (COM & LPT)** — is the drive listed? If not, Windows isn't seeing the USB adapter. Check the cable and try a different USB port.\n2. **Install the USB-to-serial driver** — AMC drives typically need an FTDI or Silicon Labs CP210x driver depending on the model and adapter. Download from AMC's site or the chip vendor.\n3. If the COM port appears but the drive isn't reachable, note the port number and select it manually in ACE (some versions default to scanning only COM1–COM4).\n4. On macOS/Linux, drivers are usually kernel-native — check `ls /dev/tty.usbserial*` to confirm the device is enumerated.",
+        source: "AMC_AppNote_008.pdf, AMC_SW_Manual_ACE.pdf"
+      },
+      q_sw_timeout_interface: {
+        question: "Which interface are you using?",
+        options: [
+          { label: "RS-232 serial (9-pin D-sub)", next: "a_sw_rs232_timeout" },
+          { label: "RS-485 serial (often via adapter)", next: "a_sw_rs485_timeout" },
+          { label: "USB (built-in USB port on drive)", next: "a_sw_usb_timeout" },
+          { label: "Ethernet / EtherCAT / CANopen", next: "a_sw_fieldbus_timeout" },
+        ]
+      },
+      a_sw_rs232_timeout: {
+        answer: "**RS-232 timeout** — common fixes:\n\n1. **Baud rate mismatch** — ACE / DriveWare default is 115200; some older drives default to 38400 or 9600. Try each baud rate, or check the drive's DIP switches / NVM for baud setting.\n2. **Cable pinout** — RS-232 requires a null-modem or straight-through cable depending on drive — verify against the drive's HW manual. Pin 2/3 swap (TX/RX) kills the link.\n3. **Address / Drive ID** — if the drive has a multi-drop address (even on RS-232), the software must target that address. Check NVM / DIP switches.\n4. **Ground loop** — RS-232 requires signal ground connection. Without it, the signal looks noisy and the UART desynchronizes.\n5. If it was working yesterday and broke today, check for a **loose connector** or a **power glitch** that reset the baud rate.",
+        source: "AMC_AppNote_008.pdf, AMC_CommManual_RS485.pdf"
+      },
+      a_sw_rs485_timeout: {
+        answer: "**RS-485 timeout** — common fixes:\n\n1. **Termination** — the last device on the RS-485 bus needs a 120 Ω terminator. Missing termination causes reflections and silent drops.\n2. **Baud rate** — AN-001 covers 921.6 kbaud operation specifically for AMC drives; non-standard baud rates often fail if the adapter/driver doesn't support them. Start at 115200 and work up.\n3. **Half-duplex vs full-duplex** — RS-485 is half-duplex by default. Your adapter must match the drive's mode. Full-duplex (4-wire) drives wired as half-duplex (2-wire) won't talk.\n4. **Bias resistors** — on a non-terminated bus, you may need 680 Ω pull-up / pull-down biasing to keep the differential line at a known idle state.\n5. **Drive address (node ID)** — multi-drop requires each drive to have a unique address and the master must query that address.\n6. Check **ground reference** — RS-485 is differential but needs a common ground reference for the receivers to work.",
+        source: "AMC_AppNote_001.pdf, AMC_AppNote_008.pdf, AMC_CommManual_RS485.pdf"
+      },
+      a_sw_usb_timeout: {
+        answer: "**USB timeout** — built-in USB ports are usually USB-to-serial bridges internally:\n\n1. **Check COM port number** — the drive enumerates as a virtual COM port. Device Manager shows the number; select that exact one in ACE.\n2. **Baud rate** — even USB drives use serial framing internally; baud mismatch causes timeouts.\n3. **Driver version** — mismatched FTDI/CP210x driver versions can cause packet loss. Update to the latest from the chip vendor.\n4. **USB hub issues** — plug directly into a computer port, skip USB hubs (especially bus-powered ones). Some USB 3.0 ports also cause problems — try a USB 2.0 port.\n5. **Power** — if the drive is unpowered, the USB port can enumerate but not respond. Verify DC power to the drive first.",
+        source: "AMC_SW_Manual_ACE.pdf, AMC_AppNote_008.pdf"
+      },
+      a_sw_fieldbus_timeout: {
+        answer: "**Fieldbus timeout (EtherCAT / CANopen / Ethernet)** — use the Communication Error tree for detailed diagnosis. Quick checks:\n\n1. **Physical link** — LED on drive's network port should indicate link state (green = connected, off = no link). Check cable.\n2. **Node / slave address** — must match the master's expected address.\n3. **ESI / EDS file** — on EtherCAT, the master needs the drive's ESI XML file loaded. On CANopen, it needs the EDS file.\n4. **Cycle time** — set too fast, the drive can't respond in time. 1 kHz (1 ms) is a safe starting cycle.\n5. **Firmware** — drive and master must share a compatible protocol version.",
+        source: "AMC_CommManual_FP_EtherCAT.pdf, AMC_CommManual_FP_CANopen.pdf"
+      },
+      a_sw_flaky: {
+        answer: "**Connects then drops randomly** — usually noise or power:\n\n1. **Ground loop** — the PC and the drive share a ground path that's carrying power-supply noise. Use an isolated USB-to-serial adapter.\n2. **Cable length** — RS-232 limits to ~15 meters; RS-485 to ~1200 meters at low baud but less at high baud. Long cables + high baud = errors.\n3. **EMI** — route signal cable away from motor power cables. Use shielded cable, grounded at drive end only. See AN-023 on ferrite cores.\n4. **USB power saving** — Windows' \"USB selective suspend\" disables the adapter after idle. Device Manager → USB Root Hub → Power Management → uncheck \"Allow the computer to turn off this device.\"\n5. **Drive reset** — if the drive is power-cycling silently (e.g., brown-outs on the DC bus), the link drops on every reset. Check DC bus voltage stability under load.",
+        source: "AMC_AppNote_023.pdf, AMC_SW_Manual_ACE.pdf"
+      },
+      a_sw_dll: {
+        answer: "**DLL registration error (AN-000)** — this is a Windows issue, not a drive issue.\n\n**Fix (per AN-000):**\n1. **Run ACE / DriveWare as Administrator** — right-click the shortcut, \"Run as administrator.\" The installer may have failed to register DLLs without admin rights.\n2. **Re-install the software** — an interrupted install leaves DLLs on disk but not registered. Uninstall fully, reboot, re-install as administrator.\n3. **Manually re-register** (advanced): open Command Prompt as admin, navigate to the install folder, run `regsvr32 <dllname>.dll` for each flagged DLL.\n4. On Windows 10/11, **Controlled Folder Access** (ransomware protection) can block DLL registration. Temporarily disable or add the install folder as an allowed app.\n5. On a corporate-managed machine, ask IT — software-restriction policies often block COM DLL registration.",
+        source: "AMC_AppNote_000.pdf"
+      },
+      a_sw_firmware: {
+        answer: "**Firmware version mismatch** — the software is built for a specific firmware range.\n\n**Fix:**\n1. **Check what firmware is on the drive** — ACE displays it on the connection dialog. Write it down.\n2. **Check the ACE / DriveWare release notes** for the supported firmware range.\n3. **Update ACE / DriveWare** to the latest version first — newer software supports a wider range of firmware.\n4. If the drive has **older firmware** and your ACE is too new, you can either (a) update drive firmware (AMC-provided `.flc` file via ACE's firmware-update dialog), or (b) roll back ACE to a matching version.\n5. **NEVER update firmware without the drive-specific file** — each drive family has its own firmware. Flashing the wrong family bricks the drive.\n6. After a firmware update, expect to **re-tune** — gains often don't carry across versions.",
+        source: "AMC_SW_Manual_ACE.pdf, AMC_SW_ReleaseNotes_ACE.pdf"
+      },
+    }
+  },
+
+  // =========================================================================
+  // TREE 8: SAFE TORQUE OFF (STO) ISSUES — FlexPro safety circuit
+  // Sources: Compliance Safety STO FlexPro PDF, FlexPro HW manual.
+  // =========================================================================
+  sto_safety: {
+    title: "Safe Torque Off (STO) Problems",
+    trigger_keywords: [
+      "sto", "safe torque off", "safety input", "safety circuit",
+      "safety function", "sto fault", "sto not working", "sil 3",
+      "pld", "safety relay",
+    ],
+    root: "q_sto_symptom",
+    nodes: {
+      q_sto_symptom: {
+        question: "What's happening with STO?",
+        options: [
+          { label: "Drive reports STO active when it shouldn't be", next: "a_sto_false_trigger" },
+          { label: "Drive doesn't disable when STO is asserted", next: "a_sto_doesnt_trigger" },
+          { label: "STO inputs and wiring — how do I connect them?", next: "a_sto_wiring" },
+          { label: "Drive faults on STO discrepancy", next: "a_sto_discrepancy" },
+        ]
+      },
+      a_sto_wiring: {
+        answer: "**STO wiring on FlexPro drives:**\n\n1. STO uses **two independent 24 V inputs** (STO1 and STO2). Both must be energized (high) to enable the drive. If either drops low, the drive goes to Safe Torque Off state.\n2. Supply each STO input from a **certified safety relay or safety controller** — standard PLC outputs are not SIL-rated.\n3. **Do not tie STO1 and STO2 together** — the redundancy is the entire safety function. Tying them makes the safety certification invalid.\n4. **Test pulses** — most safety controllers pulse the STO inputs briefly to test the diagnostic coverage. FlexPro inputs tolerate pulses up to the duration specified in the Compliance STO document; longer pulses trip the drive.\n5. See the dedicated **AMC_Compliance_Safety_STO_FlexPro.pdf** for certified wiring diagrams, response times, and SIL 3 / PL e certification statements.",
+        source: "AMC_Compliance_Safety_STO_FlexPro.pdf, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_sto_false_trigger: {
+        answer: "**STO reports active when it shouldn't** — the safety circuit is seeing a low on at least one input.\n\n**Fix:**\n1. **Measure both STO1 and STO2 inputs with a multimeter** while the safety loop is \"safe\". Both must read 24 V DC relative to the input common. If one is low, the wiring from the safety controller is the problem.\n2. Check the **safety relay's output contacts** — oxidation or a worn relay can drop voltage.\n3. **Wiring corrosion / loose terminals** — STO inputs are low-current, so a high-resistance joint shows up as a low voltage on the input even though there's no visible fault.\n4. Check for **inductive spikes** on the STO line from nearby E-stop or contactor coils. Add a flyback diode on the coil.\n5. **Ground reference** — STO inputs reference 0 V common. If the common isn't tied between the safety source and the drive, levels appear wrong.",
+        source: "AMC_Compliance_Safety_STO_FlexPro.pdf"
+      },
+      a_sto_doesnt_trigger: {
+        answer: "**Drive doesn't disable when STO is asserted** — this is a safety-critical failure. Stop using the machine.\n\n**Mandatory checks:**\n1. **Are you using a drive variant that HAS STO?** Not every FlexPro model includes the STO option. Check the SKU against the compliance documentation.\n2. **Are the STO inputs wired?** An unwired STO input floats or pulls up to 24 V internally (manufacturer-dependent) — defeating the safety function.\n3. **Jumpers installed by factory or previous integrator** — some drives ship with STO jumped out for test. Remove the jumper and wire the real safety circuit.\n4. **Contact AMC technical support** — this is not a field-troubleshoot issue. STO failures can be a defect or a misunderstanding of the certified configuration.\n\n**Do not commission the safety function until it has been verified by the safety integrator.** The drive's STO is only one link in a certified chain — the full chain must be validated per ISO 13849-2.",
+        source: "AMC_Compliance_Safety_STO_FlexPro.pdf"
+      },
+      a_sto_discrepancy: {
+        answer: "**STO discrepancy fault = STO1 and STO2 mismatch for longer than the tolerance window.**\n\nBoth inputs must transition in sync; if one goes low and the other stays high (or vice versa) for more than the drive's discrepancy-detection time, it faults.\n\n**Fix:**\n1. **Simultaneous switching** — drive both inputs from the same safety relay's redundant contacts, not from separate PLC channels with different timing.\n2. **Test-pulse timing** — if your safety controller pulse-tests, the pulses on STO1 and STO2 must be staggered in time so they don't both go low simultaneously, or within the drive's tolerance window. See AMC_Compliance_Safety_STO_FlexPro.pdf for the exact timing.\n3. **Wiring asymmetry** — if one input's cable is much longer than the other, propagation delay alone can trigger discrepancy at fast cycle times. Keep cable lengths similar.\n4. **Clearing the fault** — discrepancy faults are usually latched; toggle both STO inputs through a known-good safe state, then back to normal, to clear.",
+        source: "AMC_Compliance_Safety_STO_FlexPro.pdf"
+      },
+    }
+  },
+
+  // =========================================================================
+  // TREE 9: ENCODER / FEEDBACK CONFIGURATION
+  // Sources: AppNote 014 (motor phasing/commutation), AppNote 040 (absolute
+  // feedback), AppNote 041 (sinusoidal commutation speed limits), HW manuals.
+  // =========================================================================
+  encoder_feedback: {
+    title: "Encoder / Feedback Configuration",
+    trigger_keywords: [
+      "encoder", "feedback", "hall sensor", "hall", "commutation",
+      "sin/cos", "sincos", "absolute encoder", "incremental encoder",
+      "bissc", "biss-c", "endat", "ssi", "resolver",
+      "encoder setup", "feedback wrong direction",
+    ],
+    root: "q_feedback_type",
+    nodes: {
+      q_feedback_type: {
+        question: "What type of feedback are you setting up or troubleshooting?",
+        options: [
+          { label: "Incremental encoder (quadrature A/B, optional index)", next: "q_inc_enc_symptom" },
+          { label: "Absolute encoder (BiSS-C, EnDat, SSI)", next: "q_abs_enc_symptom" },
+          { label: "Hall sensors only (no encoder)", next: "q_halls_symptom" },
+          { label: "Resolver", next: "a_fb_resolver" },
+          { label: "Sin/Cos encoder", next: "a_fb_sincos" },
+          { label: "Motor runs wrong direction / torque doesn't match command", next: "a_fb_commutation" },
+        ]
+      },
+
+      q_inc_enc_symptom: {
+        question: "Incremental encoder issue:",
+        options: [
+          { label: "Position counts the wrong way", next: "a_inc_direction" },
+          { label: "Position skips or jumps randomly", next: "a_encoder_noise" },
+          { label: "Drive faults on feedback loss", next: "a_inc_lost_signal" },
+          { label: "Index pulse not detected", next: "a_index_not_seen" },
+        ]
+      },
+      a_inc_direction: {
+        answer: "**Encoder counts the wrong direction.**\n\n**Fix:**\n1. **Swap A and B channels** — this reverses the decoded direction.\n2. **Or set the encoder-direction-invert parameter** in ACE / DriveWare if your drive exposes one.\n3. **Or swap two motor phases** — reverses the physical rotation direction to match the encoder, not the other way around. Pick one method; don't swap both or you'll undo it.\n4. After fixing direction, **re-run commutation** if your motor uses Hall-based or phase-detect commutation — the electrical angle reference may be inverted.",
+        source: "AMC_AppNote_014.pdf, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_inc_lost_signal: {
+        answer: "**Feedback-loss fault on incremental encoder.**\n\n**Fix:**\n1. **Check differential pairs** — A+/A−, B+/B−, Z+/Z−. Drives with feedback-loss detection watch for both halves of the pair swinging opposite; single-ended wiring trips the fault.\n2. **Cable shielding** — shield grounded only at drive end.\n3. **5 V supply** — verify +5 V is reaching the encoder. Long cables drop voltage; some drives have a Kelvin (sense) pair to compensate.\n4. **Cable damage** — if the fault is intermittent with machine motion, the cable may be chafed or flex-fatigued. Replace suspect cable.\n5. **Encoder failure** — at this point, substitute a known-good encoder to isolate.",
+        source: "AMC_HWManual_FlexPro_PCB.pdf, AMC_AppNote_040.pdf"
+      },
+
+      q_abs_enc_symptom: {
+        question: "Absolute-encoder issue:",
+        options: [
+          { label: "Drive can't read the encoder at all", next: "a_abs_no_comm" },
+          { label: "Reads position but it's wrong / drifts / wraps oddly", next: "a_abs_wrong_position" },
+          { label: "How do I configure / enable an absolute encoder?", next: "a_abs_setup" },
+        ]
+      },
+      a_abs_setup: {
+        answer: "**Absolute encoder setup (per AN-040 for DigiFlex Performance):**\n\n1. **Select the encoder protocol** in ACE / DriveWare — BiSS-C, EnDat 2.1/2.2, or SSI. Protocol is encoder-specific; check the encoder's datasheet.\n2. **Set the position resolution** — single-turn bits + multi-turn bits. The drive needs to know how many bits of each to properly decode.\n3. **Wire the data + clock lines** — absolute encoders are serial. Check for correct TX / RX / CLK / GND pairs and differential pair polarity.\n4. **Supply voltage** — BiSS-C / EnDat usually run on 5 V; some on 8–15 V. Wrong supply fries the encoder.\n5. **Set the commutation offset** after mechanical installation — the drive needs to know the electrical angle at encoder position zero. Run auto-commutation or enter the offset manually.\n6. **Save to NVM** so the settings persist across power cycles.",
+        source: "AMC_AppNote_040.pdf"
+      },
+      a_abs_no_comm: {
+        answer: "**Absolute encoder not communicating.**\n\n**Fix:**\n1. **Protocol mismatch** — confirm the drive is set for the exact protocol the encoder uses (BiSS-C vs BiSS-B, EnDat 2.1 vs 2.2, SSI Gray vs Binary).\n2. **Pinout verification** — absolute encoders often share the same connector form factor as incremental but with very different pin assignments. Verify against both datasheets.\n3. **Termination / biasing** — some protocols require line termination at the drive end. Check the HW manual.\n4. **Clock speed** — too fast a clock for a long cable fails. Start at the lowest supported speed and work up.\n5. **Encoder supply** — measure the actual voltage at the encoder end of the cable, not at the drive. Long cables drop V significantly.",
+        source: "AMC_AppNote_040.pdf, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_abs_wrong_position: {
+        answer: "**Absolute position reads but is wrong.**\n\n**Fix:**\n1. **Resolution mismatch** — if you told the drive 17-bit single-turn but the encoder is 13-bit, the upper bits will be noise. Verify the encoder's exact bit-count from its datasheet.\n2. **Gray ↔ Binary** — SSI encoders output Gray code; binary-configured readers show garbage when rotated. Set the encoder-code parameter correctly.\n3. **Multi-turn wrap** — a 12-bit multi-turn counter wraps at 4096 revs. If your application requires more range, you need a higher-count encoder or a battery-backed multi-turn.\n4. **Commutation offset** — position may be read correctly but electrically referenced wrong, causing torque-direction flips. Re-run auto-commutation.\n5. **Offset parameter** — check if the drive has an encoder-offset parameter accidentally set to a non-zero value.",
+        source: "AMC_AppNote_040.pdf"
+      },
+
+      q_halls_symptom: {
+        question: "Hall-sensor issue:",
+        options: [
+          { label: "Valid Hall state fault (000 or 111)", next: "a_analog_hall_fault" },
+          { label: "Motor turns in wrong direction on first command", next: "a_hall_direction" },
+          { label: "Motor cogs or doesn't commutate smoothly", next: "a_fb_commutation" },
+        ]
+      },
+      a_hall_direction: {
+        answer: "**Motor turns backward on first commutation.**\n\nHall wiring and motor phase wiring must BOTH be correct for torque direction to match command.\n\n**Fix:**\n1. **Swap any two motor phases** (U↔V, V↔W, or U↔W) — this reverses the motor direction without touching the encoder or Halls.\n2. **Or swap two of the three Hall sensor wires** — changes the electrical-angle decoding.\n3. **Or run auto-commutation** — the drive will figure out the correct phase order automatically (requires the motor to be free to rotate).\n4. Pick ONE method. Swapping both motor phases AND Halls cancels out.\n5. Reference AN-014's motor-phasing procedure for manual verification with a scope.",
+        source: "AMC_AppNote_014.pdf"
+      },
+
+      // --- Universal commutation answer ---
+      a_fb_commutation: {
+        answer: "**Commutation fault** — the drive doesn't know the correct electrical angle of the rotor.\n\n**Fix:**\n1. **Run auto-commutation** in ACE (Tuning → Commutation → Auto-Commute). The motor must be free to rotate and the current loop must be tuned first.\n2. For **manual commutation**, follow AN-014's procedure: apply a small DC current to one phase pair and observe which Hall state activates. Record the alignment between Hall states and phase order.\n3. **Commutation type mismatch**: verify the drive is set for sinusoidal vs. trapezoidal vs. Hall-only matching your motor. Trapezoidal-commutated sinusoidal-wound motors produce 15% torque ripple.\n4. **Pole count wrong**: the drive must know the motor's electrical-pole count. If set wrong, commutation angle wraps at the wrong rate.\n5. See AN-041 for sinusoidal-commutation speed limits — at very high speeds, sinusoidal can lose sync and fall back to block commutation with a torque-ripple bump.",
+        source: "AMC_AppNote_014.pdf, AMC_AppNote_041.pdf"
+      },
+
+      a_fb_resolver: {
+        answer: "**Resolver setup** on AMC drives.\n\n1. **Verify transformation ratio** — the drive expects a specific transformation ratio (typically **0.5 Vrms** on DigiFlex Performance resolver drives). Check the drive's datasheet before installation. A mismatched resolver produces degraded signals and the drive may fail feedback checks. See HW manual page 54 (DigiFlex Panel CANopen) and equivalent.\n2. **Excitation voltage and frequency** — typical AMC setup is 4 Vrms at 5 kHz. The drive outputs this to the resolver primary winding; wrong voltage = wrong feedback amplitude.\n3. **Wiring**: 6 wires (excitation pair + two secondary pairs for sine and cosine). Differential pairs must be wired polarity-correct.\n4. **Shielding and twist**: shield the resolver cable and twist each differential pair to reject noise.\n5. **Pole-pair count** — tell the drive how many resolver electrical cycles per mechanical revolution. Standard industrial resolvers are 1-speed (one electrical cycle per mechanical rev); multi-speed resolvers scale up.\n6. If your resolver's transformation ratio doesn't match the drive's expected ratio, either change resolvers or use a different drive — most AMC resolver drives don't configure this parameter in software.",
+        source: "AMC_HWManual_DigiFlex_Panel_CANopen.pdf p.54, AMC_HWManual_DigiFlex_Panel_RS485-ModbusRTU.pdf p.27, AMC_SW_Manual_DriveWare.pdf p.36"
+      },
+
+      a_fb_sincos: {
+        answer: "**Sin/Cos encoder setup.**\n\n1. Sin/Cos encoders output analog differential sine and cosine signals, typically **1 Vpp** peak-to-peak. Not compatible with drive inputs expecting digital quadrature.\n2. **Verify the drive has a Sin/Cos option** — it's a hardware feature, not a software mode. Check the drive's datasheet / HW manual.\n3. **Interpolation** — the drive interpolates between counts for sub-count resolution. Configure the interpolation factor in software (typical 4096x).\n4. **Signal amplitude calibration** — Sin/Cos drives expect 1 Vpp centered on 2.5 V. If signal amplitudes don't match, the drive's interpolation produces non-uniform counts. Scope the signals and adjust encoder supply if necessary.\n5. **Index / reference mark** — most Sin/Cos encoders have a separate TTL index line for homing.\n6. See AN-040 for configuration details on DigiFlex Performance.",
+        source: "AMC_AppNote_040.pdf, AMC_HWManual_DigiFlex_Panel_EtherCAT.pdf"
       },
     }
   },
