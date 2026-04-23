@@ -100,6 +100,13 @@ STRATEGY:
 7. If drive lookup reports a reserved drive status, prefer concise support guidance and avoid implying the product has full current-product coverage.
 8. CASCADE-TUNING PREREQUISITE — INVIOLABLE: AMC servo drives use cascaded control loops (current → velocity → position, inside-out). When the user asks about velocity-loop or position-loop tuning, noise, oscillation, overshoot, or steady-state error, you MUST state explicitly that the current (torque) loop has to be tuned first — the velocity loop sits on top of the current loop and a poorly-tuned inner loop will always produce a noisy outer loop regardless of velocity-loop gains. This is true even if the retrieved chunks don't spell it out. Do NOT write a velocity- or position-tuning procedure without naming this dependency, because "noisy velocity tune" in the field is most often an under-tuned current loop, not a velocity-loop problem. Same rule applies in reverse: if a user asks about position noise, mention that BOTH the current loop AND velocity loop must be tuned first.
 
+9. FEATURE-PREREQUISITE AWARENESS — INVIOLABLE: When a user asks why a specific drive feature or UI element isn't working ("button is greyed out", "can't execute X", "Y isn't responding", "Z won't enable"), you MUST check for operating-mode and state prerequisites BEFORE giving configuration details. Key known prerequisites in AMC drives:
+   - **Motion Engine / Index execution**: requires (a) drive enabled, (b) Motion Engine enabled, (c) **Active Drive Configuration set to Position around Velocity** (or Position around Velocity around Current), and (d) Absolute Position Valid — set via Homing, Phase Detect, or Set Position. (Per AMC_SW_Manual_ACE.pdf p.93 and AN-027.)
+   - **Homing operations**: require a position-capable operating mode selected; cannot run in pure Current or Velocity mode.
+   - **Position commands**: require a position-loop mode (Position around Velocity, Position around Current) — they are ignored in pure velocity or current modes.
+   - **CiA 402 motion modes (Profile Position, Cyclic Sync Position, etc.)**: require correct state transitions through the CiA 402 state machine via Controlword 0x6040.
+   If you don't see an explicit prerequisite in retrieved chunks, state the prerequisite AS A LIKELY CAUSE and recommend the user verify it before the other troubleshooting steps. Greyed-out buttons are almost always a prerequisite-not-met issue, not a bug.
+
 ANSWER RULES:
 1. Be CONCISE. Give the direct answer with exact values, steps, or parameters. No filler. Aim for 3-8 sentences for simple questions, longer only for multi-step procedures.
 2. Cite sources: [Source: filename, Page X]. Include section heading if available.
@@ -858,6 +865,51 @@ def _is_cascade_tuning_query(message: str) -> bool:
     return bool(_CASCADE_TUNE_PATTERN.search(message or ""))
 
 
+# Motion Engine / Index execution: a user whose index buttons are greyed out
+# or who can't fire an index needs to know the prerequisites (drive enabled,
+# Motion Engine enabled, Active Drive Configuration = Position around
+# Velocity, Absolute Position Valid via Homing/Phase Detect/Set Position).
+# That prerequisite lives in ACE manual p.93 and AN-027 but retrieval
+# typically surfaces the CAN object state table instead.
+# Direct Motion-Engine feature words that always trigger
+_MOTION_ENGINE_DIRECT = re.compile(
+    r"\b(motion\s+engine|indexer|motion\s+task|pre.?programmed\s+(move|motion|profile))\b",
+    re.IGNORECASE,
+)
+# "index" (noun) word — broad enough to catch mentions in any context
+_INDEX_WORD = re.compile(r"\b(index|indexes|indexer)\b", re.IGNORECASE)
+# Problem / symptom signals (greyed out button, can't execute, won't fire, etc.)
+_MOTION_PROBLEM_SIGNAL = re.compile(
+    r"\b(greyed|grayed|disabled|inactive|"
+    r"can'?t|cannot|can\s+not|won'?t|wont|doesn'?t|"
+    r"not\s+working|not\s+firing|not\s+running|fails?\s+to|"
+    r"how\s+do\s+i\s+(use|execute|run|start|configure)|"
+    r"how\s+(to|can\s+i)\s+(use|execute|run|start|configure)|"
+    r"arrow\s+button|play\s+button|start\s+button)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_motion_engine_query(message: str) -> bool:
+    """Does the user's message look like a Motion-Engine / index-execution question?
+
+    Matches either:
+      - Direct feature words: 'motion engine', 'indexer', 'motion task', etc.
+      - 'index' noun combined with a problem/action signal (greyed out,
+        can't execute, how do I use, won't fire, etc.).
+
+    The combined form avoids false positives on e.g. 'encoder index pulse'
+    (which mentions 'index' but has no problem/usage signal in typical
+    phrasing).
+    """
+    msg = message or ""
+    if _MOTION_ENGINE_DIRECT.search(msg):
+        return True
+    if _INDEX_WORD.search(msg) and _MOTION_PROBLEM_SIGNAL.search(msg):
+        return True
+    return False
+
+
 # Maps drive family -> applicable SW manual filenames. FlexPro uses ACE;
 # DigiFlex Performance uses DriveWare. AxCent and Classic are analog drives
 # with no software configuration tool. Citing the wrong software for a
@@ -1152,6 +1204,37 @@ def _smart_route(
         # otherwise ranks the directly-matching outer-loop chunks above it
         # (see e.g. AN-037, which on page 1 has the current-loop procedure
         # that is prerequisite to the velocity-loop procedure on page 2).
+        # Motion Engine / index question: pull ACE or DriveWare Motion Tasks
+        # content (contains the prerequisite list for index execution) plus
+        # AN-027 (Motion Engine app note). Family-gated like SW-manual
+        # retrieval so FlexPro gets ACE, DigiFlex gets DriveWare.
+        motion_engine_chunks: list[dict] = []
+        if _is_motion_engine_query(user_message):
+            allowed_sw = _sw_manuals_for_family(result.get("family"))
+            me_query = (
+                "indexes motion task position around velocity absolute "
+                "position valid Motion Engine enable prerequisites — "
+                + user_message
+            )
+            me_pool = retrieve(
+                me_query, top_k=fetch_k,
+                doc_type_filter="sw,sw_ref,app_note",
+                expanded_query=None,
+            )
+            # Prefer family-appropriate SW manuals; keep app notes as-is
+            if allowed_sw:
+                me_pool = [
+                    c for c in me_pool
+                    if c.get("source") in allowed_sw or c.get("doc_type") == "app_note"
+                ]
+            if ENABLE_RERANKING and len(me_pool) >= 2:
+                me_pool = rerank(
+                    "index execution prerequisites Motion Engine Position around Velocity Absolute Position Valid",
+                    me_pool,
+                    top_k=4,
+                )
+            motion_engine_chunks = me_pool[:2]
+
         cascade_current_chunks: list[dict] = []
         if _is_cascade_tuning_query(user_message):
             # Augment the query with explicit current-loop terms so both
@@ -1248,6 +1331,20 @@ def _smart_route(
             reserved = [c for c in _reserved_cl if c["text"][:100] not in existing_texts]
             if reserved:
                 chunks = (reserved[:1] + chunks)[:PILOT_RETRIEVAL_TOP_K]
+
+        # Motion Engine / index question: reserve 2 slots for the ACE or
+        # DriveWare Motion-Tasks section (contains the "drive enabled +
+        # Motion Engine enabled + Position around Velocity + Absolute
+        # Position Valid" prerequisite) + AN-027 (Motion Engine app note).
+        try:
+            _reserved_me = motion_engine_chunks  # noqa: F821 — defined above
+        except NameError:
+            _reserved_me = []
+        if _reserved_me:
+            existing_texts = {c["text"][:100] for c in chunks}
+            reserved = [c for c in _reserved_me if c["text"][:100] not in existing_texts]
+            if reserved:
+                chunks = (reserved[:2] + chunks)[:PILOT_RETRIEVAL_TOP_K]
 
     context_text = build_context(chunks)
 
