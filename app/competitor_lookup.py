@@ -45,6 +45,11 @@ _COMPETITOR_BRANDS: tuple[tuple[str, str], ...] = (
     ("Schneider Electric",       r"\bschneider\s+(electric|lexium)\b|\blexium\b"),
     ("Lenze",                    r"\blenze\s+(servo|8400|9400|i700)\b"),
     ("SEW Eurodrive",            r"\bsew\s+(eurodrive|movi)\b|\bmovidrive\b"),
+    # Also match the product-line names so users who say "my EPOS4 drive"
+    # get routed correctly without needing to mention the parent brand.
+    ("Ingenia Motion Control",   r"\bingenia\b|\beverest\s+(net|xcr|s)\b|\bcapitan\s+(net|xcr)\b|\bsummit\s+net\b|\bnemesis\b"),
+    ("Nanotec",                  r"\bnanotec\b|\bnanotech\b|\bn5-\w+\b|\bc5-?e\b|\bcl3-?e\b"),
+    ("Maxon Motor",              r"\bmaxon\s+(motor|drive|servo|esc|epos|maxpos)\b|\bescon\b|\bepos\s*\d?\b|\bmaxpos\b"),
 )
 
 _COMPETITOR_PATTERNS = tuple(
