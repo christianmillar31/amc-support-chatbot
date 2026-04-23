@@ -841,10 +841,33 @@ def _classify_query_type(message: str) -> str:
                      'serial', 'pdo', 'sdo', 'object dictionary', 'baud', 'register',
                      'protocol', 'communication', 'network', 'node id', 'node address']
     spec_keywords = ['current rating', 'voltage range', 'specification', 'specs', 'datasheet',
-                     'continuous current', 'peak current', 'supply voltage']
-    appnote_keywords = ['pvt', 'trajectory', 'current loop', 'stepper', 'twincat',
+                     'continuous current', 'peak current', 'supply voltage',
+                     # Resolution / ADC / bit-width questions live in datasheets
+                     # (analog input resolution, A/D hardware bit-width). They
+                     # used to mis-route to app_note because "current loop" was
+                     # exclusively an app-note keyword.
+                     'resolution', 'bit resolution', '16-bit', '12-bit', '10-bit', '8-bit',
+                     'adc', 'a/d converter', 'analog to digital',
+                     # PWM / switching frequency, current sensor bandwidth, etc.
+                     'pwm frequency', 'switching frequency', 'current sensor',
+                     'current feedback', 'bandwidth']
+    appnote_keywords = ['pvt', 'trajectory', 'stepper', 'twincat',
                         'sequencing', 'g-code', 'gcode', 'mode switch', 'inrush',
-                        'ferrite', 'power supply sizing']
+                        'ferrite', 'power supply sizing',
+                        # "current loop" stays here ONLY when combined with a
+                        # tuning verb — see check below.
+                        ]
+    # "current loop" can be either a spec question or an app-note question.
+    # Keep it out of the flat keyword list and instead gate it: if combined
+    # with tuning/procedure verbs, route to app_note; otherwise let the spec
+    # or general-retrieval path handle it.
+    if 'current loop' in msg_lower and any(
+        verb in msg_lower for verb in (
+            'tune', 'tuning', 'autotune', 'auto-tune', 'setup',
+            'configure', 'configuring', 'how do i',
+        )
+    ):
+        return 'app_note'
     compliance_keywords = ['ul-listed', 'ul listed', 'ul certif', 'ce mark', 'ce certif',
                            'reach', 'rohs', 'iso 9001', 'iso9001', 'functional safety',
                            'func safety', 'sto (safe torque', 'safe torque off',
