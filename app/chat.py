@@ -95,7 +95,7 @@ STRATEGY:
 2. If user asks about replacing/upgrading a discontinued analog drive BY PART NUMBER → step 1 still applies: call detect_drive_manual first. Only call find_replacement_drive AFTER detect_drive_manual confirms the drive exists OR the user has clarified the exact discontinued model.
 3. Use doc_type filter to narrow searches. Use manual_filter when you know the exact manual.
 4. One focused search usually suffices. Only do a second search if the first had low relevance (<0.15) or missed key info.
-5. For specs (current, voltage, dimensions) → search datasheets. For procedures → search app_notes.
+5. For specs (current, voltage, dimensions) → search datasheets. For procedures → search app_notes. SPEC KEYWORDS THAT LIVE IN DATASHEETS ONLY: continuous current, peak current, DC/AC supply voltage, power output, switching frequency, PWM frequency, weight, dimensions, form factor, resolver transformation ratio, resolver excitation voltage, resolver excitation frequency, encoder supply, Hall supply, motor type support, operating mode, control command input, commutation type. If the user asks about any of these, the FIRST search MUST include doc_type="datasheet" — do not exclude datasheets even if the question sounds like troubleshooting. When a SKU is mentioned, always filter the datasheet search by that drive's datasheet filename first.
 6. If drive lookup reports support_bucket=core_drive_missing, DO NOT pretend a local datasheet exists. Use the hardware manual, communication manual, application notes, and product metadata instead, and say clearly when exact local datasheet coverage is missing.
 7. If drive lookup reports a reserved drive status, prefer concise support guidance and avoid implying the product has full current-product coverage.
 
@@ -189,12 +189,7 @@ TOOLS = [
                 },
                 "doc_type": {
                     "type": "string",
-                    "enum": [
-                        "comm", "hw", "sw", "sw_ref", "sw_release",
-                        "app_note", "product_note", "datasheet",
-                        "compliance", "marketing", "rma",
-                    ],
-                    "description": "Optional: filter by document type. 'comm' = communication manuals, 'hw' = hardware installation manuals, 'sw' = software manuals (ACE, DriveWare, DriveLibrary), 'sw_ref' = software quick references, 'sw_release' = software release notes / readmes, 'app_note' = application notes (detailed how-to guides), 'product_note' = product notes (retrofit guides, wiring recommendations), 'datasheet' = per-drive datasheets with specifications, current ratings, voltages, dimensions, weight, pinouts, 'compliance' = UL/CE/REACH/RoHS/STO/functional-safety certifications (use ONLY when the user asks about compliance or a specific region/standard), 'marketing' = brochures, industry flyers, product flyers, presentations (OFF by default; request explicitly only for industry/use-case questions), 'rma' = RMA / product-return process docs. Use when you want all manuals of a type without specifying a filename.",
+                    "description": "Optional: filter by document type. Single value (e.g. 'datasheet') OR comma-separated list (e.g. 'datasheet,hw,app_note') to search multiple types at once. Valid types: 'comm' = communication manuals, 'hw' = hardware installation manuals, 'sw' = software manuals (ACE, DriveWare, DriveLibrary), 'sw_ref' = software quick references, 'sw_release' = software release notes / readmes, 'app_note' = application notes (detailed how-to guides), 'product_note' = product notes (retrofit guides, wiring recommendations), 'datasheet' = per-drive datasheets with specifications, current ratings, voltages, dimensions, pinouts, resolver transformation ratio, resolver excitation, encoder supply, form factor, operating modes (ALWAYS include datasheet when asking about any numeric spec — these fields live NOWHERE else), 'compliance' = UL/CE/REACH/RoHS/STO/functional-safety certifications (use ONLY when the user asks about compliance or a specific region/standard), 'marketing' = brochures, industry flyers, product flyers, presentations (OFF by default; request explicitly only for industry/use-case questions), 'rma' = RMA / product-return process docs.",
                 },
             },
             "required": ["query"],
@@ -792,8 +787,14 @@ def _classify_query_type(message: str) -> str:
                            'compliance', 'certification', 'certified', 'regulatory']
     marketing_keywords = ['industry flyer', 'brochure', 'use case', 'use-case',
                           'case study', 'applications brochure', 'marketing material']
-    rma_keywords = ['rma', 'return authorization', 'beyond repair', 'return for repair',
-                    'return process']
+    # RMA patterns use word boundaries: bare 'rma' substring-matches 'tRANSFoRMAtion'
+    # and other innocuous words. Keep the list narrow + specific.
+    import re as _re
+    rma_patterns = [
+        r'\brma\b', r'\brma number\b', r'\brma request\b', r'\breturn authorization\b',
+        r'\bbeyond repair\b', r'\breturn for repair\b', r'\bsend.*back for repair\b',
+    ]
+    rma_hit = any(_re.search(p, msg_lower) for p in rma_patterns)
 
     # Check compliance / marketing / rma BEFORE the technical categories so a
     # question like "is the FE060-25-EM UL-certified?" routes to compliance
@@ -802,7 +803,7 @@ def _classify_query_type(message: str) -> str:
         return 'compliance'
     if any(kw in msg_lower for kw in marketing_keywords):
         return 'marketing'
-    if any(kw in msg_lower for kw in rma_keywords):
+    if rma_hit:
         return 'rma'
 
     if any(kw in msg_lower for kw in spec_keywords):

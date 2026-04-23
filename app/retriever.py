@@ -128,8 +128,30 @@ def _semantic_rank(query: str, candidate_count: int) -> list[int]:
     return semantic_sims.argsort()[::-1][:candidate_count].tolist()
 
 
+def _normalize_doc_type_filter(doc_type_filter):
+    """Accept None, a single string, a comma-separated string, or a list/set.
+
+    The agentic tool-use path tends to emit comma-separated strings (e.g.
+    ``"app_note,hw"``) even when the schema says single-value. Before this
+    normalizer the retriever silently returned zero chunks because no
+    metadata's ``doc_type`` field equals the literal string
+    ``"app_note,hw"``. Now we accept any of:
+        None              -> None (no filter)
+        "datasheet"       -> {"datasheet"}
+        "app_note,hw"     -> {"app_note", "hw"}
+        ["hw", "comm"]    -> {"hw", "comm"}
+    """
+    if doc_type_filter is None:
+        return None
+    if isinstance(doc_type_filter, (list, tuple, set)):
+        values = {str(v).strip() for v in doc_type_filter if str(v).strip()}
+    else:
+        values = {v.strip() for v in str(doc_type_filter).split(",") if v.strip()}
+    return values or None
+
+
 def retrieve(query: str, top_k: int = TOP_K, source_filter: str = None,
-             doc_type_filter: str = None, expanded_query: str = None) -> list[dict]:
+             doc_type_filter=None, expanded_query: str = None) -> list[dict]:
     """
     Retrieve the most relevant manual chunks for a query.
 
@@ -178,6 +200,10 @@ def retrieve(query: str, top_k: int = TOP_K, source_filter: str = None,
         candidate_indices = sparse_ranked
 
     # --- Filter, dedup, and build results ---
+    # Normalize doc_type_filter once (not per-chunk) — supports None, a single
+    # string, a comma-separated string, or a list/set.
+    dtf_set = _normalize_doc_type_filter(doc_type_filter)
+
     results = []
     seen_hashes: set[str] = set()
 
@@ -197,10 +223,10 @@ def retrieve(query: str, top_k: int = TOP_K, source_filter: str = None,
             if _metadatas[idx]["source"] != source_filter:
                 continue
 
-        # Doc type filtering
+        # Doc type filtering (dtf_set was normalized once before the loop).
         chunk_doc_type = _metadatas[idx].get("doc_type", "")
-        if doc_type_filter:
-            if chunk_doc_type != doc_type_filter:
+        if dtf_set:
+            if chunk_doc_type not in dtf_set:
                 continue
         else:
             # No explicit doc_type asked for — drop types flagged as off-by-default
