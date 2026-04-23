@@ -98,6 +98,7 @@ STRATEGY:
 5. For specs (current, voltage, dimensions) → search datasheets. For procedures → search app_notes. SPEC KEYWORDS THAT LIVE IN DATASHEETS ONLY: continuous current, peak current, DC/AC supply voltage, power output, switching frequency, PWM frequency, weight, dimensions, form factor, resolver transformation ratio, resolver excitation voltage, resolver excitation frequency, encoder supply, Hall supply, motor type support, operating mode, control command input, commutation type. If the user asks about any of these, the FIRST search MUST include doc_type="datasheet" — do not exclude datasheets even if the question sounds like troubleshooting. When a SKU is mentioned, always filter the datasheet search by that drive's datasheet filename first.
 6. If drive lookup reports support_bucket=core_drive_missing, DO NOT pretend a local datasheet exists. Use the hardware manual, communication manual, application notes, and product metadata instead, and say clearly when exact local datasheet coverage is missing.
 7. If drive lookup reports a reserved drive status, prefer concise support guidance and avoid implying the product has full current-product coverage.
+8. CASCADE-TUNING PREREQUISITE — INVIOLABLE: AMC servo drives use cascaded control loops (current → velocity → position, inside-out). When the user asks about velocity-loop or position-loop tuning, noise, oscillation, overshoot, or steady-state error, you MUST state explicitly that the current (torque) loop has to be tuned first — the velocity loop sits on top of the current loop and a poorly-tuned inner loop will always produce a noisy outer loop regardless of velocity-loop gains. This is true even if the retrieved chunks don't spell it out. Do NOT write a velocity- or position-tuning procedure without naming this dependency, because "noisy velocity tune" in the field is most often an under-tuned current loop, not a velocity-loop problem. Same rule applies in reverse: if a user asks about position noise, mention that BOTH the current loop AND velocity loop must be tuned first.
 
 ANSWER RULES:
 1. Be CONCISE. Give the direct answer with exact values, steps, or parameters. No filler. Aim for 3-8 sentences for simple questions, longer only for multi-step procedures.
@@ -830,6 +831,33 @@ def _is_fieldbus_deep_dive(message: str) -> bool:
     return bool(_FIELDBUS_DEEP_DIVE_PATTERN.search(message or ""))
 
 
+# Cascade-tuning detector: question is about velocity-loop or position-loop
+# tuning / noise / oscillation / overshoot. The current loop is a hard
+# prerequisite for both, but retrieval often surfaces the outer-loop chunk
+# while leaving the current-loop-tuning chunk (same app note, previous
+# page) behind. We reserve a slot to bring the inner-loop content in.
+_CASCADE_TUNE_PATTERN = re.compile(
+    r"\b(velocity|position)\s+"
+    r"(loop|tune|tuning|gains?|kp|ki|kd|bandwidth|response|"
+    r"noise|noisy|oscillat\w*|ring\w*|overshoot|undershoot|"
+    r"steady.?state|following\s+error)\b|"
+    # Also catch noise-on-tune phrasings without loop word
+    r"\b(noisy|oscillating|jittery|unstable)\s+(tune|tuning)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_cascade_tuning_query(message: str) -> bool:
+    """Is the user asking about velocity- or position-loop tuning/noise?
+
+    If so, we want to ALSO pull current-loop tuning content (the prerequisite)
+    from app notes and SW manuals — retrieval ranks outer-loop chunks higher
+    on query-term match but the inner loop is what usually needs fixing in
+    the field.
+    """
+    return bool(_CASCADE_TUNE_PATTERN.search(message or ""))
+
+
 # Maps drive family -> applicable SW manual filenames. FlexPro uses ACE;
 # DigiFlex Performance uses DriveWare. AxCent and Classic are analog drives
 # with no software configuration tool. Citing the wrong software for a
@@ -1118,6 +1146,38 @@ def _smart_route(
                 comm_pool = rerank(user_message, comm_pool, top_k=4)
             fieldbus_comm_chunks = comm_pool[:2]
 
+        # Cascade-tuning: if user asks about velocity- or position-loop tune
+        # / noise / oscillation, reserve a slot for current-loop-tuning
+        # content. The inner loop is a hard prerequisite and retrieval
+        # otherwise ranks the directly-matching outer-loop chunks above it
+        # (see e.g. AN-037, which on page 1 has the current-loop procedure
+        # that is prerequisite to the velocity-loop procedure on page 2).
+        cascade_current_chunks: list[dict] = []
+        if _is_cascade_tuning_query(user_message):
+            # Augment the query with explicit current-loop terms so both
+            # BM25 and semantic retrieval surface the inner-loop chunks
+            # rather than the outer-loop ones that matched the original
+            # phrasing.
+            current_loop_query = (
+                f"current loop tuning procedure waveform generator "
+                f"current command scope Kp Ki step response — {user_message}"
+            )
+            current_pool = retrieve(
+                current_loop_query, top_k=fetch_k,
+                doc_type_filter="app_note,sw,sw_ref",
+                expanded_query=None,
+            )
+            if ENABLE_RERANKING and len(current_pool) >= 2:
+                # Rerank using a current-loop-focused query so the right
+                # chunks win this mini-rerank, independent of the outer-
+                # loop phrasing in the user's original message.
+                current_pool = rerank(
+                    "current loop tuning procedure waveform generator step response",
+                    current_pool,
+                    top_k=4,
+                )
+            cascade_current_chunks = current_pool[:1]
+
         # If still not enough, search everything
         if len(chunks) < 3:
             broad_retrieval = True
@@ -1172,6 +1232,22 @@ def _smart_route(
             reserved = [c for c in _reserved_fb if c["text"][:100] not in existing_texts]
             if reserved:
                 chunks = (reserved[:2] + chunks)[:PILOT_RETRIEVAL_TOP_K]
+
+        # Cascade-tuning: reserve 1 slot for current-loop-tuning content
+        # when the query is about velocity- or position-loop tune/noise,
+        # so the inner-loop prerequisite content (e.g. AN-037 p.1, AN-015)
+        # makes the final context. Only 1 slot (not 2) because the primary
+        # velocity-loop content should still dominate; we just want the
+        # prerequisite to be citable, not overrepresented.
+        try:
+            _reserved_cl = cascade_current_chunks  # noqa: F821 — defined above
+        except NameError:
+            _reserved_cl = []
+        if _reserved_cl:
+            existing_texts = {c["text"][:100] for c in chunks}
+            reserved = [c for c in _reserved_cl if c["text"][:100] not in existing_texts]
+            if reserved:
+                chunks = (reserved[:1] + chunks)[:PILOT_RETRIEVAL_TOP_K]
 
     context_text = build_context(chunks)
 
