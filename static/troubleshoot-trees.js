@@ -950,4 +950,292 @@ const TROUBLESHOOT_TREES = {
       },
     }
   },
+
+  // =========================================================================
+  // TREE 10: THERMAL / OVERHEATING
+  // Sources: HW manuals (thermal ratings, derating curves), AN-009 (red LED
+  // overtemp), AN-003 (current foldback envelope), datasheets.
+  // =========================================================================
+  thermal: {
+    title: "Thermal / Overheating Issues",
+    trigger_keywords: [
+      "overtemperature", "over-temperature", "over temp", "overtemp",
+      "too hot", "heatsink hot", "drive hot", "motor hot",
+      "thermal fault", "thermal shutdown", "foldback", "i2t",
+      "I²t", "current foldback", "derating", "derate",
+      "drive is hot", "motor is hot", "overheating",
+    ],
+    root: "q_thermal_what",
+    nodes: {
+      q_thermal_what: {
+        question: "What's hot — and how did you find out?",
+        options: [
+          { label: "Drive reports over-temperature fault (LED or status)", next: "q_drive_overtemp_when" },
+          { label: "Motor housing is hot to the touch", next: "a_motor_hot" },
+          { label: "Drive's heatsink is hot but no fault yet", next: "a_heatsink_warm" },
+          { label: "Current foldback is limiting my output (I²t)", next: "a_current_foldback" },
+        ]
+      },
+      q_drive_overtemp_when: {
+        question: "When does the over-temperature fault happen?",
+        options: [
+          { label: "Immediately at power-up (before any motion)", next: "a_overtemp_immediate" },
+          { label: "After running for a while at high current", next: "a_overtemp_after_run" },
+          { label: "Only in hot ambient conditions (summer, cabinet)", next: "a_overtemp_ambient" },
+          { label: "During / after regenerative braking", next: "a_overtemp_regen" },
+        ]
+      },
+      a_overtemp_immediate: {
+        answer: "**Over-temp fault at power-up = stuck sensor, damaged drive, or wrong thermal configuration.**\n\n**Fix:**\n1. **Measure actual heatsink temperature** with an IR thermometer or thermocouple. If it's under 40 °C / 104 °F and the drive says overtemp, the **thermistor on the heatsink may be damaged / disconnected**.\n2. **Check motor thermistor wiring** — if you've configured the drive to use a motor-mounted thermistor (PTC or NTC), an open or shorted thermistor wire reads as maximum temperature. Disconnect the motor thermistor temporarily; if the fault clears, the wiring or sensor is the issue.\n3. **Check thermistor configuration** — some drives let you enable/disable the motor thermistor input and set active-closed vs active-open. A mis-configured sensor is always \"hot\" from the drive's perspective. See CommManual CANopen p.153 on thermistor / thermal cutoff switch configuration.\n4. If measured heatsink temp is genuinely high at power-on, the drive was probably hot from the previous run and hasn't cooled. Wait 10–15 min.",
+        source: "AMC_CommManual_CANopen.pdf p.153, AMC_AppNote_009.pdf p.2"
+      },
+      a_overtemp_after_run: {
+        answer: "**Over-temp after sustained operation = drive is genuinely exceeding its thermal limit. Approximately 65–85 °C internal limit depending on drive family.**\n\n**Fix (root causes in order):**\n1. **Heatsink / thermal interface** — check that the drive is **mounted to a heat-transferring surface** per its HW manual. Without the specified heatsink or thermal pad, the drive can't dissipate heat. PCB-mount drives typically need the specified cold plate or ground plane.\n2. **Thermal compound** — if the drive uses a thermal pad or grease against a heatsink, it must be clean and correctly applied. Dried grease or a missing pad cuts thermal conductivity dramatically.\n3. **Continuous current too high for your duty cycle** — if you're running closer to the drive's continuous rating, even slight thermal limits will trip. Derate per the datasheet's temperature curve (datasheets show continuous-current vs ambient-temperature curves).\n4. **Airflow** — if the drive is in an enclosed cabinet, forced airflow (fan) may be required. Spec sheets call out required airflow in CFM.\n5. **The drive will auto-recover** once internal temperature drops below the reset threshold (typically 10 °C hysteresis).",
+        source: "AMC_HWManual_FlexPro_PCB.pdf, AMC_HWManual_DigiFlex_Panel_CANopen.pdf, AMC_AppNote_009.pdf"
+      },
+      a_overtemp_ambient: {
+        answer: "**Overtemp only in hot ambient = you're outside the drive's derated operating range.**\n\nEvery AMC drive has a **derating curve** in its datasheet that reduces allowable continuous current as ambient temperature rises. Typical spec: full rating to ~40 °C, linear derate to 50% at 65 °C.\n\n**Fix:**\n1. **Check the derating curve** on your drive's datasheet. Compare your actual cabinet temperature (measured near the drive) to the allowed continuous current at that temperature.\n2. **Add cabinet cooling** — a small fan or AC unit often solves this. Target 40 °C or below at the drive's intake.\n3. **Move the drive** to a cooler location if the cabinet can't be cooled.\n4. **Upgrade to a higher-rated drive** — a drive rated for more continuous current will derate less aggressively at your ambient.\n5. **Duty cycle the application** — if loading is intermittent, the drive's thermal mass can absorb the duty cycle without hitting the limit. I²t integration runs on a time constant of minutes.",
+        source: "AMC_Datasheet_FE060-25-EM.pdf p.3, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_overtemp_regen: {
+        answer: "**Overtemp during/after braking = regen energy is dumping into the drive's internal shunt.**\n\nWhen the motor decelerates, kinetic energy flows back into the DC bus. The drive's **internal shunt regulator** (if present) dissipates this as heat to keep bus voltage in range. Heavy regen cycles overheat the shunt resistor.\n\n**Fix:**\n1. **Add an external shunt resistor** — see the regen/shunt tree. External shunts dissipate the energy outside the drive and won't trigger overtemp.\n2. **Reduce deceleration rate** — slower decel means less peak regen power. Often effective for high-inertia loads.\n3. **Check if your drive even has an internal shunt** — small drives often don't, and the DC bus pumps up until the overvoltage fault trips. If that's your symptom instead of overtemp, see the regen tree.\n4. **Use a larger DC bus capacitor** to absorb transient energy (limited effect but helps with short regen bursts).",
+        source: "AMC_AppNote_009.pdf, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_motor_hot: {
+        answer: "**Motor housing running hot.**\n\nSome heat is normal — a servo motor at continuous rated torque typically stabilizes at 80–100 °C case temperature. Class F / H insulation allows 155–180 °C rotor.\n\n**Check if it's actually too hot:**\n1. **Read the motor's max allowed temperature** from its nameplate or datasheet. This is usually case or winding temperature.\n2. **Measure actual winding temp** via the motor's thermistor (if installed) or an IR gun on the case.\n3. If you're **at or below rated current** and the motor is at its rated thermal limit — that's normal. Not a drive issue.\n4. If you're **below rated current** and the motor is overheating:\n   - Wrong motor parameters entered (Kt, inertia) cause the drive to request more current than necessary\n   - Bad commutation causes the drive to waste current as heating instead of torque (run auto-commutation)\n   - Motor shaft binding — load is fighting the motor\n   - Cooling fan not running (if the motor has one)\n\n**The drive's I²t model may be protective** — foldback will kick in to keep the motor from cooking. See the current foldback branch.",
+        source: "AMC_AppNote_003.pdf, AMC_AppNote_014.pdf"
+      },
+      a_heatsink_warm: {
+        answer: "**Warm heatsink, no fault yet = normal operation near the drive's capacity.**\n\nA drive under continuous load dissipates watts of heat; the heatsink is supposed to be warm. The drive self-protects at 65–85 °C internal; you'll get a fault before damage.\n\n**When to worry:**\n1. If the heatsink is approaching **too hot to touch for 2 seconds** (~60 °C surface) AND you're at rated load, you're near the thermal limit. Add cooling headroom.\n2. If the heatsink is warm but you're only at 30% of rated current, something's wrong: wrong motor parameters, regen dumping into internal shunt, or a mechanical binding.\n3. **Preventive fixes:** add a fan, upsize the drive, derate your current command, or duty-cycle the load.\n\n**Bottom line:** warm-but-not-faulting is fine. Track the heatsink temperature over time during your duty cycle; if it climbs steadily toward the fault threshold, intervene before the fault happens.",
+        source: "AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_current_foldback: {
+        answer: "**Current foldback is the drive protecting your motor (or itself) from thermal damage via I²t.**\n\nThe drive integrates I² × time and compares it to a limit. When that integral exceeds the threshold, the drive **reduces output current** to prevent continuous overheating. Behavior:\n- Short high-current bursts (peak) are allowed\n- Sustained high current trips foldback\n- Output current limits to the continuous rating until the integral bleeds down\n\n**Per AN-003**, the typical foldback envelope on DigiFlex drives is: peak current for ~2 seconds, then linear rolloff to continuous over ~10 seconds.\n\n**Fix if foldback is hurting your application:**\n1. **Verify the peak/continuous current settings** match your motor. If peak is set to 100 A but your motor can only handle 50 A, you're thermally overloading the MOTOR even though the drive is happy.\n2. **Lower your acceleration** — aggressive accel demands peak current. Slower ramps stay below the peak region and avoid foldback.\n3. **Lower your continuous command** — if the application truly needs less current on average, the foldback won't kick in.\n4. **Upsize the drive / motor** — if your application requires sustained high current and foldback keeps kicking in, the hardware is undersized.\n5. **Check motor thermistor** — if the drive is also reading motor-side thermal data, foldback triggers on motor temp too.",
+        source: "AMC_AppNote_003.pdf, AMC_CommManual_CANopen.pdf p.288"
+      },
+    }
+  },
+
+  // =========================================================================
+  // TREE 11: REGEN / SHUNT REGULATOR ISSUES
+  // Sources: AN-009 (over-voltage from regen), HW manuals (shunt specs),
+  // datasheets (bus overvoltage thresholds).
+  // =========================================================================
+  regen_shunt: {
+    title: "Regen / Shunt Regulator Problems",
+    trigger_keywords: [
+      "regen", "regenerative", "shunt", "shunt regulator", "shunt resistor",
+      "bus overvoltage", "dc bus voltage rise", "back emf",
+      "deceleration fault", "braking resistor", "external regen",
+      "vertical load", "overhauling load",
+    ],
+    root: "q_regen_symptom",
+    nodes: {
+      q_regen_symptom: {
+        question: "What's the regen-related symptom?",
+        options: [
+          { label: "Overvoltage fault during deceleration", next: "a_regen_overvoltage_decel" },
+          { label: "Drive's internal shunt resistor gets hot (no external added)", next: "a_regen_internal_shunt" },
+          { label: "Power LED flashes red/green during motion", next: "a_regen_led_flash" },
+          { label: "Need to spec an external shunt/brake resistor", next: "a_regen_spec_external" },
+          { label: "Vertical or overhauling load — how do I handle regen?", next: "a_regen_vertical" },
+        ]
+      },
+      a_regen_overvoltage_decel: {
+        answer: "**Overvoltage fault on deceleration = regen energy exceeding the drive's ability to absorb it.**\n\nDuring decel, the motor acts as a generator. Energy flows back into the DC bus, pumping up the voltage. When bus exceeds the drive's OV threshold (typically ~110% of nominal max), the drive trips to protect itself.\n\n**Fix (in order of cost):**\n1. **Reduce deceleration rate** — halves the peak regen power. Often the simplest fix.\n2. **Add S-curve profiling** — softens the deceleration transition, spreads regen power over more time.\n3. **Add an external shunt resistor** — dissipates regen energy as heat outside the drive. See the external-shunt spec branch.\n4. **Larger DC bus capacitance** — helps with short bursts but doesn't solve sustained regen.\n5. **Lower the nominal bus voltage** — gives the drive more headroom before OV trip. Trade-off: reduces max motor speed.\n6. **For vertical loads**, an external shunt is usually mandatory — gravity keeps pumping energy back whenever you decelerate a descending load.",
+        source: "AMC_AppNote_009.pdf, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_regen_internal_shunt: {
+        answer: "**Internal shunt getting hot = drive is working hard to absorb regen, dissipating it as heat inside the drive.**\n\nMany AMC drives have a small internal shunt resistor that handles moderate regen. Heavy or frequent regen saturates it.\n\n**Fix:**\n1. **Add an external shunt** — wires to the drive's shunt-out terminals (check HW manual for exact terminal names, usually P+/P−/R or similar). External shunts can dissipate 10× what the internal one handles.\n2. **External shunt sizing**: calculate peak regen power and average regen power for your application. Peak = ½ × J × ω² / decel_time. Average = peak × (decel_time / cycle_time). Pick a resistor rated above both.\n3. **Resistor value**: typically **bus voltage² / peak power**. For a 60 V drive regen'ing 2 kW peak: R ≈ 60² / 2000 = 1.8 Ω. Err on the lower side (higher current dissipation) within drive spec.\n4. **Confirm the drive supports external shunts** — not all AMC drives expose shunt terminals. Check the datasheet.",
+        source: "AMC_HWManual_FlexPro_PCB.pdf, AMC_HWManual_DigiFlex_Panel_CANopen.pdf"
+      },
+      a_regen_led_flash: {
+        answer: "**Power LED flashing red/green during motion = shunt regulator is actively dissipating regen energy.**\n\n**Per the HW manual, this is often NORMAL behavior** during deceleration — it just means the drive is clamping bus voltage. It does not indicate a fault.\n\n**When to worry:**\n1. **Constant flashing** during all motion (not just decel) — suggests something else is pumping energy back, like an overhauling load or a gravity-pulled axis.\n2. **Flashing becomes solid red** — the internal shunt overheated or failed. Needs external shunt or reduced regen.\n3. **Flashing + overvoltage fault** — internal shunt isn't keeping up. External shunt required.\n\nIf you just see brief flashes on deceleration and no faults, there's nothing to fix.",
+        source: "AMC_HWManual_DigiFlex_Panel_EtherCAT.pdf p.48"
+      },
+      a_regen_spec_external: {
+        answer: "**Sizing an external shunt resistor:**\n\n**Step 1 — Calculate peak regen power (watts):**\n    P_peak = ½ × J_total × ω² / t_decel\n\nWhere J_total is total reflected inertia (kg·m²), ω is velocity at start of decel (rad/s), t_decel is decel time (s).\n\n**Step 2 — Calculate average regen power (watts):**\n    P_avg = P_peak × (t_decel / t_cycle)\n\nWhere t_cycle is the full cycle time (one complete regen event every t_cycle seconds).\n\n**Step 3 — Pick resistor value:**\n    R = V_shunt² / P_peak  (V_shunt ≈ 108% of nominal bus voltage, the threshold where the drive's shunt switch activates)\n\n**Step 4 — Pick resistor power rating:** at least **1.5× P_avg** for continuous dissipation. If the resistor is wirewound, derate further for pulse current.\n\n**Step 5 — Verify against the drive's peak shunt current limit.** The drive's shunt MOSFET / IGBT has a current limit. If R is too low, peak current during clamping exceeds the drive's rating.\n\n**Typical values:**\n- 60 V drive, 2 kW peak regen: **R = 2–4 Ω, 200 W+ power rating**\n- 240 V drive, 5 kW peak regen: **R = 12–18 Ω, 500 W+ power rating**\n\nSee the drive's HW manual for exact terminal wiring and polarity.",
+        source: "AMC_HWManual_FlexPro_PCB.pdf, AMC_HWManual_DigiFlex_Panel_CANopen.pdf"
+      },
+      a_regen_vertical: {
+        answer: "**Vertical / overhauling loads = regen is constant whenever the load descends or overhauls.**\n\nGravity keeps the motor generating energy continuously while the load is falling, not just during decel.\n\n**Always-required for vertical loads:**\n1. **External shunt resistor** — the internal shunt was designed for intermittent decel events, not continuous gravity regen.\n2. **Mechanical brake** — when stopped, the drive can't hold a vertical load indefinitely on current alone (drive may fault, power may cycle). A fail-safe brake is almost always required by safety code for vertical axes. The brake engages when drive disables.\n3. **Worst-case power sizing** — calculate regen as: P = mass × g × v (falling power). For a 100 kg load falling at 0.5 m/s: P = 100 × 9.81 × 0.5 = 490 W continuous. Your shunt must handle this AVERAGE power all the way down.\n4. **Bus voltage margin** — if the motor has high back-EMF constant and the load drops fast, bus voltage can climb even with a shunt. Choose drive bus rating accordingly.\n5. **Controller logic** — during lowering, command velocity must match what gravity wants to do, else the drive fights gravity (motoring vs regen). Trajectory planning for descent should be gentle.",
+        source: "AMC_AppNote_009.pdf, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+    }
+  },
+
+  // =========================================================================
+  // TREE 12: POWER / DC SUPPLY ISSUES
+  // Sources: AN-058 (inrush current), AN-009 (over/under voltage), HW manuals.
+  // =========================================================================
+  power_supply: {
+    title: "DC Supply / Power Problems",
+    trigger_keywords: [
+      "undervoltage", "under-voltage", "under voltage",
+      "inrush", "inrush current", "soft start", "pre-charge",
+      "brown out", "brownout", "bus voltage", "dc bus",
+      "power supply", "ps sizing", "capacitor sizing",
+      "blown fuse", "drive won't power up", "drive won't boot",
+      "power on reset", "resets on startup",
+    ],
+    root: "q_power_symptom",
+    nodes: {
+      q_power_symptom: {
+        question: "What's the power / supply symptom?",
+        options: [
+          { label: "Drive reports undervoltage fault", next: "q_uv_when" },
+          { label: "Drive resets / brown-outs during motion", next: "a_pw_brownout" },
+          { label: "Blown fuse or tripped breaker on power-up", next: "a_pw_inrush" },
+          { label: "Drive won't power up at all (no LEDs)", next: "q_no_power_check" },
+          { label: "Sizing a DC supply — how big does it need to be?", next: "a_pw_sizing" },
+        ]
+      },
+      q_uv_when: {
+        question: "When does the undervoltage fault happen?",
+        options: [
+          { label: "Constant, even before starting a motion", next: "a_uv_constant" },
+          { label: "Only during acceleration", next: "a_uv_accel" },
+          { label: "Only under heavy load", next: "a_uv_loaded" },
+        ]
+      },
+      a_uv_constant: {
+        answer: "**Constant undervoltage = DC supply is below the drive's minimum operating voltage.**\n\nEvery AMC drive has a minimum bus voltage in its datasheet (typically ~80% of nominal rating).\n\n**Fix:**\n1. **Measure DC voltage at the drive's power terminals** with a multimeter — not at the power supply. Cable voltage drop can sink you below the minimum even if the supply is nominal.\n2. **Check the drive's rated input range** on its datasheet. A 20–80 VDC drive won't tolerate 18 V.\n3. **If measured voltage is right but fault persists**, the drive's internal UV threshold sensor may be miscalibrated. Unlikely but possible — contact AMC tech support.\n4. Check you're powering **the right supply input** — AMC drives often have separate signal power and bus power terminals.",
+        source: "AMC_AppNote_009.pdf, AMC_Datasheet_FE060-25-EM.pdf"
+      },
+      a_uv_accel: {
+        answer: "**UV only on acceleration = supply can't deliver peak current; bus voltage sags.**\n\nDuring accel the drive pulls peak current. If the supply can't provide it instantaneously, bus voltage drops (V = V_open − I × R_source) below the UV threshold.\n\n**Fix:**\n1. **Upgrade to a bigger DC supply** — rated for your peak current, not just continuous. For servo applications, sizing for 2–3× continuous is common.\n2. **Add DC bus capacitance** — capacitors closer to the drive absorb peak demand, letting the supply catch up. Typical add: 4700–10000 µF at bus voltage.\n3. **Reduce acceleration rate** — less peak current demand.\n4. **Cable gauge** — long power cables add resistance. AWG-upsize the cable.\n5. **Connections** — loose screw terminals add resistance and heat. Check connections at both supply and drive ends.",
+        source: "AMC_AppNote_009.pdf, AMC_AppNote_058.pdf"
+      },
+      a_uv_loaded: {
+        answer: "**UV only under heavy load = same as accel-UV, just sustained.**\n\n**Fix:**\n1. **Supply undersized for your continuous current** — size the DC supply for the motor's actual continuous current × bus voltage, with 30% headroom.\n2. **Long cable drop** — at high continuous current, voltage drop across power cables adds up. V_drop = I × R_cable × 2 (round trip). Shorten or upsize cable.\n3. **Supply current-limiting kicking in** — some supplies fold back when approaching rated current. Check the supply datasheet.\n4. **Thermal protection on supply** — a hot supply may derate and drop output.\n5. If multiple drives share one supply, **each drive's peak current demand adds up**. Consider individual supplies for each axis.",
+        source: "AMC_AppNote_009.pdf"
+      },
+      a_pw_brownout: {
+        answer: "**Drive resets during motion = bus voltage dips below the POR (power-on-reset) threshold briefly.**\n\nShort dips can reset the drive without a clean UV fault because the drive's processor loses power faster than the UV detector can flag.\n\n**Fix:**\n1. **Add bus capacitance** — 4700–10 000 µF at the drive terminals. Large caps keep voltage up during brief demand spikes.\n2. **Upgrade supply's transient response** — switching supplies with fast loops, or linear supplies with huge capacitors, handle step loads better.\n3. **Kelvin-measure bus voltage at the drive during a demand spike** — use a scope to catch the dip. If bus drops below POR even briefly, you've found the cause.\n4. Inspect for **loose connections** — a high-resistance joint looks like a brown-out during current spikes.\n5. On **three-phase DC supplies**, check for balanced phases; imbalance causes ripple that can dip below POR.",
+        source: "AMC_AppNote_009.pdf, AMC_AppNote_058.pdf"
+      },
+      a_pw_inrush: {
+        answer: "**Blown fuse / tripped breaker on power-up = inrush current (per AN-058).**\n\nWhen a servo drive powers on, its DC bus capacitor bank is empty. For a few milliseconds, the capacitor looks like a short circuit to the supply, drawing **very high current** (hundreds of amps in large systems).\n\n**Per AN-058:** I_inrush ≈ V × C / t, where t is the risetime. A 60 V / 10 000 µF bus charging in 1 ms = 600 A inrush.\n\n**Fix:**\n1. **Add a soft-start / pre-charge circuit** — a resistor in series with the supply during power-up, bypassed by a contactor after 100–500 ms. Standard for industrial drives.\n2. **Use a slow-blow fuse** — rated for the continuous current but able to survive a brief inrush transient (I²t rating).\n3. **Use an inrush-limiting thermistor (NTC)** — its cold resistance limits initial current; warms up and drops to low resistance for normal operation. Requires minutes to reset after power-off.\n4. **Upsize the breaker / use time-delayed breaker** — a C-curve or D-curve magnetic trip tolerates inrush; a B-curve may not.\n5. **Multiple drives on one supply** — stagger power-up by 100+ ms each, or use a pre-charge circuit for the whole bus.",
+        source: "AMC_AppNote_058.pdf"
+      },
+      q_no_power_check: {
+        question: "The drive shows no LEDs at all — what have you verified?",
+        options: [
+          { label: "Haven't measured supply voltage yet", next: "a_np_measure_first" },
+          { label: "Supply is correct at drive terminals", next: "a_np_internal" },
+          { label: "Supply is dead too", next: "a_np_supply_dead" },
+        ]
+      },
+      a_np_measure_first: {
+        answer: "**Start with a multimeter at the drive's DC power terminals.**\n\n1. Put the multimeter on DC volts, black lead to drive's power ground, red to DC+.\n2. Measured voltage should be within the drive's rated input range (check datasheet).\n3. If the supply reads correct at the drive but no LEDs light up, the drive itself may be damaged — go to the 'supply correct' branch.\n4. If the supply reads zero or wrong voltage, go to the 'supply dead' branch.\n5. **Also verify signal / logic power separately** — some AMC drives have a separate 5 V or 24 V logic supply for the control section. The power LED may require logic power even when the bus is off.",
+        source: "AMC_HWManual_FlexPro_PCB.pdf"
+      },
+      a_np_internal: {
+        answer: "**Supply voltage correct but drive shows no life = internal drive fault.**\n\nAt this point the troubleshooting moves beyond the field — the drive's internal DC-DC regulator, processor, or protection circuitry has failed.\n\n**What to try before declaring it dead:**\n1. **Power cycle with all I/O disconnected** — isolate whether a fault on the I/O is preventing startup.\n2. **Check STO inputs** if equipped — some drives won't boot with STO disabled (inputs low) and no indication on the LEDs. Supply 24 V to both STO inputs and retry.\n3. **Check the reset input / enable** — not a boot requirement usually, but worth checking.\n4. **Inspect for obvious damage** — burn marks, cracked components, smell. Do not repower a visibly damaged drive.\n\nIf none of those help, the drive needs repair or replacement. Contact AMC tech support with the drive's serial number and the fault description.",
+        source: "AMC_HWManual_FlexPro_PCB.pdf, AMC_Compliance_Safety_STO_FlexPro.pdf"
+      },
+      a_np_supply_dead: {
+        answer: "**DC supply is not producing voltage.**\n\nThis is a supply-side problem, not a drive problem.\n\n1. **Verify AC input to the supply** (if it's a mains-powered DC supply).\n2. **Check supply's own fuses** — many DC supplies have internal fuses in addition to any external fuse.\n3. **Check supply's over-current / over-temp lockout** — some supplies latch off after a fault and need a power cycle or reset.\n4. **Check load** — disconnect the drive and see if the supply produces voltage with no load. If yes, something about the drive load is tripping the supply's over-current (likely inrush — see AN-058).\n5. **Swap supply** if available to isolate.",
+        source: "AMC_AppNote_058.pdf"
+      },
+      a_pw_sizing: {
+        answer: "**Sizing a DC supply for an AMC servo drive:**\n\n**Voltage:** pick the highest voltage your drive supports that fits your application. Higher bus = more top speed for a given motor Ke.\n\n**Continuous current:** total continuous current of the motor(s) under typical duty. This is NOT the drive's peak rating.\n    I_cont_total = Σ (motor_rated_current × duty_factor)\n\n**Peak current headroom:** peak demand during acceleration can be 2–3× continuous. The supply should either (a) be sized for peak, or (b) have local bus capacitance to buffer peaks.\n    Bus capacitance: 4700–10000 µF per drive as a starting point.\n\n**Regen headroom:** if the application regens, either the supply must absorb reverse current (rare) or you need an external shunt (common). See the regen tree.\n\n**Inrush protection:** required for any servo system. Pre-charge circuit or NTC thermistor. See AN-058.\n\n**Safety margin:** +30% on continuous current rating handles surges and component aging.\n\n**Example:** single FlexPro FE060-25-EM running at 15 A continuous, 30 A peak, 48 V bus:\n- Supply: 48 V, 20 A continuous (15 A + 30% margin)\n- Bus cap: 6800 µF / 63 V aluminum electrolytic + 100 nF ceramic for HF decoupling\n- External NTC or pre-charge resistor for inrush\n- No external shunt unless regen exceeds internal shunt rating",
+        source: "AMC_AppNote_058.pdf, AMC_Datasheet_FE060-25-EM.pdf, AMC_HWManual_FlexPro_PCB.pdf"
+      },
+    }
+  },
+
+  // =========================================================================
+  // TREE 13: MOTION PROFILES / WON'T REACH VELOCITY / STEP-DIR
+  // Sources: AN-010 (profile time), AN-016 (velocity modes), AN-027 (motion
+  // engine), AN-039 (step/direction), ACE manual.
+  // =========================================================================
+  motion_profile: {
+    title: "Motion Profile / Won't Reach Commanded Velocity / Step-Dir",
+    trigger_keywords: [
+      "won't reach velocity", "doesn't reach speed", "motor too slow",
+      "velocity limit", "speed limit",
+      "pvt", "point to point", "trajectory", "motion engine",
+      "step direction", "step/dir", "step and dir", "pulse direction",
+      "stepper mode", "motion profile", "acceleration", "jerk",
+      "s-curve", "scurve", "trapezoidal profile",
+    ],
+    root: "q_mp_symptom",
+    nodes: {
+      q_mp_symptom: {
+        question: "What motion behavior are you troubleshooting?",
+        options: [
+          { label: "Motor won't reach commanded velocity", next: "q_wont_reach_why" },
+          { label: "Acceleration feels wrong / different from commanded", next: "a_mp_accel_mismatch" },
+          { label: "Step/direction input — pulses don't produce motion", next: "q_stepdir_problem" },
+          { label: "PVT or trajectory mode — motion stutters between points", next: "a_mp_pvt" },
+          { label: "Position moves complete early / late vs expected", next: "a_mp_timing" },
+        ]
+      },
+      q_wont_reach_why: {
+        question: "What's limiting the speed? Check the scope first — you'll see one of these:",
+        options: [
+          { label: "Current is saturated (pegged at limit)", next: "a_wr_current_sat" },
+          { label: "Velocity flat-tops at a specific value below commanded", next: "a_wr_vel_limit" },
+          { label: "Motor accelerates then falls back / oscillates", next: "a_wr_oscillates" },
+          { label: "Smooth acceleration but stops short", next: "a_wr_short_time" },
+        ]
+      },
+      a_wr_current_sat: {
+        answer: "**Current saturated during motion = drive is giving everything it has, physics won't let it go faster.**\n\n**Root causes and fixes:**\n1. **Load inertia too high** for the accel rate you're asking. Reduce acceleration — scales linearly with required current.\n2. **Back-EMF eating bus voltage headroom.** At high speed, motor back-EMF approaches bus voltage. Remaining voltage drives current through the winding R + L impedance. If V_bus − V_bemf is too small, max current drops. **Fix:** raise bus voltage, or pick a motor with lower Ke (back-EMF constant).\n3. **Current limit set low.** Check the drive's peak and continuous current settings — may be misconfigured under the drive's rating.\n4. **Motor undersized** — if even the drive's peak current can't overcome load + friction + back-EMF, you need a bigger motor.\n5. **Trajectory demands more than the motor can produce** — acceleration × inertia = torque required, torque = Kt × current. Work backward from your motor's Kt and the drive's current limit to find the achievable acceleration.",
+        source: "AMC_AppNote_015.pdf, AMC_AppNote_041.pdf"
+      },
+      a_wr_vel_limit: {
+        answer: "**Velocity flat-tops below commanded = a velocity limit somewhere in the chain.**\n\n**Check (in order):**\n1. **Application velocity limit parameter** — many drives have a user-configurable max velocity that caps the command regardless of capability. Check and raise if needed.\n2. **Trajectory limit** — in CiA 402 profile mode, object 0x6080 (Max Motor Speed) or 0x607F (Max Profile Velocity) clips the command.\n3. **Feedforward / clamp** in ACE / DriveWare — some drives have a velocity feedforward with a clamp.\n4. **Physics limit (back-EMF)** — if the command is 100% achievable but the motor physically can't run that fast on your bus voltage, you'll see saturation (see the saturated-current branch).\n5. **Commutation failure at speed** — per AN-041, DigiFlex drives have a max sinusoidal commutation speed based on pole count and switching frequency. Above that, torque drops to zero. Lower speed or pick a higher-bandwidth drive.",
+        source: "AMC_AppNote_016.pdf, AMC_AppNote_041.pdf"
+      },
+      a_wr_oscillates: {
+        answer: "**Accelerates then falls back or oscillates = velocity loop unstable near the target.**\n\n**Fix:**\n1. **Reduce velocity Kp** — classic overshoot symptom. Go to the scope_tuning tree's velocity-loop branch.\n2. **Current loop may be bandwidth-limited** — if the velocity loop is asking for rapid current changes that the current loop can't deliver, you see secondary oscillation. Tune current loop first.\n3. **Commutation issue at the target speed** — if you're near the drive's max commutation speed (AN-041), transitions in commutation can cause a torque dip. You may see velocity droop right at a specific speed. Lower the target.\n4. **Low bus voltage** — if motor back-EMF at target speed equals bus voltage, the drive loses torque margin and the loop becomes marginal.",
+        source: "AMC_AppNote_015.pdf, AMC_AppNote_041.pdf"
+      },
+      a_wr_short_time: {
+        answer: "**Smooth acceleration but the move completes too short in time = profile parameters don't match physical capability.**\n\nYou asked for velocity V and accel A. Time-to-reach = V / A. If the drive can't produce A (current-limited), it accelerates slower and takes longer to reach V. The move finishes early from the drive's point of view (it ran out of profile points) even though from your stopwatch it took too long.\n\n**Per AN-010, profile time calculations:**\n- Trapezoidal move: t = V/A (accel) + distance_at_V (cruise) + V/A (decel)\n- If A is impossible, the profile runs at whatever A is achievable, and cruise time adjusts to make up the distance.\n\n**Fix:** verify the achievable acceleration given your current limits, then pick profile parameters that respect it. Or increase bus voltage / current limit to raise achievable A.",
+        source: "AMC_AppNote_010.pdf"
+      },
+      a_mp_accel_mismatch: {
+        answer: "**Actual acceleration differs from commanded:**\n\n1. **Unit mismatch** — most common. Drive may expect rev/s² while you're commanding counts/s², or vice versa. Check the drive's scaling parameters (CiA 402 SI-unit factor, or drive-specific scaling).\n2. **Current saturation** — covered in the won't-reach-velocity branch. When current saturates, actual accel < commanded.\n3. **Jerk (S-curve) enabled** — if jerk limiting is on, the drive rolls into peak accel gradually. Average accel over the ramp is less than peak. Disable S-curve or compare peak vs average.\n4. **Feedforward errors** — if velocity or acceleration feedforward is miscalibrated, the drive effectively runs slower than commanded.\n5. **Profile mode vs direct-command** — some profile modes internally re-calculate based on achievable limits; direct current commands don't. Verify you're in the expected mode.",
+        source: "AMC_AppNote_010.pdf, AMC_AppNote_016.pdf"
+      },
+      a_mp_pvt: {
+        answer: "**PVT (Position-Velocity-Time) stuttering = buffered points running out, or interpolation between points is wrong.**\n\n**Per AN-027 and the CANopen comm manual:**\n\n1. **Buffer underrun** — PVT needs continuous supply of new points. If the master falls behind, the drive runs out and holds position, causing stutter. Monitor the buffer-level object and feed points faster, or slow the trajectory.\n2. **Time units** — PVT points specify a time between them. If units don't match the drive's expectation, interpolation goes wrong. Check CiA 402 time-units configuration.\n3. **Large position deltas** — if two adjacent points imply a velocity jump beyond what the drive can deliver, you see a lag followed by a catch-up. Smooth out the trajectory.\n4. **Cycle time too fast** — if the master sends PVT points faster than the drive can consume them, overflow can manifest as stutter. Slow the send rate to the drive's expected cycle time.\n5. **Use the Motion Engine** (AN-027) instead — it generates the trajectory on the drive itself, avoiding host-side timing issues.",
+        source: "AMC_AppNote_027.pdf, AMC_CommManual_CANopen.pdf"
+      },
+      a_mp_timing: {
+        answer: "**Moves complete at the wrong time compared to expectations:**\n\n**Per AN-010:**\n\n1. **Total profile time = 2×(V/A) + (distance − V²/A) / V** for trapezoidal profiles — verify your math.\n2. **For short moves** that don't reach the commanded velocity, the profile becomes triangular: t = 2 × √(distance / A). The peak velocity is lower than commanded.\n3. **Jerk-limited (S-curve) profiles** add time. Total = trap time + jerk smoothing time. Exact amount depends on jerk value.\n4. **Pre-trigger latency** — if you're using PDO or host commands, there's a cycle-time latency between command and motion start. Typical: one PDO cycle (~1 ms) to start, several cycles for the drive to load the profile and begin.\n5. **Mechanical vs electrical** — if you're measuring with a stopwatch at the load, any gearbox / belt introduces compliance and settling time.",
+        source: "AMC_AppNote_010.pdf"
+      },
+
+      // --- Step/Direction specific ---
+      q_stepdir_problem: {
+        question: "What's wrong with step/direction input?",
+        options: [
+          { label: "Motor doesn't move at all with pulses", next: "a_sd_no_motion" },
+          { label: "Motor moves but wrong direction", next: "a_sd_wrong_dir" },
+          { label: "Loses steps / position drifts", next: "a_sd_loses_steps" },
+          { label: "How do I wire step/direction?", next: "a_sd_wiring" },
+        ]
+      },
+      a_sd_wiring: {
+        answer: "**Step/direction wiring (per AN-039 + HW manuals):**\n\n1. **Identify the drive's step/dir inputs** — usually labeled STEP, DIR, and common ground on the I/O connector. Check the HW manual for your specific drive.\n2. **Signal levels:**\n   - **5 V TTL** (most controllers) — wire directly if the drive supports 5 V logic.\n   - **24 V logic** (PLCs) — most AMC drives accept 24 V on these inputs; check the HW manual for input tolerance.\n3. **Differential vs single-ended:** AMC drives often accept both. Differential (STEP+/STEP−, DIR+/DIR−) is more noise-immune for long cable runs; single-ended is fine for short runs.\n4. **Pulse polarity:** rising-edge active is standard. Check the drive's step-polarity parameter if motion only happens on specific edges.\n5. **Step rate:** datasheet lists max input pulse frequency (typically 500 kHz to several MHz). Higher rates need better signal integrity.\n6. **Mode configuration:** configure the drive for **Stepper Emulation / Step-Direction mode** in software. Out of the box, an AMC servo is in another mode (velocity, current, PVT, etc.).",
+        source: "AMC_AppNote_039.pdf, AMC_HWManual_DigiFlex_PCB_XEnv.pdf"
+      },
+      a_sd_no_motion: {
+        answer: "**Pulses arriving but motor doesn't move.**\n\n**Fix:**\n1. **Confirm the drive is in step/direction mode** — in ACE / DriveWare, set the operating mode to Stepper Emulation or equivalent. If the drive is in velocity or current mode, step inputs are ignored.\n2. **Scope the STEP input** at the drive's terminal. You should see pulses at the expected frequency. If not, the controller's output or the wiring is broken.\n3. **Check polarity / edge configuration** — if the drive expects rising edge but the controller produces falling-edge pulses, no counts register.\n4. **Check steps-per-revolution scaling** — if configured at very high count ratio, a small pulse count may not produce visible motion.\n5. **Verify ENABLE state** — step mode still respects the drive's enable input. Drive disabled = no motion regardless of pulses.\n6. **Current limit / torque limit** — if the drive is loaded beyond its torque capacity, the motor slips and appears stationary even though the drive is trying. Reduce load or raise current limit.",
+        source: "AMC_AppNote_039.pdf, AMC_SW_Manual_ACE.pdf"
+      },
+      a_sd_wrong_dir: {
+        answer: "**Motor moves the wrong direction on step/direction command.**\n\n**Fix:**\n1. **Swap the polarity of the DIR signal** in the drive's configuration — most drives have a direction-invert parameter.\n2. **Or swap two motor phases** to physically reverse direction.\n3. **Or change the controller's DIR output polarity** if you have control over that.\n4. Don't swap multiple things at once — you'll just double-invert back to the wrong direction.",
+        source: "AMC_AppNote_039.pdf"
+      },
+      a_sd_loses_steps: {
+        answer: "**Step count and actual position diverge = steps being missed or faked.**\n\n**Fix:**\n1. **Noise on the STEP line** — long unshielded cables near motor power or AC lines pick up spurious pulses. Use differential signaling and shielded cable. See AN-023 on ferrite cores.\n2. **Step rate exceeds max input frequency** — check datasheet. If you're over the drive's spec, pulses are aliased or dropped.\n3. **Insufficient pulse width** — some drives need a minimum pulse width (e.g., 1 µs high + 1 µs low). Very fast controllers may produce pulses too narrow to count.\n4. **Motor stalling / missing steps** — under load above the drive's torque capability, the motor physically lags the commanded step count. Servo drives usually report this as position-error fault; if not, increase current or reduce load.\n5. **Encoder scaling mismatch** — if you're comparing commanded steps to encoder counts, make sure the ratio matches your configured scaling.",
+        source: "AMC_AppNote_039.pdf, AMC_AppNote_023.pdf"
+      },
+    }
+  },
 };

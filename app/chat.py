@@ -762,6 +762,31 @@ def dispatch_tool(
 # Smart routing — decide what to search without calling an LLM
 # ---------------------------------------------------------------------------
 
+_DIAGNOSIS_PATTERN = re.compile(
+    r"\b(diagnose|troubleshoot|fault|following\s+error|"
+    r"not\s+working|won't\s+\w+|wont\s+\w+|"
+    r"doesn't\s+\w+|cannot\s+\w+|can'?t\s+\w+|"
+    r"why\s+(is|does|won't|can't)|"
+    r"help\s+(me\s+)?(fix|diagnose|debug)|"
+    r"fix\s+(this|the|my)|what's\s+wrong|whats\s+wrong|"
+    r"trying\s+to\s+figure|stuck|"
+    r"under.?voltage|over.?voltage|over.?current|over.?temperature|"
+    r"error\s+code|fault\s+code|red\s+led|drive\s+(error|fault|failed))\b",
+    re.IGNORECASE,
+)
+
+
+def _is_diagnosis_query(message: str) -> bool:
+    """Does the user's message look like a troubleshooting / diagnosis question?
+
+    Used by the drive-aware retrieval path to decide whether to also pull
+    chunks from the ACE / DriveWare SW manuals. The SW manuals contain the
+    universal fault-diagnosis tables that apply to every drive family but
+    would otherwise be excluded by the drive-specific priority search.
+    """
+    return bool(_DIAGNOSIS_PATTERN.search(message or ""))
+
+
 def _classify_query_type(message: str) -> str:
     """Rule-based classification of query intent. No LLM needed."""
     msg_lower = message.lower()
@@ -932,6 +957,30 @@ def _smart_route(
                 seen.add(key)
                 chunks.append(c)
 
+        # Supplement with SW manual (ACE / DriveWare) chunks when the query
+        # looks like fault diagnosis or troubleshooting. The SW manuals carry
+        # the universal "Event / Description / Likely Cause / Recommended
+        # Actions" tables (ACE p.141, DriveWare p.128) that are vastly more
+        # useful for diagnosis than the comm manual's object-dictionary
+        # addresses. Previously, drive-aware retrieval excluded SW manuals
+        # entirely for drive-specific queries, so questions like "diagnose
+        # velocity following error on FM060-1-CM" only surfaced CANopen
+        # register descriptions — the agent had no troubleshooting-table
+        # context and produced answers citing only the comm manual.
+        #
+        # We retrieve SW chunks separately and store them for a post-rerank
+        # merge. Mixing them into the main pool would just get them reranked
+        # BELOW comm-manual chunks that densely mention the exact phrase
+        # (e.g. "Velocity Following Error Window") even though the SW manual
+        # has the actual troubleshooting table the user needs.
+        diagnostic_sw_chunks: list[dict] = []
+        if _is_diagnosis_query(user_message):
+            sw_pool = retrieve(drive_search_query, top_k=fetch_k, doc_type_filter="sw,sw_ref", expanded_query=expanded_query)
+            if ENABLE_RERANKING and len(sw_pool) >= 2:
+                sw_pool = rerank(user_message, sw_pool, top_k=4)
+            # Reserve the top-2 SW chunks so they survive the final trim.
+            diagnostic_sw_chunks = sw_pool[:2]
+
         # If still not enough, search everything
         if len(chunks) < 3:
             broad_retrieval = True
@@ -957,6 +1006,21 @@ def _smart_route(
     if ENABLE_RERANKING and len(chunks) >= 2:
         chunks = rerank(user_message, chunks, top_k=RERANK_TOP_K)
     chunks = chunks[:PILOT_RETRIEVAL_TOP_K]
+
+    # For diagnostic queries on a known drive, ensure the reserved SW-manual
+    # chunks (from the ACE/DriveWare troubleshooting tables) are in the final
+    # context even if rerank dropped them. Merge by prepending to the pool and
+    # trimming back to PILOT_RETRIEVAL_TOP_K, with dedup by text hash.
+    if result:
+        try:
+            _reserved_sw = diagnostic_sw_chunks  # noqa: F821 — defined above in `if result:`
+        except NameError:
+            _reserved_sw = []
+        if _reserved_sw:
+            existing_texts = {c["text"][:100] for c in chunks}
+            reserved = [c for c in _reserved_sw if c["text"][:100] not in existing_texts]
+            if reserved:
+                chunks = (reserved[:2] + chunks)[:PILOT_RETRIEVAL_TOP_K]
 
     context_text = build_context(chunks)
 
