@@ -787,6 +787,49 @@ def _is_diagnosis_query(message: str) -> bool:
     return bool(_DIAGNOSIS_PATTERN.search(message or ""))
 
 
+# Fieldbus deep-dive detection. When a question references a CiA 402 object
+# by hex (0x6040, 0x607A, etc.) OR uses protocol-stack terminology (SDO,
+# TPDO, PDO mapping, distributed clock, SyncManager, controlword, homing
+# method, modes of operation, etc.), the real answer lives in the
+# communication manual, NOT the datasheet. Drive-aware priority search
+# otherwise lets datasheet chunks (which mention "EtherCAT" or "CANopen"
+# as feature bullets) crowd out the actual protocol content.
+_FIELDBUS_DEEP_DIVE_PATTERN = re.compile(
+    r"\b("
+    # CiA 402 hex object references: 0x6040, 6040h, 0x60-7F range
+    r"0x[0-9a-f]{3,4}|[0-9a-f]{4}h|"
+    # CiA 402 / DS-402 vocabulary
+    r"cia\s*402|ds-?402|ds402|"
+    r"controlword|statusword|modes\s+of\s+operation|"
+    r"profile\s+position|profile\s+velocity|cyclic\s+sync|"
+    # PDO / SDO / object-dictionary access
+    r"object\s+dictionary|sdo(\s+access|\s+read|\s+write)?|"
+    r"pdo\s+(mapping|config|parameter)|tpdo|rpdo|"
+    r"emergency\s+object|heartbeat|"
+    # EtherCAT specifics
+    r"distributed\s+clocks?|distributed-?clocks?|sync\s*manager|"
+    r"sync\s+mode|free\s*run\s+mode|dc\s+mode|sm\s*sync|"
+    r"ethercat\s+(state|master|slave|sync)|esi\s+file|dc\s+sync|"
+    # POWERLINK / EthernetIP specifics
+    r"powerlink\s+(node|cycle|config)|assembly\s+object|"
+    # CANopen specifics
+    r"node\s+(id|address)\s+for\s+can|can\s+baud|nmt\s+state"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def _is_fieldbus_deep_dive(message: str) -> bool:
+    """Is the user asking about a fieldbus protocol-stack detail that lives
+    in the communication manual (not the datasheet or HW manual)?
+
+    Triggers: CiA 402 hex object references (0x6040), controlword/statusword
+    terminology, PDO/SDO access, EtherCAT distributed clocks, CANopen NMT,
+    POWERLINK cycle config, etc.
+    """
+    return bool(_FIELDBUS_DEEP_DIVE_PATTERN.search(message or ""))
+
+
 # Maps drive family -> applicable SW manual filenames. FlexPro uses ACE;
 # DigiFlex Performance uses DriveWare. AxCent and Classic are analog drives
 # with no software configuration tool. Citing the wrong software for a
@@ -1051,6 +1094,30 @@ def _smart_route(
                 # survive the final trim.
                 diagnostic_sw_chunks = sw_pool[:2]
 
+        # Reserved comm-manual slots for fieldbus deep-dive questions
+        # (CiA 402 object indices, SDO/PDO access, distributed clocks,
+        # controlword/statusword semantics). Without this, the drive-aware
+        # priority search lets datasheet chunks (which mention EtherCAT /
+        # CANopen as one-line feature bullets) crowd out the actual
+        # protocol-stack content that lives only in the comm manual.
+        # Symmetric to the diagnostic_sw_chunks pattern above.
+        fieldbus_comm_chunks: list[dict] = []
+        if _is_fieldbus_deep_dive(user_message):
+            comm_pool_raw = retrieve(drive_search_query, top_k=fetch_k, doc_type_filter="comm", expanded_query=expanded_query)
+            # Narrow to the drive's actual comm manual when we know it — a
+            # FE060-25-EM question shouldn't be answered from the CANopen
+            # manual when the drive is EtherCAT. Fall back to unfiltered if
+            # the drive-specific manual isn't in the retrieved pool.
+            drive_comm = (result.get("comm_manual") or "").strip()
+            if drive_comm:
+                filtered = [c for c in comm_pool_raw if c.get("source") == drive_comm]
+                comm_pool = filtered if filtered else comm_pool_raw
+            else:
+                comm_pool = comm_pool_raw
+            if ENABLE_RERANKING and len(comm_pool) >= 2:
+                comm_pool = rerank(user_message, comm_pool, top_k=4)
+            fieldbus_comm_chunks = comm_pool[:2]
+
         # If still not enough, search everything
         if len(chunks) < 3:
             broad_retrieval = True
@@ -1089,6 +1156,20 @@ def _smart_route(
         if _reserved_sw:
             existing_texts = {c["text"][:100] for c in chunks}
             reserved = [c for c in _reserved_sw if c["text"][:100] not in existing_texts]
+            if reserved:
+                chunks = (reserved[:2] + chunks)[:PILOT_RETRIEVAL_TOP_K]
+
+        # Same pattern for fieldbus deep-dive questions — guarantee at least
+        # 2 comm-manual chunks in the final context so protocol-stack detail
+        # (object dictionary entries, SDO access, distributed clocks, etc.)
+        # can't be crowded out by datasheet feature bullets.
+        try:
+            _reserved_fb = fieldbus_comm_chunks  # noqa: F821 — defined above in `if result:`
+        except NameError:
+            _reserved_fb = []
+        if _reserved_fb:
+            existing_texts = {c["text"][:100] for c in chunks}
+            reserved = [c for c in _reserved_fb if c["text"][:100] not in existing_texts]
             if reserved:
                 chunks = (reserved[:2] + chunks)[:PILOT_RETRIEVAL_TOP_K]
 
