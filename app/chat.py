@@ -1350,8 +1350,14 @@ def _smart_route(
 
     # Build authoritative canonical spec context (P1 spec grounding).
     # Pulls from CM Servo Info.csv so the model cannot fabricate ratings from
-    # SKU naming conventions. Keyed off explicitly detected/resolved SKUs and
-    # family keywords mentioned in the question.
+    # SKU naming conventions. Keyed off explicitly detected/resolved SKUs,
+    # family keywords in the question, AND — critically — any SKU that
+    # appears as the source of a retrieved chunk. The last case prevents
+    # the class of hallucination where Claude paraphrases a datasheet's
+    # conditional-row spec (e.g. "20-80 VDC Supply Range" as a row in a
+    # fuse-sizing table) and presents it as the drive's overall voltage
+    # range. With the CSV truth in the canonical block, rule 15 binds
+    # Claude to the real verbatim value.
     canonical_skus: list[str] = []
     if result:
         for key in ("canonical_sku", "datasheet_sku", "requested_sku"):
@@ -1360,9 +1366,28 @@ def _smart_route(
                 canonical_skus.append(val)
     if detected_sku and detected_sku not in canonical_skus:
         canonical_skus.insert(0, detected_sku)
+
+    # Scan retrieved chunk sources for drive-specific datasheet SKUs and
+    # ensure their canonical specs are included in the facts block.
+    # Pattern: AMC_Datasheet_<SKU>.pdf -> <SKU>
+    import re as _re
+    _datasheet_re = _re.compile(r"AMC_Datasheet_([A-Za-z0-9][A-Za-z0-9\-]+)\.pdf")
+    for c in chunks:
+        src = c.get("source", "")
+        m = _datasheet_re.match(src)
+        if not m:
+            continue
+        sku_from_src = m.group(1).upper()
+        # Skip filenames like AMC_Datasheet_AB50A200(1).pdf — keep the clean SKU
+        sku_from_src = _re.sub(r"\(\d+\)$", "", sku_from_src)
+        # Only add if the SKU actually resolves in the DB (don't pollute
+        # with false matches from weirdly-named files)
+        if lookup_drive(sku_from_src) and sku_from_src not in canonical_skus:
+            canonical_skus.append(sku_from_src)
+
     canonical_context = build_canonical_context(
         user_message,
-        detected_skus=canonical_skus,
+        detected_skus=canonical_skus[:20],  # cap at 20 to keep prompt size sane
         family_limit=12,
     )
 
