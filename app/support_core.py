@@ -38,6 +38,7 @@ from app.equivalent_drives import (
 )
 from app.faq import match_faq
 from app.retrofit_lookup import format_retrofit_answer, is_retrofit_question
+from app.safety_gate import SAFETY_FIRST_RESPONSE, is_safety_critical
 from app.sku_matcher import (
     candidate_sku_tokens,
     format_typo_ambiguous_answer,
@@ -173,6 +174,44 @@ def stream_support_request(
         return {"type": "token", "text": "\n\n" + summary}
 
     effective_message = request.message
+
+    # Safety gate: runs FIRST, before every other deterministic gate.
+    # If the user's message contains hazard language (exploded, fire,
+    # smoke, sparks, shock, burning smell, melted, etc.) the highest-
+    # value first response is safety guidance + a human contact, not
+    # "which drive is this?". The response still asks for the SKU at
+    # the bottom so the follow-up message gets routed normally.
+    if is_safety_critical(request.message):
+        if support_note:
+            yield {"type": "status", "text": support_note}
+        yield {
+            "type": "status",
+            "text": "Detected hazard language — leading with safety guidance before troubleshooting.",
+        }
+        yield {"type": "token", "text": SAFETY_FIRST_RESPONSE}
+        # Escalation summary is still appended if cues are present —
+        # a customer who said "it exploded and I've tried everything"
+        # gets the safety block, then the AMC-handoff block.
+        esc_tok = _maybe_escalation_token()
+        if esc_tok:
+            yield esc_tok
+        yield {
+            "type": "done",
+            "sources": [],
+            "support_note": support_note or None,
+            "provider_used": "safety_first",
+            "model_used": None,
+            "latency_ms": 0,
+            "estimated_cost_usd": 0.0,
+            "support_bucket": support_bucket,
+            "retrieval_chunk_count": 0,
+            "used_fallback": used_fallback,
+            "broad_retrieval": False,
+            "channel": request.channel,
+            "session_request_count": request_count,
+            "cost_budget_state": budget_state,
+        }
+        return
 
     # Competitor gate: if the user mentions a competitor brand (Elmo,
     # Kollmorgen, Copley, Yaskawa, Beckhoff, ...), don't let the typo gate
