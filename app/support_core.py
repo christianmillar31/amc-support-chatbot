@@ -30,6 +30,12 @@ from app.competitor_lookup import (
     format_competitor_answer,
     parse_competitor_specs,
 )
+from app.equivalent_drives import (
+    detect_equivalent_query,
+    find_equivalents,
+    format_equivalent_answer,
+    resolve_reference_drive,
+)
 from app.faq import match_faq
 from app.retrofit_lookup import format_retrofit_answer, is_retrofit_question
 from app.sku_matcher import (
@@ -308,6 +314,62 @@ def stream_support_request(
                 "estimated_cost_usd": 0.0,
                 "support_bucket": support_bucket,
                 "retrieval_chunk_count": 1,
+                "used_fallback": used_fallback,
+                "broad_retrieval": False,
+                "channel": request.channel,
+                "session_request_count": request_count,
+                "cost_budget_state": budget_state,
+            }
+            return
+
+    # Equivalent-drive lookup: "what's similar to X?" / "if X gets
+    # discontinued, what's the replacement?" / "anything comparable to X?".
+    # Deterministic CSV lookup returns only drives that actually exist —
+    # prevents the class of hallucination where Claude invents plausible-
+    # sounding SKUs when asked for alternatives. Runs BEFORE the spec
+    # validator (which answers single-drive spec questions) so that
+    # multi-drive comparative questions don't get mis-routed.
+    if not uploaded_chunks and detect_equivalent_query(effective_message):
+        ref_drive = resolve_reference_drive(effective_message, drive_context)
+        if ref_drive:
+            # Detect whether the user emphasized Hall Velocity or another
+            # specific mode — if so, require candidates to support it.
+            mode_filter = set()
+            msg_lower = effective_message.lower()
+            for mode_label in ("Hall Velocity", "Velocity", "Current", "Duty Cycle"):
+                if mode_label.lower() in msg_lower:
+                    mode_filter.add(mode_label)
+            buckets = find_equivalents(
+                ref_drive,
+                prefer_modes=mode_filter or None,
+            )
+            answer_text = format_equivalent_answer(ref_drive, buckets)
+            n_candidates = sum(len(v) for v in buckets.values())
+            if support_note:
+                yield {"type": "status", "text": support_note}
+            yield {
+                "type": "status",
+                "text": f"Found {n_candidates} equivalent candidate(s) in the canonical product database...",
+            }
+            yield {"type": "token", "text": answer_text}
+            esc_tok = _maybe_escalation_token()
+            if esc_tok:
+                yield esc_tok
+            yield {
+                "type": "done",
+                "sources": [{
+                    "source": "CM Servo Info.csv",
+                    "page": 0,
+                    "heading": "Canonical product database",
+                    "url": "",
+                }],
+                "support_note": support_note or None,
+                "provider_used": "equivalent_drive_lookup",
+                "model_used": None,
+                "latency_ms": 0,
+                "estimated_cost_usd": 0.0,
+                "support_bucket": support_bucket,
+                "retrieval_chunk_count": n_candidates,
                 "used_fallback": used_fallback,
                 "broad_retrieval": False,
                 "channel": request.channel,
