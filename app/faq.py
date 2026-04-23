@@ -7,6 +7,7 @@ between the user's question and the pre-built FAQ database.
 """
 import csv
 import logging
+import re
 import numpy as np
 from pathlib import Path
 
@@ -101,6 +102,38 @@ def _is_broad_scope_question(user_question: str) -> bool:
     return True
 
 
+_DIAGNOSIS_QUESTION_RE = re.compile(
+    r"\b(diagnose|diagnosing|troubleshoot|troubleshooting|fault|following\s+error|"
+    r"not\s+working|won't\s+\w+|wont\s+\w+|doesn't\s+\w+|cannot\s+\w+|can'?t\s+\w+|"
+    r"why\s+(is|does|won't|can't)|help\s+(me\s+)?(fix|diagnose|debug)|"
+    r"fix\s+(this|the|my)|what's\s+wrong|whats\s+wrong|"
+    r"under.?voltage|over.?voltage|over.?current|over.?temperature|"
+    r"error\s+code|fault\s+code|red\s+led|drive\s+(error|fault|failed))\b",
+    re.IGNORECASE,
+)
+
+_DIAGNOSIS_FAQ_RE = re.compile(
+    r"\b(diagnose|diagnosing|troubleshoot|troubleshooting|fault|error|"
+    r"not\s+working|won't|cannot|fix|what's\s+wrong|"
+    r"under.?voltage|over.?voltage|over.?current|over.?temperature|"
+    r"red\s+led|fault\s+code)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_diagnosis_question(user_question: str) -> bool:
+    """Does the user's question look like a troubleshoot/diagnosis ask?"""
+    return bool(_DIAGNOSIS_QUESTION_RE.search(user_question or ""))
+
+
+def _faq_is_diagnostic(entry: dict) -> bool:
+    """Does the FAQ row itself look like a troubleshoot/diagnosis answer?"""
+    for field in ("question", "section"):
+        if _DIAGNOSIS_FAQ_RE.search(entry.get(field, "") or ""):
+            return True
+    return False
+
+
 def match_faq(user_question: str, threshold: float = FAQ_SIMILARITY_THRESHOLD) -> dict | None:
     """
     Check if the user's question matches an FAQ entry.
@@ -117,6 +150,14 @@ def match_faq(user_question: str, threshold: float = FAQ_SIMILARITY_THRESHOLD) -
         logger.info("FAQ skipped for broad-scope question: %s", user_question[:80])
         return None
 
+    # Intent guard: if the user asked a diagnosis/troubleshoot question, a FAQ
+    # row about setup or tuning (even when semantically similar) is the wrong
+    # answer. Only let the FAQ match through if the row itself looks
+    # diagnostic. Otherwise fall through to the retrieval path, which will
+    # pull the SW manual's troubleshooting tables (ACE p.141 / DriveWare
+    # p.130) that actually answer the question.
+    asked_diagnosis = _is_diagnosis_question(user_question)
+
     try:
         # Encode user question (with BGE query prefix for asymmetric search)
         q_embedding = _embed_model.encode([EMBEDDING_QUERY_PREFIX + user_question], normalize_embeddings=True)
@@ -129,6 +170,15 @@ def match_faq(user_question: str, threshold: float = FAQ_SIMILARITY_THRESHOLD) -
 
         if best_score >= threshold:
             entry = _faq_entries[best_idx]
+
+            if asked_diagnosis and not _faq_is_diagnostic(entry):
+                logger.info(
+                    "FAQ skipped — diagnosis intent (%.2f): '%s' would have matched "
+                    "non-diagnostic row '%s'; falling through to retrieval.",
+                    best_score, user_question[:60], entry["question"][:60]
+                )
+                return None
+
             logger.info(
                 "FAQ match (%.2f): '%s' → '%s'",
                 best_score, user_question[:60], entry["question"][:60]
