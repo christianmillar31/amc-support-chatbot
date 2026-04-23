@@ -787,6 +787,45 @@ def _is_diagnosis_query(message: str) -> bool:
     return bool(_DIAGNOSIS_PATTERN.search(message or ""))
 
 
+# Maps drive family -> applicable SW manual filenames. FlexPro uses ACE;
+# DigiFlex Performance uses DriveWare. AxCent and Classic are analog drives
+# with no software configuration tool. Citing the wrong software for a
+# family is misleading because menu paths, parameter names, and scope tools
+# differ between ACE and DriveWare.
+_SW_MANUALS_BY_FAMILY: dict[str, frozenset[str]] = {
+    "FlexPro": frozenset({
+        "AMC_SW_Manual_ACE.pdf",
+        "AMC_SW_QuickReference_ACE.pdf",
+        "AMC_SW_QuickRef_ACE.pdf",
+        "AMC_ReadMe_ACE.pdf",
+        "AMC_SW_ReleaseNotes_ACE.pdf",
+    }),
+    "DigiFlex Performance": frozenset({
+        "AMC_SW_Manual_DriveWare.pdf",
+        "AMC_SW_QuickRef_DriveWare.pdf",
+    }),
+    # Legacy DigiFlex (without "Performance") — same tool as DigiFlex Performance.
+    "DigiFlex": frozenset({
+        "AMC_SW_Manual_DriveWare.pdf",
+        "AMC_SW_QuickRef_DriveWare.pdf",
+    }),
+    # AxCent and Classic have no software tool — all configuration is via
+    # DIP switches and potentiometers on the drive itself.
+    "AxCent": frozenset(),
+    "Classic": frozenset(),
+}
+
+
+def _sw_manuals_for_family(family: str | None) -> frozenset[str]:
+    """Return the set of SW manual filenames applicable to a drive family.
+
+    Empty set means no software tool applies (AxCent, Classic, unknown).
+    """
+    if not family:
+        return frozenset()
+    return _SW_MANUALS_BY_FAMILY.get(family, frozenset())
+
+
 def _classify_query_type(message: str) -> str:
     """Rule-based classification of query intent. No LLM needed."""
     msg_lower = message.lower()
@@ -975,11 +1014,19 @@ def _smart_route(
         # has the actual troubleshooting table the user needs.
         diagnostic_sw_chunks: list[dict] = []
         if _is_diagnosis_query(user_message):
-            sw_pool = retrieve(drive_search_query, top_k=fetch_k, doc_type_filter="sw,sw_ref", expanded_query=expanded_query)
-            if ENABLE_RERANKING and len(sw_pool) >= 2:
-                sw_pool = rerank(user_message, sw_pool, top_k=4)
-            # Reserve the top-2 SW chunks so they survive the final trim.
-            diagnostic_sw_chunks = sw_pool[:2]
+            # Family-gate the SW manuals: FlexPro -> ACE; DigiFlex -> DriveWare.
+            # AxCent and Classic are analog — no software tool applies; skip.
+            # Citing DriveWare for a FlexPro drive (or vice versa) is misleading
+            # because the UIs, menu paths, and parameter names differ.
+            allowed_sw_sources = _sw_manuals_for_family(result.get("family"))
+            if allowed_sw_sources:
+                sw_pool_raw = retrieve(drive_search_query, top_k=fetch_k, doc_type_filter="sw,sw_ref", expanded_query=expanded_query)
+                sw_pool = [c for c in sw_pool_raw if c.get("source") in allowed_sw_sources]
+                if ENABLE_RERANKING and len(sw_pool) >= 2:
+                    sw_pool = rerank(user_message, sw_pool, top_k=4)
+                # Reserve the top-2 family-appropriate SW chunks so they
+                # survive the final trim.
+                diagnostic_sw_chunks = sw_pool[:2]
 
         # If still not enough, search everything
         if len(chunks) < 3:
